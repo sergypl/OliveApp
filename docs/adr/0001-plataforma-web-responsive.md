@@ -1,7 +1,7 @@
 # ADR 0001: OlivApp MVP como web responsive en lugar de app móvil nativa
 
 ## Status
-Accepted (2026-09-21)
+Superseded por [ADR 0002](0002-app-android-nativa.md) (2026-09-28). Se conserva como registro histórico: describía el plan anterior a la decisión de app Android nativa.
 
 ## Context
 El briefing describía OlivApp como "aplicación móvil", pero el proyecto es un MVP académico con plazo y alcance acotados. La feature estrella (captura de labores por voz con IA) es viable en un navegador moderno (grabación con MediaRecorder, cola offline simple sin APIs nativas). El usuario tomó la decisión durante la discovery: web responsive accesible desde el navegador.
