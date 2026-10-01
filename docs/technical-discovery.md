@@ -9,7 +9,7 @@
 - App Android: Kotlin, Jetpack Compose (Material 3), Android Studio + Gradle.
 - Cliente de red: Retrofit/OkHttp o Ktor Client; serialización JSON (kotlinx.serialization).
 - Persistencia local: Room (cuaderno, campañas cacheadas y cola de notas pendientes).
-- Backend/API: servicio ligero separado (Node/Express o FastAPI) o equivalente; autenticación por token (JWT).
+- Backend/API: servicio ligero separado (FastAPI/Python, elegido en la feature `bootstrap-backend`) o equivalente; autenticación por token (JWT).
 - Base de datos del servidor: relacional ligera según hosting disponible (PostgreSQL/SQLite).
 - La elección concreta de backend y hosting queda abierta para la fase de planificación (no es parte del build brief).
 
