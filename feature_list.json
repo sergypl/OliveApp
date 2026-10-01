@@ -1,0 +1,389 @@
+[
+  {
+    "id": "bootstrap-backend",
+    "area": "bootstrap",
+    "title": "El backend levanta con healthcheck y configuración por variables de entorno",
+    "user_visible_behavior": "El servicio backend arranca en local y responde un healthcheck; la URL de la app puede apuntar a él y las claves (DEVEXPERT_API_KEY, secreto JWT) se leen solo de variables de entorno.",
+    "depends_on": [],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Arrancar el backend y comprobar que el endpoint de healthcheck responde 200",
+      "Comprobar que el arranque falla de forma explícita si falta una variable de entorno obligatoria"
+    ],
+    "evidence": [],
+    "notes": "Primer bootstrap técnico. Stack abierto (Node/Express o FastAPI, ver docs/technical-discovery.md). Bloqueante previo: decidir backend y hosting (docs/risks-and-open-questions.md). Registrar los comandos reales en init.sh al terminar."
+  },
+  {
+    "id": "bootstrap-android",
+    "area": "bootstrap",
+    "title": "El proyecto Android compila y se instala en el dispositivo",
+    "user_visible_behavior": "Un APK de desarrollo de Kotlin + Jetpack Compose compila y se instala en el dispositivo objetivo mostrando una pantalla mínima de OlivApp.",
+    "depends_on": [],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Compilar el APK de desarrollo (Gradle) sin errores",
+      "Instalar y abrir el APK en el dispositivo objetivo mostrando la pantalla mínima"
+    ],
+    "evidence": [],
+    "notes": "Mitiga el riesgo 'salto a app nativa': fijar un único dispositivo objetivo y conseguir APK cuanto antes (docs/risks-and-open-questions.md). Registrar los comandos reales en init.sh al terminar."
+  },
+  {
+    "id": "datos-sembrados-cooperativa",
+    "area": "campanas",
+    "title": "Los datos de campaña de la cooperativa se siembran en el backend",
+    "user_visible_behavior": "El backend contiene una cooperativa única y varias campañas (una actual y anteriores) con datos oficiales por socio: kilos entregados, rendimiento graso y aceite obtenido.",
+    "depends_on": ["bootstrap-backend"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Cargar el juego de datos sembrados y consultar la API: cada socio tiene datos oficiales en la campaña actual y al menos una anterior",
+      "Comprobar que los datos oficiales no admiten escritura desde la API de la app"
+    ],
+    "evidence": [],
+    "notes": "Según ADR 0006 y ADR 0007: fichero de seed versionado (JSON) + script de carga si la base está vacía. Volumen: 1 cooperativa, 4 campañas (2022/2023 a 2025/2026, actual 2025/2026 con datos completos), 2 socios con 3-4 parcelas sembradas cada uno. Socio 1 de 2025/2026 con datos reales anonimizados (5 vales, 10.958 kg, rdto lab 17,93 %, aceite industrial 1.774 kg); resto calibrado con datos reales (MAPA REDES TECO, liquidaciones publicadas). Regla de coherencia en dos etapas (ADR 0007): aceite = round(kilos × rendimiento lab × (1 − 0,097)). Datos de solo lectura y declarados como demo."
+  },
+  {
+    "id": "registro-cuenta-socio",
+    "area": "acceso",
+    "title": "El socio crea su cuenta con email y contraseña",
+    "user_visible_behavior": "Desde la app, el socio introduce email y contraseña, la cuenta se crea en el backend y queda asociada a la cooperativa sembrada.",
+    "depends_on": ["bootstrap-backend", "bootstrap-android"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Registrar un socio nuevo desde la app y comprobar que aparece en el backend con la contraseña hasheada",
+      "Intentar registrar el mismo email y comprobar un error claro en la app"
+    ],
+    "evidence": [],
+    "notes": "Política mínima de contraseñas por decidir. Sin verificación de email ni reset en el MVP (limitación declarada)."
+  },
+  {
+    "id": "inicio-de-sesion",
+    "area": "acceso",
+    "title": "El socio inicia sesión y la sesión persiste",
+    "user_visible_behavior": "El socio entra con email y contraseña, recibe un token que la app guarda en almacenamiento seguro del dispositivo y sigue con sesión abierta tras reiniciar la app; las llamadas a la API van autenticadas.",
+    "depends_on": ["registro-cuenta-socio"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Iniciar sesión y comprobar que el panel accesible exige token válido",
+      "Cerrar y reabrir la app comprobando que la sesión sigue abierta (token en almacenamiento seguro)"
+    ],
+    "evidence": [],
+    "notes": "JWT con caducidad. Token en EncryptedSharedPreferences/Keystore (ver docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "cierre-de-sesion",
+    "area": "acceso",
+    "title": "El socio cierra sesión",
+    "user_visible_behavior": "El socio pulsa cerrar sesión, el token se borra del dispositivo y la app vuelve a la pantalla de acceso; las pantallas dejan de ser accesibles sin entrar de nuevo.",
+    "depends_on": ["inicio-de-sesion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Cerrar sesión y comprobar que no queda token en el dispositivo y que se requiere login de nuevo"
+    ],
+    "evidence": [],
+    "notes": "Escenario pequeño y acotado; no confundir con baja de cuenta (fuera del MVP)."
+  },
+  {
+    "id": "panel-campana-actual",
+    "area": "campanas",
+    "title": "El panel muestra la campaña actual con los datos oficiales",
+    "user_visible_behavior": "Tras entrar, el socio ve la campaña actual (año agrícola) con sus datos oficiales de cooperativa: kilos entregados, rendimiento graso y aceite obtenido; además ve el acceso al cuaderno y al simulador.",
+    "depends_on": ["inicio-de-sesion", "datos-sembrados-cooperativa"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Entrar como socio y comprobar que el panel muestra la campaña actual con los tres datos oficiales sembrados, separados de las labores"
+    ],
+    "evidence": [],
+    "notes": "Pantalla de aterrizaje (ver CONTEXT.md: 'Panel'). Decidir cómo se determina la campaña actual (docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "consulta-campanas-anteriores",
+    "area": "campanas",
+    "title": "El socio abre una campaña anterior desde el panel",
+    "user_visible_behavior": "Desde el panel, el socio elige una campaña cerrada y ve sus datos oficiales de cooperativa y sus labores de 'Mi cuaderno' por separado, en modo solo consulta.",
+    "depends_on": ["panel-campana-actual"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Abrir una campaña anterior y comprobar que muestra datos oficiales y labores por separado y que no admite nuevas labores"
+    ],
+    "evidence": [],
+    "notes": "Estado 'cerrada' de Campaña en docs/domain-model.md: solo consulta."
+  },
+  {
+    "id": "alta-de-parcela",
+    "area": "cuaderno",
+    "title": "El socio crea una parcela con nombre propio",
+    "user_visible_behavior": "El socio crea una parcela manualmente (nombre) y la ve en su lista de parcelas para poder asignarle labores.",
+    "depends_on": ["inicio-de-sesion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Crear una parcela y comprobar que aparece en la lista del socio y no en la de otro socio"
+    ],
+    "evidence": [],
+    "notes": "Las parcelas no se eliminan ni archivan en el MVP (docs/domain-model.md)."
+  },
+  {
+    "id": "alta-manual-labor",
+    "area": "cuaderno",
+    "title": "El socio crea una labor con el formulario manual",
+    "user_visible_behavior": "Con el formulario manual, el socio registra una labor (fecha, parcela, categoría y campos de la categoría) en la campaña que corresponde a la fecha, y la labor aparece en 'Mi cuaderno'.",
+    "depends_on": ["alta-de-parcela"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Crear una labor de cada categoría (tratamiento fitosanitario, riego, cosecha) y comprobar que sus campos por categoría quedan guardados y listados en la campaña correcta"
+    ],
+    "evidence": [],
+    "notes": "Campos por categoría (ADR 0005): tratamiento (producto, plaga a controlar, cantidad + unidad), riego (cantidad en horas o volumen), cosecha (modalidad a vuelo / a suelo, kilos); toda labor admite observaciones opcionales. Listas cerradas para plaga, unidades y modalidad."
+  },
+  {
+    "id": "consulta-cuaderno-por-campana",
+    "area": "cuaderno",
+    "title": "'Mi cuaderno' lista las labores por campaña en orden cronológico",
+    "user_visible_behavior": "El socio ve 'Mi cuaderno' como historial cronológico de sus labores agrupado por campaña, con los campos tipo SIEX de cada una legibles de un vistazo.",
+    "depends_on": ["alta-manual-labor"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Con varias labores en dos campañas, comprobar el orden cronológico y la agrupación por campaña en 'Mi cuaderno'"
+    ],
+    "evidence": [],
+    "notes": "Solo labores vigentes (sin papelera, ver ciclo de vida de Labor en docs/domain-model.md)."
+  },
+  {
+    "id": "edicion-de-labor",
+    "area": "cuaderno",
+    "title": "El socio corrige cualquier campo de una labor",
+    "user_visible_behavior": "Desde el formulario auxiliar, el socio edita cualquier campo de una labor existente y los cambios se reflejan en 'Mi cuaderno'.",
+    "depends_on": ["alta-manual-labor"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Editar campos de una labor (incluido moverla de fecha o de parcela) y comprobar el cambio en el listado"
+    ],
+    "evidence": [],
+    "notes": "Escenario 'Corrección manual' de docs/domain-model.md."
+  },
+  {
+    "id": "eliminacion-de-labor",
+    "area": "cuaderno",
+    "title": "El socio elimina una labor",
+    "user_visible_behavior": "El socio elimina una labor y desaparece de 'Mi cuaderno'; es borrado directo, sin papelera.",
+    "depends_on": ["alta-manual-labor"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Eliminar una labor y comprobar que ya no aparece en el cuaderno ni en la campaña"
+    ],
+    "evidence": [],
+    "notes": "Borrado directo en el MVP (docs/domain-model.md)."
+  },
+  {
+    "id": "aislamiento-de-datos-por-socio",
+    "area": "acceso",
+    "title": "Un socio nunca ve datos de otro socio",
+    "user_visible_behavior": "Con dos cuentas de socio con datos propias, cada una solo ve sus parcelas, labores y datos oficiales de campaña; las consultas a la API del otro socio fallan o devuelven vacío.",
+    "depends_on": ["registro-cuenta-socio", "alta-manual-labor"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Con dos socios con datos, comprobar en app y en API que cada uno solo accede a los suyos (incluidos los datos oficiales de campaña)"
+    ],
+    "evidence": [],
+    "notes": "Requisito del build brief: cada socio ve y edita solo sus propios datos. Todas las consultas filtradas por el socio autenticado (docs/technical-discovery.md)."
+  },
+  {
+    "id": "grabacion-de-nota-voz",
+    "area": "voz",
+    "title": "El socio dicta una nota de voz con el botón de micrófono",
+    "user_visible_behavior": "Con el botón grande de micrófono del panel, el socio graba una nota de voz corta (audio en el dispositivo) y la grabación queda registrada como nota de voz con estado visible.",
+    "depends_on": ["inicio-de-sesion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Conceder el permiso de micrófono y grabar una nota corta en el dispositivo, comprobando que el audio queda asociado a la nota de voz"
+    ],
+    "evidence": [],
+    "notes": "Riesgo de permisos y fabricantes Android: probar en el móvil real pronto. Definir límite de duración y formato de audio (docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "cola-offline-de-notas",
+    "area": "voz",
+    "title": "Sin cobertura la nota de voz queda pendiente y en cola",
+    "user_visible_behavior": "Al dictar sin conexión, la nota se guarda localmente (Room) en estado 'pendiente' con un aviso visible en la app; no se pierde el audio ni el registro.",
+    "depends_on": ["grabacion-de-nota-voz"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Grabar en modo avión y comprobar que la nota aparece como pendiente con aviso y que sobrevive a cerrar la app"
+    ],
+    "evidence": [],
+    "notes": "La ausencia de cobertura es un caso de primera clase (docs/build-brief.md). Estados de la cola visibles en la UI (docs/technical-discovery.md)."
+  },
+  {
+    "id": "transcripcion-de-nota-voz",
+    "area": "voz",
+    "title": "El backend transcribe la nota de voz al español",
+    "user_visible_behavior": "Una nota de voz enviada al backend se transcribe vía el gateway de inferencia y la nota pasa a estado 'transcrita' con el texto visible para el socio.",
+    "depends_on": ["grabacion-de-nota-voz", "bootstrap-backend"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Enviar una nota de voz real en español grabada desde Android y comprobar que devuelve la transcripción y que el audio se borra del servidor tras transcribir"
+    ],
+    "evidence": [],
+    "notes": "Bloqueante: confirmar en inference.devexpert.io el endpoint exacto de audio y modelo, y validar formato/latencia/coste (docs/risks-and-open-questions.md). Clave DEVEXPERT_API_KEY solo en servidor."
+  },
+  {
+    "id": "reintento-de-transcripcion-fallida",
+    "area": "voz",
+    "title": "Un fallo de transcripción deja error visible y se puede reintentar",
+    "user_visible_behavior": "Si la transcripción falla, la nota permanece pendiente con un error claro en la UI y el socio puede reintentar; si el audio es demasiado corto o ilegible se le pide repetir el dictado.",
+    "depends_on": ["transcripcion-de-nota-voz"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Simular un fallo del endpoint de transcripción y comprobar el error visible y que el reintento completa la nota"
+    ],
+    "evidence": [],
+    "notes": "Ciclo de vida de Nota de voz en docs/domain-model.md y caso borde 'audio demasiado corto o ilegible'."
+  },
+  {
+    "id": "sincronizacion-pendientes-al-reconectar",
+    "area": "voz",
+    "title": "Al volver la cobertura se transcriben las notas pendientes en orden",
+    "user_visible_behavior": "Al recuperar conexión, las notas pendientes se envían a transcribir automáticamente en orden de grabación y sus estados cambian en la UI sin intervención del socio.",
+    "depends_on": ["cola-offline-de-notas", "transcripcion-de-nota-voz"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Con dos notas pendientes, restaurar la conexión y comprobar que se transcriben en orden de grabación y sin duplicados"
+    ],
+    "evidence": [],
+    "notes": "Idempotencia básica al confirmar para evitar duplicados al reconectar (docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "borrador-ia-desde-transcripcion",
+    "area": "voz",
+    "title": "El borrador IA propone una ficha estructurada a partir de la transcripción",
+    "user_visible_behavior": "A partir de la transcripción, el backend extrae con el LLM un JSON {fecha, parcela, categoría, campos de la categoría} y el socio ve el borrador IA en estado 'transcrita' esperando su confirmación.",
+    "depends_on": ["transcripcion-de-nota-voz", "alta-de-parcela"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Con un dictado del set de frases de prueba, comprobar que el borrador IA muestra fecha, parcela, categoría y campos de la categoría correctos",
+      "Cuando la IA no reconoce la categoría, comprobar que aparece un mensaje claro de rechazo"
+    ],
+    "evidence": [],
+    "notes": "Extracción con salida JSON forzada apoyándose en las parcelas del socio (docs/technical-discovery.md). Preparar el set de 10-20 frases de prueba (docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "completar-borrador-por-preguntas",
+    "area": "voz",
+    "title": "El asistente pregunta por los campos que faltan del borrador",
+    "user_visible_behavior": "Cuando el dictado no trae todos los campos obligatorios, el asistente pregunta por ellos de forma natural, el socio responde por voz y la ficha del borrador IA se completa con cada respuesta hasta poder confirmar.",
+    "depends_on": ["borrador-ia-desde-transcripcion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Dictar una labor sin producto ni cantidad y comprobar que el asistente pregunta por los campos faltantes y que las respuestas por voz completan el borrador",
+      "Comprobar que mientras falte un campo obligatorio el borrador no se puede confirmar"
+    ],
+    "evidence": [],
+    "notes": "Flujo conversacional acordado en ADR 0005: extraer lo dictado, preguntar lo que falte y confirmar. El alias `chat` genera las preguntas (ADR 0004). Tono natural, una pregunta por respuesta, pensado para perfil sénior."
+  },
+  {
+    "id": "confirmacion-de-borrador",
+    "area": "voz",
+    "title": "El socio confirma el borrador IA y queda la labor en el cuaderno",
+    "user_visible_behavior": "Con un toque, el socio confirma el borrador IA, la nota pasa a 'confirmada' y la labor aparece en 'Mi cuaderno' en la campaña correspondiente, sin duplicados aunque se confirma dos veces.",
+    "depends_on": ["borrador-ia-desde-transcripcion", "alta-manual-labor"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Confirmar un borrador y comprobar la labor en el cuaderno y el estado 'confirmada' de la nota",
+      "Repetir la confirmación y comprobar que no se crea una segunda labor"
+    ],
+    "evidence": [],
+    "notes": "Una Nota de voz produce como mucho una Labor (docs/domain-model.md). Idempotencia al confirmar."
+  },
+  {
+    "id": "descarte-de-borrador",
+    "area": "voz",
+    "title": "El socio descarta un borrador IA",
+    "user_visible_behavior": "El socio rechaza un borrador IA, la nota pasa a 'descartada' y no se crea ninguna labor.",
+    "depends_on": ["borrador-ia-desde-transcripcion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Descartar un borrador y comprobar que la nota queda 'descartada' y que no hay labor nueva en el cuaderno"
+    ],
+    "evidence": [],
+    "notes": "Estados de Nota de voz en docs/domain-model.md."
+  },
+  {
+    "id": "borrador-sin-parcela",
+    "area": "voz",
+    "title": "El borrador sin parcela reconocida obliga a elegirla antes de confirmar",
+    "user_visible_behavior": "Cuando la IA no identifica la parcela, el borrador deja la parcela vacía y el socio debe elegirla de su lista antes de poder confirmar.",
+    "depends_on": ["borrador-ia-desde-transcripcion", "alta-de-parcela"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Dictar una labor con una parcela no reconocible y comprobar que el borrador pide elegir parcela y que sin parcela no se puede confirmar"
+    ],
+    "evidence": [],
+    "notes": "Caso borde de docs/domain-model.md."
+  },
+  {
+    "id": "fecha-relativa-en-borrador",
+    "area": "voz",
+    "title": "El borrador resuelve fechas relativas a una fecha concreta",
+    "user_visible_behavior": "Cuando el dictado lleva fechas relativas ('hoy', 'ayer'), el borrador muestra una fecha concreta editable antes de confirmar; si la fecha pertenece a otra campaña, el borrador propone esa campaña para que el socio la confirme.",
+    "depends_on": ["borrador-ia-desde-transcripcion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Dictar con 'hoy' y 'ayer' y comprobar la fecha concreta resuelta en el borrador",
+      "Dictar una fecha de campaña anterior y comprobar que el borrador propone esa campaña"
+    ],
+    "evidence": [],
+    "notes": "Casos borde de docs/domain-model.md. Comportamiento con fecha ambigua por decidir (docs/risks-and-open-questions.md)."
+  },
+  {
+    "id": "calculo-de-liquidacion-en-limpio",
+    "area": "simulador",
+    "title": "El simulador calcula la liquidación en limpio",
+    "user_visible_behavior": "El socio introduce kilos de aceituna y rendimiento graso y ve el aceite neto estimado (kilos × rendimiento − ajuste industrial), claramente etiquetado como estimación orientativa.",
+    "depends_on": ["inicio-de-sesion"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Simular con valores conocidos (p. ej. 1000 kg al 20 % con ajuste 5 %) y comprobar el resultado verificado a mano"
+    ],
+    "evidence": [],
+    "notes": "La simulación no se persiste ni compite con las cifras oficiales de la cooperativa (CONTEXT.md). Usar 'liquidación en limpio', nunca 'liquidación' a secas. Con el ajuste industrial por defecto (10 %, ADR 0007), el resultado cuadra con el aceite industrial real de la cooperativa."
+  },
+  {
+    "id": "ajuste-industrial-configurable",
+    "area": "simulador",
+    "title": "El socio configura el porcentaje de ajuste industrial",
+    "user_visible_behavior": "En el simulador, el socio puede cambiar el porcentaje de ajuste industrial (con un valor por defecto razonable) y el aceite neto se recalcula al instante con su valor.",
+    "depends_on": ["calculo-de-liquidacion-en-limpio"],
+    "status": "not_started",
+    "verification": [
+      "./init.sh",
+      "Cambiar el ajuste industrial y comprobar que el aceite neto se recalcula con la única deducción del MVP"
+    ],
+    "evidence": [],
+    "notes": "Única deducción del MVP (CONTEXT.md). Valor por defecto 10 % y editable según ADR 0007: replica la merma real medida entre rendimiento de laboratorio e industrial (9,7 %) en la cooperativa de la referencia de producto."
+  }
+]

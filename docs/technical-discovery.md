@@ -21,9 +21,9 @@
 - Audio: se graba en el dispositivo y se envía al backend solo para transcribir. Stance mínima: borrar el audio del servidor tras transcribir; en cola offline vive en el dispositivo.
 
 ## Integrations
-- Gateway de inferencia compatible con OpenAI (`inference.devexpert.io`, clave `DEVEXPERT_API_KEY` solo en servidor):
-  - **Transcripción:** audio grabado en Android (p. ej. m4a/opus) → texto en español.
-  - **Extracción:** modelo de texto con salida JSON forzada (fecha, parcela, categoría, campos de la categoría), apoyándose en la lista de parcelas conocidas del socio para desambiguar.
+- Gateway de inferencia compatible con OpenAI (`inference.devexpert.io`, clave `DEVEXPERT_API_KEY` solo en servidor; ver ADR 0004 para la elección de aliases):
+  - **Transcripción:** audio grabado en Android (formato a confirmar en validación, candidato `m4a`) → texto en español, alias `transcribe` (`/audio/transcriptions`).
+  - **Extracción:** alias `chat` (`/chat/completions`) con salida JSON forzada (fecha, parcela, categoría, campos de la categoría), apoyándose en la lista de parcelas conocidas del socio para desambiguar; `chat-pro` como escalón de calidad solo para extracción.
 - Sin más integraciones externas en el MVP (SIEX es solo estructura de campos; la cooperativa no se integra, sus datos se siembran).
 
 ## Authentication and Authorization

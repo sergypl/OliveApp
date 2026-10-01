@@ -1,21 +1,25 @@
 # Risks and Open Questions — OlivApp
 
 ## Blocking Next Phase
-- Confirmar en el gateway (`inference.devexpert.io`) el endpoint exacto de transcripción de audio y el modelo de texto a usar, y validar con una nota de voz real en español grabada desde Android (formato, latencia, coste).
-- Definir la lista concreta de campos SIEX por categoría (tratamiento / riego / cosecha) con una fuente: especificación oficial o mínimo razonable documentado.
-- Definir el formato de los datos de campaña sembrados (kilos entregados, rendimiento graso, aceite obtenido) y de dónde salen los valores de la demo.
-- Decidir dónde se despliega el backend (requisito: HTTPS + variables de entorno) y cómo se instala el APK en el dispositivo de demo.
+Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/0003-backend-paas-gratuito-y-apk-por-archivo.md) a [ADR 0006](adr/0006-datos-sembrados-de-campana.md). El proyecto puede entrar en bootstrap técnico e implementación.
+
+## Decided
+- Despliegue del backend e instalación del APK: resuelto en [ADR 0003](adr/0003-backend-paas-gratuito-y-apk-por-archivo.md). Backend en PaaS gratuito con HTTPS y secretos en variables de entorno (plan B: local + túnel `cloudflared`/`ngrok`); APK release firmado distribuido por archivo en la demo (plan B y desarrollo: `adb install`). La forma concreta de levantar el backend puede revisarse sin cambiar esta decisión. Pendiente de verificar al elegir proveedor: cuota y tiempo de sleep/cold start del free tier.
+- Endpoint de audio y modelo de texto del gateway: resuelto en [ADR 0004](adr/0004-transcripcion-y-extraccion-via-gateway.md). Transcripción con alias `transcribe` y extracción con alias `chat` (salida JSON forzada), subiendo a `chat-pro` solo para extracción si falla el set de frases de prueba. Pendiente de validación empírica (ver Research Tasks).
+- Campos SIEX por categoría de labor: resuelto en [ADR 0005](adr/0005-campos-por-categoria-alineados-siex.md). Modelo híbrido (núcleo por categoría + plaga a controlar en tratamiento + observaciones opcionales), listas cerradas donde sea posible y relleno conversacional del borrador IA, contrastado con fuentes oficiales (FEGA y Manual CUE SIEX).
+- Datos de campaña sembrados: resuelto en [ADR 0006](adr/0006-datos-sembrados-de-campana.md). Fichero de seed versionado (JSON) + script de carga, 4 campañas (actual 2025/2026 con datos completos), 2 socios con parcelas, valores calibrados con datos reales y regla de coherencia `aceite = round(kilos × rendimiento graso)`.
+- Distinción laboratorio/industrial y ajuste industrial: resueltos en [ADR 0007](adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md). Rendimiento graso = laboratorio, aceite obtenido = industrial, merma industrial del 9,7 % en el dataset (regla de coherencia en dos etapas) y ajuste industrial del simulador por defecto 10 % (medido en la cooperativa real de la [referencia de producto](referencia-sb-portal-socios.md)). El socio 1 de la campaña 2025/2026 usa datos reales anonimizados.
 
 ## Implementation-Time Questions
 - Modelo de campaña: ¿el año agrícola se introduce a mano, se deriva de la fecha de la labor o se hereda de la campaña activa?
 - ¿Cómo se determina la "campaña actual" (fecha del sistema, campaña marcada como abierta en el backend)?
-- Valor por defecto y editabilidad del ajuste industrial (p. ej. 5 %).
+- Valor por defecto y editabilidad del ajuste industrial: resueltos en [ADR 0007](adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md) (por defecto 10 %, editable).
 - Límite de duración de una nota de voz y formato de audio nativo.
 - Resolución de fechas relativas ("ayer") y comportamiento cuando la fecha quede ambigua.
 - Política mínima de contraseñas (sin reset por email en el MVP: limitación documentada).
 - Almacenamiento seguro del token en Android (EncryptedSharedPreferences/Keystore).
 - Prefill del simulador con los kilos de la campaña o con los kilos entregados a la cooperativa (opcional; solo si es barato).
-- Elección de backend, base de datos y hosting.
+- Elección concreta de backend y base de datos dentro del PaaS elegido (ver ADR 0003).
 
 ## Later / Not MVP
 - Administración por parte de la cooperativa (rol y pantallas propios) e importación real de sus datos.
@@ -42,7 +46,6 @@
 - Alcance académico: la app no estará validada con usuarios reales en el MVP (aceptado y declarado); el replanteo a nativa + campañas amplía el alcance frente al plan inicial.
 
 ## Research Tasks
-- Probar el endpoint de audio del gateway con una nota de voz real en español grabada en Android (formato, latencia, coste).
-- Buscar la estructura de campos del SIEX / cuaderno digital por categoría de labor.
-- Definir un juego realista de campañas y datos oficiales sembrados para la demo.
-- Preparar el set de 10-20 frases de prueba para la demo (productos, unidades, "a vuelo", "a suelo").
+- Validar el pipeline de voz según ADR 0004: nota de voz real en español grabada en Android → alias `transcribe` → alias `chat`, verificando formato de audio aceptado, latencia, coste y soporte de JSON forzado (`response_format`).
+- Preparar el set de 10-20 frases de prueba para la demo (productos, unidades, "a vuelo", "a suelo", plaga a controlar).
+- (Opcional) Ampliar los datos reales anonimizados del seed con más campañas del socio real (ADR 0007 ya incorporó la 2025/2026).

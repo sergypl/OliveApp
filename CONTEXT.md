@@ -26,7 +26,7 @@ Datos oficiales que la cooperativa registra para el socio en una campaña: kilos
 Aceituna que el socio lleva a la cooperativa durante una campaña.
 
 ### Aceite obtenido
-Aceite resultante de molturar los kilos entregados en una campaña. Cifra oficial de la cooperativa.
+Aceite resultante de molturar los kilos entregados en una campaña. Cifra oficial de la cooperativa: el **aceite industrial**, es decir, el efectivo tras la merma del proceso. Por eso no cuadra con kilos × rendimiento graso (que es el de laboratorio): la diferencia es la merma industrial.
 
 ### Panel
 Pantalla de aterrizaje tras el inicio de sesión. Muestra la campaña actual, da acceso a las campañas anteriores y a los dos módulos: cuaderno de campo y simulador.
@@ -47,13 +47,19 @@ Unidad de terreno de olivar con nombre propio. La crea manualmente el socio en e
 Tarea realizada en una parcela en una fecha. Categorías del MVP: tratamiento fitosanitario, riego y cosecha.
 
 ### Tratamiento fitosanitario
-Labor de aplicación de un producto fitosanitario: fecha, parcela, producto y cantidad (con unidad).
+Labor de aplicación de un producto fitosanitario: fecha, parcela, producto, plaga a controlar y cantidad (con unidad).
 
 ### Riego
 Labor de riego: fecha, parcela y cantidad (horas o volumen, según dicte el socio).
 
 ### Cosecha
 Labor de recolección: fecha, parcela, modalidad (a vuelo o a suelo) y kilos de aceituna. No se confunde con la campaña ni con los kilos entregados a la cooperativa.
+
+### Plaga a controlar
+Plaga, enfermedad o malas hierbas que justifican un tratamiento fitosanitario (en olivar: mosca del olivo, repilo, prays, tuberculosis, cochinilla, malas hierbas u otra). Campo con lista cerrada.
+
+### Observaciones
+Campo libre opcional de toda labor para valoración del tratamiento u otros detalles que no encajan en los campos de su categoría.
 
 ### Cosecha a vuelo
 Aceituna recolectada directamente del árbol.
@@ -68,10 +74,10 @@ Grabación corta dictada por el socio para registrar una labor. Estados: pendien
 Ficha propuesta por el módulo de IA a partir de la transcripción: fecha, parcela, categoría de tarea y campos de la categoría. Requiere confirmación del socio antes de convertirse en labor.
 
 ### Rendimiento graso
-Porcentaje de aceite obtenible por peso de aceituna (típicamente entre el 18 % y el 25 %). Entrada principal del simulador y, además, dato oficial de campaña que registra la cooperativa.
+Porcentaje de aceite obtenible por peso de aceituna (típicamente entre el 18 % y el 25 %). Entrada principal del simulador y, además, dato oficial de campaña que registra la cooperativa. En los datos oficiales se usa el **rendimiento de laboratorio**, el que el socio conoce del análisis de la muestra.
 
 ### Ajuste industrial
-Porcentaje configurable que se resta del aceite estimado para simular mermas del proceso de la almazara. Es la única deducción del MVP.
+Porcentaje configurable que se resta del aceite estimado para simular las mermas del proceso de la almazara. Es la única deducción del MVP y replica la merma real entre el rendimiento de laboratorio y el industrial (p. ej. 10 %).
 
 ### Liquidación en limpio
 Resultado del simulador: aceite neto estimado tras aplicar el ajuste industrial. Es una estimación orientativa, no el documento de liquidación real de una cooperativa.
