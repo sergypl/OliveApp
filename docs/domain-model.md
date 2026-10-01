@@ -11,10 +11,11 @@
 - **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación.
 - **Simulación:** cálculo bajo demanda de liquidación en limpio (kilos × rendimiento graso − ajuste industrial). No se persiste como entidad en el MVP ni se compara con el dato oficial.
 
-Campos por categoría de labor:
-- Tratamiento fitosanitario: producto, cantidad + unidad.
+Campos por categoría de labor (alineados con SIEX según ADR 0005):
+- Tratamiento fitosanitario: producto, plaga a controlar, cantidad + unidad.
 - Riego: cantidad (horas o volumen).
 - Cosecha: modalidad (a vuelo / a suelo), kilos.
+- Toda labor: observaciones (opcional).
 
 ## Relationships
 - Una Cooperativa agrupa N socios (Agricultores) y N Campañas.
@@ -46,6 +47,7 @@ Campos por categoría de labor:
 3. **Dictado sin cobertura:** la nota queda pendiente con aviso visible; al reconectar se transcribe y se pide confirmación.
 4. **Corrección manual:** el socio edita cualquier campo de una labor desde el formulario auxiliar.
 5. **Simulación:** introduce kilos y rendimiento graso y ve el aceite neto con el ajuste industrial aplicado.
+6. **Relleno conversacional del borrador:** el dictado no trae todos los campos, el asistente pregunta por los que faltan y el socio responde por voz hasta completar la ficha; entonces confirma.
 
 ## Edge Cases
 - La IA no identifica la parcela: el borrador deja la parcela vacía y pide elegirla de la lista antes de confirmar.
