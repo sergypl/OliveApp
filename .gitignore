@@ -7,3 +7,7 @@ node_modules/
 .venv/
 __pycache__/
 .pytest_cache/
+build/
+.gradle/
+android/local.properties
+.idea/

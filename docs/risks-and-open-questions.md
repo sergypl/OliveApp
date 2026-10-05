@@ -36,7 +36,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 - El vocabulario del dominio fue confirmado con el usuario (ver `CONTEXT.md`).
 
 ## Risks
-- **Salto a app nativa:** build, firma, Gradle y dispositivo real añaden fricción frente a la web del plan anterior; mitigar fijando un único dispositivo objetivo y un APK de desarrollo cuanto antes.
+- **Salto a app nativa:** build, firma, Gradle y dispositivo real añaden fricción frente a la web del plan anterior; mitigar fijando un único dispositivo objetivo y un APK de desarrollo cuanto antes. **Mitigado parcialmente (2026-10-05):** el APK de desarrollo ya compila, se instala y se abre (verificado en un emulador Android 14); queda fijar el móvil físico definitivo como dispositivo de la demo y verificar la firma del APK release.
 - Precisión de transcripción/extracción con acentos y vocabulario local: mitigada por el ciclo "IA propone, socio confirma" y el set de frases de prueba.
 - Dependencia del micrófono y permisos en Android (versiones de SO, fabricantes): probar en el móvil real de la demo cuanto antes.
 - Datos de cooperativa sembrados que no cuadren con la realidad: mitigado declarándolos como datos de demo y de solo lectura.
