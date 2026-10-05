@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "declaracion": "Datos de demostración según ADR 0006 y ADR 0007. La fila 2025/2026 del socio-001 usa magnitudes reales anonimizadas (5 vales, 10.958 kg); el resto está calibrado con fuentes públicas. No representan a ninguna cooperativa real.",
+  "merma_industrial": 0.097,
+  "cooperativa": {
+    "id": "coop-demo",
+    "nombre": "Cooperativa de demostración"
+  },
+  "campanas": [
+    { "id": "2022-2023", "nombre": "2022/2023", "actual": false },
+    { "id": "2023-2024", "nombre": "2023/2024", "actual": false },
+    { "id": "2024-2025", "nombre": "2024/2025", "actual": false },
+    { "id": "2025-2026", "nombre": "2025/2026", "actual": true }
+  ],
+  "socios": [
+    {
+      "id": "socio-001",
+      "codigo": "Socio 1",
+      "parcelas": ["El Encinar", "Los Llanos", "Cañada Honda", "La Umbría"]
+    },
+    {
+      "id": "socio-002",
+      "codigo": "Socio 2",
+      "parcelas": ["El Romeral", "Fuente Vieja", "Los Olivares"]
+    }
+  ],
+  "datos_oficiales": [
+    { "socio_id": "socio-001", "campana_id": "2022-2023", "kilos_entregados": 2650, "rendimiento_graso": 15.4, "aceite_obtenido": 369 },
+    { "socio_id": "socio-001", "campana_id": "2023-2024", "kilos_entregados": 4100, "rendimiento_graso": 18.2, "aceite_obtenido": 674 },
+    { "socio_id": "socio-001", "campana_id": "2024-2025", "kilos_entregados": 6200, "rendimiento_graso": 21.4, "aceite_obtenido": 1198 },
+    { "socio_id": "socio-001", "campana_id": "2025-2026", "kilos_entregados": 10958, "rendimiento_graso": 17.93, "aceite_obtenido": 1774 },
+    { "socio_id": "socio-002", "campana_id": "2022-2023", "kilos_entregados": 1200, "rendimiento_graso": 16.0, "aceite_obtenido": 173 },
+    { "socio_id": "socio-002", "campana_id": "2023-2024", "kilos_entregados": 1850, "rendimiento_graso": 18.8, "aceite_obtenido": 314 },
+    { "socio_id": "socio-002", "campana_id": "2024-2025", "kilos_entregados": 2750, "rendimiento_graso": 20.6, "aceite_obtenido": 512 },
+    { "socio_id": "socio-002", "campana_id": "2025-2026", "kilos_entregados": 2100, "rendimiento_graso": 19.2, "aceite_obtenido": 364 }
+  ]
+}

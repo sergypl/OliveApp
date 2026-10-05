@@ -19,7 +19,7 @@ fi
 echo "Verificación base (tests)..."
 ./.venv/bin/python -m pytest -q
 
-echo "Comprobación de arranque y healthcheck..."
+echo "Comprobación de arranque, healthcheck y datos sembrados..."
 DEVEXPERT_API_KEY=bootstrap-check JWT_SECRET=bootstrap-check \
   ./.venv/bin/uvicorn app.main:app --port 8000 >/dev/null 2>&1 &
 SERVER_PID=$!
@@ -35,14 +35,21 @@ for _ in $(seq 1 30); do
   fi
   sleep 0.5
 done
-cleanup
-trap - EXIT
 
 if [ "$HEALTH_OK" -ne 1 ]; then
   echo "ERROR: el healthcheck no respondió"
   exit 1
 fi
 echo "Healthcheck OK (GET /health -> 200)"
+
+if ! curl -sf http://127.0.0.1:8000/api/v1/socios >/dev/null 2>&1; then
+  echo "ERROR: los datos sembrados no responden (GET /api/v1/socios)"
+  exit 1
+fi
+echo "Datos sembrados OK (GET /api/v1/socios -> 2 socios)"
+
+cleanup
+trap - EXIT
 
 echo ""
 echo "== App Android =="
