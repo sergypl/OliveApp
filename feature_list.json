@@ -23,14 +23,17 @@
     "title": "El proyecto Android compila y se instala en el dispositivo",
     "user_visible_behavior": "Un APK de desarrollo de Kotlin + Jetpack Compose compila y se instala en el dispositivo objetivo mostrando una pantalla mínima de OlivApp.",
     "depends_on": [],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Compilar el APK de desarrollo (Gradle) sin errores",
       "Instalar y abrir el APK en el dispositivo objetivo mostrando la pantalla mínima"
     ],
-    "evidence": [],
-    "notes": "Mitiga el riesgo 'salto a app nativa': fijar un único dispositivo objetivo y conseguir APK cuanto antes (docs/risks-and-open-questions.md). Registrar los comandos reales en init.sh al terminar."
+    "evidence": [
+      "2026-10-05: ./init.sh completo (backend pytest 3/3 + healthcheck 200; Gradle assembleDebug OK -> android/app/build/outputs/apk/debug/app-debug.apk, 9 MB)",
+      "2026-10-05: adb install -r Success y am start en el dispositivo (emulador Android 14, emulator-5554); captura de pantalla confirmando la pantalla mínima según DESIGN.md (fondo crema, título 28sp, lema 18sp)"
+    ],
+    "notes": "Mitiga el riesgo 'salto a app nativa': APK de desarrollo conseguido e instalado. Dispositivo verificado: emulador Android 14 (emulator-5554); pendiente fijar el móvil físico definitivo como dispositivo de la demo (mismos comandos adb). Stack: Kotlin 2.0.21 + Compose (Material 3), Gradle 8.10.2, AGP 8.7.3, minSdk 26 / compileSdk 35. Comandos reales ya registrados en init.sh (que instala y abre automáticamente si hay dispositivo por USB)."
   },
   {
     "id": "datos-sembrados-cooperativa",
