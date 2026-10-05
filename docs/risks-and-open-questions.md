@@ -19,7 +19,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 - Política mínima de contraseñas (sin reset por email en el MVP: limitación documentada).
 - Almacenamiento seguro del token en Android (EncryptedSharedPreferences/Keystore).
 - Prefill del simulador con los kilos de la campaña o con los kilos entregados a la cooperativa (opcional; solo si es barato).
-- Elección concreta de backend y base de datos dentro del PaaS elegido (ver ADR 0003).
+- Elección concreta de base de datos dentro del PaaS elegido (ver ADR 0003). El backend ya está elegido: FastAPI/Python (feature `bootstrap-backend`).
 
 ## Later / Not MVP
 - Administración por parte de la cooperativa (rol y pantallas propios) e importación real de sus datos.

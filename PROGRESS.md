@@ -4,10 +4,10 @@
 
 - Raíz del repositorio: `/Users/<usuario>/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
-- Camino estándar de verificación: provisional — aún no hay bootstrap (pendiente tras elegir la primera feature)
-- Siguiente feature lista actual: `bootstrap-backend`
+- Camino estándar de verificación: `./init.sh` (instala dependencias del backend, ejecuta pytest y comprueba el healthcheck real)
+- Siguiente feature lista actual: `bootstrap-android`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-01 (validación de JSON de `feature_list.json`, no del producto)
+- Última verificación: 2026-10-01 (`./init.sh`: pytest 3/3 y healthcheck 200)
 
 ## Registro de sesiones
 
@@ -76,3 +76,14 @@
 - Ficheros o artefactos actualizados: `docs/referencia-sb-portal-socios.md`, `docs/adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md`, `docs/adr/0006-datos-sembrados-de-campana.md`, `CONTEXT.md`, `docs/risks-and-open-questions.md`, `feature_list.json`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: un observador puede notar que kilos × rendimiento no cuadra con el aceite mostrado (merma industrial); queda declarado en CONTEXT.md y ADR 0007. Pendiente la validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: bootstrap técnico (`bootstrap-backend` o `bootstrap-android`) según `feature_list.json`.
+
+### Sesión 007
+
+- Fecha: 2026-10-01
+- Objetivo: bootstrap técnico del backend (feature `bootstrap-backend`).
+- Completado: esqueleto del backend en `backend/` con FastAPI (Python 3.9 del sistema, código compatible 3.9): endpoint `GET /health` y validación estricta de `DEVEXPERT_API_KEY` y `JWT_SECRET` por variables de entorno (falla explícita si faltan); tests base; `init.sh` con los comandos reales de instalación, verificación y arranque.
+- Verificación ejecutada: `./init.sh` completo (instalación, pytest 3/3, healthcheck real 200) y arranque real sin variables obligatorias (RuntimeError con el nombre de las que faltan, exit 3).
+- Evidencia capturada: `feature_list.json` (`bootstrap-backend` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/` (requirements, app, tests), `init.sh`, `.gitignore`, `feature_list.json`, `docs/technical-discovery.md`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: base de datos sin elegir (SQLite para desarrollo vs PostgreSQL en el PaaS); pendiente la validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `bootstrap-android` (proyecto Kotlin + Compose que compila a APK y se instala en el móvil).
