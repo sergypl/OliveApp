@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Repositorio: $(pwd)"
-echo "Estado del harness: bootstrap del backend realizado; app Android pendiente (feature bootstrap-android)."
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
+
+echo "Repositorio: $ROOT"
+echo "Estado del harness: bootstrap del backend y de la app Android realizado."
 
 echo ""
-echo "Backend: instalando dependencias..."
-cd backend
+echo "== Backend =="
+echo "Instalando dependencias..."
+cd "$ROOT/backend"
 if [ ! -d .venv ]; then
   python3 -m venv .venv
 fi
 ./.venv/bin/pip install -q -r requirements.txt
 
-echo ""
-echo "Backend: verificación base (tests)..."
+echo "Verificación base (tests)..."
 ./.venv/bin/python -m pytest -q
 
-echo ""
-echo "Backend: comprobación de arranque y healthcheck..."
+echo "Comprobación de arranque y healthcheck..."
 DEVEXPERT_API_KEY=bootstrap-check JWT_SECRET=bootstrap-check \
   ./.venv/bin/uvicorn app.main:app --port 8000 >/dev/null 2>&1 &
 SERVER_PID=$!
+disown "$SERVER_PID" 2>/dev/null || true
 cleanup() { kill "$SERVER_PID" 2>/dev/null || true; }
 trap cleanup EXIT
 
@@ -42,8 +45,31 @@ fi
 echo "Healthcheck OK (GET /health -> 200)"
 
 echo ""
+echo "== App Android =="
+echo "Compilando APK de desarrollo..."
+cd "$ROOT/android"
+export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+./gradlew --console=plain -q assembleDebug
+APK="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+echo "APK compilado: $APK"
+
+if "$ADB" get-state >/dev/null 2>&1; then
+  echo "Instalando y abriendo en el dispositivo conectado..."
+  "$ADB" install -r "$APK"
+  "$ADB" shell am start -n com.olivapp.app/.MainActivity
+else
+  echo "Sin dispositivo por USB: salto la instalación."
+  echo "Para instalarlo: conecta el móvil (depuración USB activada) y ejecuta:"
+  echo "  $ADB install -r $APK"
+  echo "  $ADB shell am start -n com.olivapp.app/.MainActivity"
+fi
+
+echo ""
 echo "Comandos reales del backend:"
 echo "  - instalación: cd backend && python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt"
 echo "  - verificación: cd backend && ./.venv/bin/python -m pytest -q"
 echo "  - arranque: cd backend && DEVEXPERT_API_KEY=... JWT_SECRET=... ./.venv/bin/uvicorn app.main:app --reload"
-echo "Comandos de la app Android: pendientes tras la feature bootstrap-android."
+echo "Comandos reales de la app Android:"
+echo "  - compilación: cd android && ./gradlew assembleDebug (requiere ANDROID_HOME apuntando al SDK)"
+echo "  - instalación: \$ANDROID_HOME/platform-tools/adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
+echo "  - apertura: \$ANDROID_HOME/platform-tools/adb shell am start -n com.olivapp.app/.MainActivity"

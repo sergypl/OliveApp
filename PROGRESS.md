@@ -4,10 +4,10 @@
 
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
-- Camino estándar de verificación: `./init.sh` (instala dependencias del backend, ejecuta pytest y comprueba el healthcheck real)
-- Siguiente feature lista actual: `bootstrap-android`
+- Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
+- Siguiente feature lista actual: `datos-sembrados-cooperativa`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-01 (`./init.sh`: pytest 3/3 y healthcheck 200)
+- Última verificación: 2026-10-05 (`./init.sh` completo + APK instalado y abierto en el dispositivo, con captura de la pantalla mínima)
 
 ## Registro de sesiones
 
@@ -87,3 +87,14 @@
 - Ficheros o artefactos actualizados: `backend/` (requirements, app, tests), `init.sh`, `.gitignore`, `feature_list.json`, `docs/technical-discovery.md`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: base de datos sin elegir (SQLite para desarrollo vs PostgreSQL en el PaaS); pendiente la validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `bootstrap-android` (proyecto Kotlin + Compose que compila a APK y se instala en el móvil).
+
+### Sesión 008
+
+- Fecha: 2026-10-05
+- Objetivo: bootstrap técnico de la app Android (feature `bootstrap-android`).
+- Completado: proyecto Kotlin + Jetpack Compose (Material 3) en `android/` (Gradle 8.10.2, AGP 8.7.3, Kotlin 2.0.21, minSdk 26 / compileSdk 35) con pantalla mínima de bienvenida según `DESIGN.md` (paleta crema/oliva, título 28sp, cuerpo 18sp); wrapper de Gradle oficial; `init.sh` ampliado con los comandos reales de Android (compilación e instalación/apertura automática si hay dispositivo por USB).
+- Verificación ejecutada: `./init.sh` completo y limpio (pytest 3/3, healthcheck 200, `assembleDebug` OK → `app-debug.apk` 9 MB) y, en el dispositivo, `adb install -r` → Success y `am start` abriendo la app; captura de pantalla por `adb` confirmando la pantalla mínima.
+- Evidencia capturada: `feature_list.json` (`bootstrap-android` → `passing`, con evidencias) y captura revisada en sesión (no versionada: binario).
+- Ficheros o artefactos actualizados: `android/` (proyecto completo), `init.sh`, `.gitignore`, `feature_list.json`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: dispositivo verificado fue un **emulador Android 14** (`emulator-5554`), no el móvil físico del usuario: fijar el móvil definitivo de la demo (mismos comandos `adb`) y verificar la firma del APK release cuando toque la distribución; base de datos sin elegir; pendiente la validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `datos-sembrados-cooperativa` (sembrar el dataset de ADR 0006/0007 en el backend).
