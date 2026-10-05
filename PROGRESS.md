@@ -98,3 +98,14 @@
 - Ficheros o artefactos actualizados: `android/` (proyecto completo), `init.sh`, `.gitignore`, `feature_list.json`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: dispositivo verificado fue un **emulador Android 14** (`emulator-5554`), no el móvil físico del usuario: fijar el móvil definitivo de la demo (mismos comandos `adb`) y verificar la firma del APK release cuando toque la distribución; base de datos sin elegir; pendiente la validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `datos-sembrados-cooperativa` (sembrar el dataset de ADR 0006/0007 en el backend).
+
+### Sesión 009
+
+- Fecha: 2026-10-05
+- Objetivo: verificar que los PRs de los dos bootstraps quedaron bien fusionados en `main` y limpiar el repo.
+- Completado: `main` (`c879509`) contiene los PRs `#1` (backend) y `#2` (Android) con la historia intacta; verificación completa desde `main` con el camino estándar; ramas `feature/*` borradas (locales y de GitHub).
+- Verificación ejecutada: `./init.sh` desde `main` limpio → pytest 3/3, healthcheck 200, `assembleDebug` OK (9 MB) y `adb install` Success + apertura en el dispositivo conectado (emulador Android 14).
+- Evidencia capturada: salida de `./init.sh` en sesión; `feature_list.json` conserva las evidencias de las dos features (`passing`).
+- Ficheros o artefactos actualizados: `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: sin cambios respecto a la sesión 008 (móvil físico de la demo por fijar, firma del APK release pendiente, base de datos sin elegir, validación empírica del pipeline de voz pendiente).
+- Mejor siguiente paso: `datos-sembrados-cooperativa` (sembrar el dataset de ADR 0006/0007 en el backend).
