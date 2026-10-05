@@ -5,14 +5,17 @@
     "title": "El backend levanta con healthcheck y configuración por variables de entorno",
     "user_visible_behavior": "El servicio backend arranca en local y responde un healthcheck; la URL de la app puede apuntar a él y las claves (DEVEXPERT_API_KEY, secreto JWT) se leen solo de variables de entorno.",
     "depends_on": [],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Arrancar el backend y comprobar que el endpoint de healthcheck responde 200",
       "Comprobar que el arranque falla de forma explícita si falta una variable de entorno obligatoria"
     ],
-    "evidence": [],
-    "notes": "Primer bootstrap técnico. Stack abierto (Node/Express o FastAPI, ver docs/technical-discovery.md). Bloqueante previo: decidir backend y hosting (docs/risks-and-open-questions.md). Registrar los comandos reales en init.sh al terminar."
+    "evidence": [
+      "2026-10-01: ./init.sh OK (instala dependencias, pytest 3/3 passed y healthcheck GET /health -> 200)",
+      "2026-10-01: arranque real sin variables obligatorias -> 'RuntimeError: Faltan variables de entorno obligatorias: DEVEXPERT_API_KEY, JWT_SECRET' y exit 3 (también cubierto por tests)"
+    ],
+    "notes": "Stack elegido: FastAPI (Python 3.9 del sistema, código compatible 3.9); base de datos pendiente de decidir (SQLite para desarrollo, PostgreSQL si el hosting lo facilita). Código en backend/ (app/main.py, tests/), comandos reales ya registrados en init.sh."
   },
   {
     "id": "bootstrap-android",
