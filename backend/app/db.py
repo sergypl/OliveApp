@@ -52,6 +52,18 @@ CREATE TABLE IF NOT EXISTS cuenta (
     socio_id TEXT NOT NULL DEFAULT 'socio-001' REFERENCES socio(id),
     creada_en TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS labor (
+    id TEXT PRIMARY KEY,
+    socio_id TEXT NOT NULL REFERENCES socio(id),
+    parcela_id TEXT NOT NULL REFERENCES parcela(id),
+    campana_id TEXT NOT NULL REFERENCES campana(id),
+    categoria TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    campos TEXT NOT NULL,
+    observaciones TEXT NOT NULL DEFAULT '',
+    creada_en TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 
