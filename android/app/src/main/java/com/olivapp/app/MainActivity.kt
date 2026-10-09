@@ -97,6 +97,7 @@ fun OlivApp() {
         mutableStateOf(if (AlmacenSesiones(contexto).hayToken()) "sesion" else "inicio")
     }
     var idCampana by remember { mutableStateOf<String?>(null) }
+    var laborEnEdicion by remember { mutableStateOf<LaborEditable?>(null) }
     when (pantalla) {
         "registro" -> PantallaRegistro(
             onVolver = { pantalla = "inicio" },
@@ -125,14 +126,22 @@ fun OlivApp() {
         "notas_voz" -> PantallaNotasVoz(onVolver = { pantalla = "sesion" })
         "cuaderno" -> PantallaCuaderno(
             onVolver = { pantalla = "sesion" },
-            onApuntarLabor = { pantalla = "nueva_labor" }
+            onApuntarLabor = {
+                laborEnEdicion = null
+                pantalla = "nueva_labor"
+            },
+            onEditarLabor = { labor ->
+                laborEnEdicion = labor
+                pantalla = "nueva_labor"
+            }
         )
         "nueva_labor" -> PantallaNuevaLabor(
             onVolver = { pantalla = "cuaderno" },
             onVerCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
-            }
+            },
+            labor = laborEnEdicion
         )
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
@@ -527,7 +536,11 @@ fun PantallaPanel(
  * legibles de un vistazo. Solo labores vigentes (sin papelera).
  */
 @Composable
-fun PantallaCuaderno(onVolver: () -> Unit, onApuntarLabor: () -> Unit) {
+fun PantallaCuaderno(
+    onVolver: () -> Unit,
+    onApuntarLabor: () -> Unit,
+    onEditarLabor: (LaborEditable) -> Unit
+) {
     val contexto = LocalContext.current
     var campanas by remember { mutableStateOf<List<DatosCampanaDeLabores>>(emptyList()) }
     var cargado by remember { mutableStateOf(false) }
@@ -619,7 +632,7 @@ fun PantallaCuaderno(onVolver: () -> Unit, onApuntarLabor: () -> Unit) {
                             if (indiceLabor > 0) {
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
-                            FilaLabor(labor)
+                            FilaLabor(labor, alEditar = { onEditarLabor(labor.editable) })
                         }
                     }
                 }
@@ -641,27 +654,32 @@ fun PantallaCuaderno(onVolver: () -> Unit, onApuntarLabor: () -> Unit) {
 }
 
 /**
- * Formulario manual de una labor de "Mi cuaderno" (feature alta-manual-labor).
+ * Formulario de una labor de "Mi cuaderno" (features alta-manual-labor y
+ * edicion-de-labor): apunta una labor nueva o edita una existente.
  *
  * Campos por categoría según ADR 0005. La labor se guarda en la campaña
  * que corresponde a su fecha (campaña oleícola del 1 de noviembre al
  * 31 de octubre).
  */
 @Composable
-fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
+fun PantallaNuevaLabor(
+    onVolver: () -> Unit,
+    onVerCampana: (String) -> Unit,
+    labor: LaborEditable? = null
+) {
     val contexto = LocalContext.current
-    var fecha by remember { mutableStateOf(fechaDeHoy()) }
+    var fecha by remember { mutableStateOf(labor?.fechaVisible ?: fechaDeHoy()) }
     var parcelas by remember { mutableStateOf<List<DatosParcela>>(emptyList()) }
-    var parcelaId by remember { mutableStateOf("") }
-    var parcelaNombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var producto by remember { mutableStateOf("") }
-    var plaga by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
-    var unidad by remember { mutableStateOf("") }
-    var modalidad by remember { mutableStateOf("") }
-    var kilos by remember { mutableStateOf("") }
-    var observaciones by remember { mutableStateOf("") }
+    var parcelaId by remember { mutableStateOf(labor?.parcelaId ?: "") }
+    var parcelaNombre by remember { mutableStateOf(labor?.parcelaNombre ?: "") }
+    var categoria by remember { mutableStateOf(labor?.categoria ?: "") }
+    var producto by remember { mutableStateOf(labor?.campos?.optString("producto") ?: "") }
+    var plaga by remember { mutableStateOf(labor?.campos?.optString("plaga_a_controlar") ?: "") }
+    var cantidad by remember { mutableStateOf(numeroInicial(labor, "cantidad")) }
+    var unidad by remember { mutableStateOf(labor?.campos?.optString("unidad") ?: "") }
+    var modalidad by remember { mutableStateOf(labor?.campos?.optString("modalidad") ?: "") }
+    var kilos by remember { mutableStateOf(numeroInicial(labor, "kilos")) }
+    var observaciones by remember { mutableStateOf(labor?.observaciones ?: "") }
     var mensaje by remember { mutableStateOf<String?>(null) }
     var guardada by remember { mutableStateOf(false) }
     var campanaGuardada by remember { mutableStateOf<String?>(null) }
@@ -692,14 +710,18 @@ fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Apuntar una labor",
+            text = if (labor == null) "Apuntar una labor" else "Editar labor",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = TextoMarron
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Va a Mi cuaderno, en la campaña de su fecha.",
+            text = if (labor == null) {
+                "Va a Mi cuaderno, en la campaña de su fecha."
+            } else {
+                "Los cambios se reflejan en Mi cuaderno."
+            },
             fontSize = 18.sp,
             lineHeight = 26.sp,
             color = TextoMarron,
@@ -827,7 +849,11 @@ fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             BotonPrincipal(
-                texto = if (trabajando) "Guardando la labor…" else "Guardar labor",
+                texto = if (trabajando) {
+                    if (labor == null) "Guardando la labor…" else "Guardando los cambios…"
+                } else {
+                    if (labor == null) "Guardar labor" else "Guardar cambios"
+                },
                 habilitado = !trabajando,
                 alPulsar = {
                     trabajando = true
@@ -863,11 +889,22 @@ fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
                             .put("categoria", categoria)
                             .put("campos", campos)
                             .put("observaciones", observaciones)
-                        ServicioCuentas.guardarLabor(token, cuerpo) { campana, texto ->
-                            trabajando = false
-                            guardada = campana != null
-                            campanaGuardada = campana
-                            mensaje = texto
+                        val laborEditada = labor
+                        if (laborEditada != null) {
+                            ServicioCuentas.actualizarLabor(
+                                token, laborEditada.id, cuerpo
+                            ) { exito, texto ->
+                                trabajando = false
+                                guardada = exito
+                                mensaje = texto
+                            }
+                        } else {
+                            ServicioCuentas.guardarLabor(token, cuerpo) { campana, texto ->
+                                trabajando = false
+                                guardada = campana != null
+                                campanaGuardada = campana
+                                mensaje = texto
+                            }
                         }
                     }
                 }
@@ -1651,7 +1688,7 @@ fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
 
 /** Una fila de "Mi cuaderno": fecha y categoría, con sus campos legibles de un vistazo. */
 @Composable
-fun FilaLabor(labor: DatosLabor) {
+fun FilaLabor(labor: DatosLabor, alEditar: (() -> Unit)? = null) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = labor.fecha + " · " + labor.categoria,
@@ -1675,6 +1712,10 @@ fun FilaLabor(labor: DatosLabor) {
                 lineHeight = 26.sp,
                 color = TextoMarron
             )
+        }
+        if (alEditar != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            BotonSecundario(texto = "Editar", alPulsar = alEditar)
         }
     }
 }
@@ -1747,6 +1788,19 @@ class DatosLabor(
     val categoria: String,
     val parcela: String,
     val campos: List<Pair<String, String>>,
+    val observaciones: String,
+    val editable: LaborEditable
+)
+
+/** Los datos de una labor tal cual para poder editarla ('Corrección manual'). */
+class LaborEditable(
+    val id: String,
+    val fechaVisible: String,
+    val fechaIso: String,
+    val parcelaId: String,
+    val parcelaNombre: String,
+    val categoria: String,
+    val campos: org.json.JSONObject,
     val observaciones: String
 )
 
@@ -1816,8 +1870,25 @@ private fun formatearLabor(labor: org.json.JSONObject): DatosLabor {
             ?: labor.optString("categoria"),
         parcela = parcela,
         campos = parejas,
-        observaciones = labor.optString("observaciones")
+        observaciones = labor.optString("observaciones"),
+        editable = LaborEditable(
+            id = labor.optString("id"),
+            fechaVisible = formatearFecha(labor.optString("fecha")),
+            fechaIso = labor.optString("fecha"),
+            parcelaId = labor.optJSONObject("parcela")?.optString("id") ?: "",
+            parcelaNombre = parcela,
+            categoria = labor.optString("categoria"),
+            campos = campos,
+            observaciones = labor.optString("observaciones")
+        )
     )
+}
+
+/** Un número guardado en los campos de la labor, para prellenar el formulario. */
+private fun numeroInicial(labor: LaborEditable?, clave: String): String {
+    val campos = labor?.campos ?: return ""
+    if (!campos.has(clave)) return ""
+    return formatearCantidad(campos.optDouble(clave))
 }
 
 @Composable
@@ -2126,6 +2197,40 @@ object ServicioCuentas {
                             .ifEmpty { "No se pudieron cargar tus parcelas." }
                         principal.post { alTerminar(null, detalle) }
                     }
+                }
+            }
+        })
+    }
+
+    /** Edita cualquier campo de una labor existente (llamada autenticada). */
+    fun actualizarLabor(
+        token: String,
+        id: String,
+        cuerpo: JSONObject,
+        alTerminar: (Boolean, String) -> Unit
+    ) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-labores/" + id)
+            .header("Authorization", "Bearer $token")
+            .put(cuerpo.toString().toRequestBody(JSON))
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(false, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val exitosa = it.isSuccessful
+                    val detalle = if (exitosa) {
+                        "Cambios guardados en tu cuaderno."
+                    } else {
+                        detalleDeError(it).ifEmpty { "No se pudieron guardar los cambios." }
+                    }
+                    principal.post { alTerminar(exitosa, detalle) }
                 }
             }
         })

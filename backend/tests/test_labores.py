@@ -341,3 +341,146 @@ def test_historial_vacio_sin_labores():
 
         assert respuesta.status_code == 200
         assert respuesta.json() == {"campanas": []}
+
+
+# --- Edición de labores (feature edicion-de-labor) ---
+
+
+def _editar(client, cabeceras, labor_id, categoria, campos, fecha, parcela_id, **extra):
+    cuerpo = {
+        "fecha": fecha,
+        "parcela_id": parcela_id,
+        "categoria": categoria,
+        "campos": campos,
+    }
+    cuerpo.update(extra)
+    return client.put(
+        "/api/v1/mis-labores/" + labor_id, json=cuerpo, headers=cabeceras
+    )
+
+
+def test_editar_cualquier_campo_incluida_fecha_y_parcela():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(
+            client,
+            cabeceras,
+            parcela_id,
+            "tratamiento",
+            {"producto": "Azufre mojable", "plaga_a_controlar": "cochinilla", "cantidad": 2.5, "unidad": "L"},
+            fecha="2025-12-10",
+            observaciones="Tratamiento preventivo.",
+        )
+        assert creada.status_code == 201, creada.text
+        labor_id = creada.json()["id"]
+        otra = client.post(
+            "/api/v1/mis-parcelas", json={"nombre": "La Umbría"}, headers=cabeceras
+        ).json()
+
+        # Cambia todo: fecha, parcela, categoría, campos y observaciones.
+        respuesta = _editar(
+            client,
+            cabeceras,
+            labor_id,
+            "cosecha",
+            {"modalidad": "a suelo", "kilos": 720},
+            "2026-03-05",
+            otra["id"],
+            observaciones="Cosecha corregida.",
+        )
+
+        assert respuesta.status_code == 200, respuesta.text
+        assert respuesta.json()["fecha"] == "2026-03-05"
+        assert respuesta.json()["parcela"]["nombre"] == "La Umbría"
+        assert respuesta.json()["categoria"] == "cosecha"
+        # El cambio se refleja en el listado del cuaderno.
+        campanas = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"]
+        labores = campanas[0]["labores"]
+        assert len(labores) == 1
+        assert labores[0]["fecha"] == "2026-03-05"
+        assert labores[0]["categoria"] == "cosecha"
+        assert labores[0]["campos"] == {"modalidad": "a suelo", "kilos": 720}
+        assert labores[0]["parcela"]["nombre"] == "La Umbría"
+        assert labores[0]["observaciones"] == "Cosecha corregida."
+
+
+def test_editar_mueve_la_labor_en_el_orden_cronologico():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        primera = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert primera.status_code == 201
+        segunda = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 2, "unidad": "horas"}, fecha="2026-01-20")
+        assert segunda.status_code == 201
+
+        # La más antigua pasa a ser la más reciente.
+        respuesta = _editar(
+            client,
+            cabeceras,
+            primera.json()["id"],
+            "riego",
+            {"cantidad": 3, "unidad": "horas"},
+            "2026-02-01",
+            parcela_id,
+        )
+
+        assert respuesta.status_code == 200
+        labores = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"][0]["labores"]
+        assert [l["fecha"] for l in labores] == ["2026-02-01", "2026-01-20"]
+
+
+def test_editar_a_fecha_de_campana_cerrada_se_rechaza():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert creada.status_code == 201
+
+        respuesta = _editar(
+            client,
+            cabeceras,
+            creada.json()["id"],
+            "riego",
+            {"cantidad": 3, "unidad": "horas"},
+            "2024-12-05",
+            parcela_id,
+        )
+
+        assert respuesta.status_code == 400
+        assert "cerrada" in respuesta.json()["detail"].lower()
+        # La labor sigue con su fecha original.
+        labores = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"][0]["labores"]
+        assert [l["fecha"] for l in labores] == ["2025-12-10"]
+
+
+def test_editar_labor_de_otro_socio_no_existe():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+
+        respuesta = _editar(
+            client,
+            cabeceras,
+            "labor-inventada",
+            "riego",
+            {"cantidad": 3, "unidad": "horas"},
+            "2025-12-10",
+            parcela_id,
+        )
+
+        assert respuesta.status_code == 404
+
+
+def test_editar_exige_token():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert creada.status_code == 201
+
+        sin_token = client.put(
+            "/api/v1/mis-labores/" + creada.json()["id"],
+            json={
+                "fecha": "2025-12-10",
+                "parcela_id": parcela_id,
+                "categoria": "riego",
+                "campos": {"cantidad": 3, "unidad": "horas"},
+            },
+        )
+        assert sin_token.status_code == 401
