@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `cierre-de-sesion`
+- Siguiente feature lista actual: `panel-campana-actual`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; inicio de sesión verificado desde la app con sesión persistente)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; cierre de sesión verificado desde la app: sin token en el dispositivo y login exigido de nuevo)
 
 ## Registro de sesiones
 
@@ -143,3 +143,14 @@
 - Ficheros o artefactos actualizados: `backend/app/sesiones.py`, `backend/app/cuentas.py`, `backend/app/main.py`, `backend/requirements.txt` (PyJWT), `backend/tests/test_sesiones.py`, `backend/tests/test_datos_sembrados.py` (autenticación en los tests), `android/` (pantallas de login y sesión + EncryptedSharedPreferences), `init.sh` (comprobación de seed autenticada), `docs/risks-and-open-questions.md` (token resuelto), `feature_list.json`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: PR #4 (`registro-cuenta-socio`) aún pendiente de fusionar en main (esta rama está apilada sobre él); queda fuera de alcance el cierre de sesión (siguiente feature), por lo que ahora mismo la sesión solo se abandona desinstalando o limpiando datos; pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `cierre-de-sesion` (abandonar la sesión y borrar el token guardado).
+
+### Sesión 013
+
+- Fecha: 2026-10-09
+- Objetivo: feature `cierre-de-sesion` (abandonar la sesión desde la app).
+- Completado: botón "Cerrar sesión" en la pantalla de sesión que borra el token de EncryptedSharedPreferences y vuelve a la pantalla de acceso. Sin cambios en el backend (el alcance es del dispositivo: el token JWT caduca por sí mismo en 30 días). Aclaración registrada: cierre de sesión ≠ baja de cuenta (la baja sigue fuera del MVP).
+- Verificación ejecutada: `./init.sh` completo (pytest 24/24, healthcheck, datos sembrados con token, APK instalado y abierto) y verificación real desde la app en el emulador: "Cerrar sesión" → pantalla de acceso, preferencias cifradas sin token (0 apariciones de JWT) y, tras cerrar y reabrir la app, se exige iniciar sesión de nuevo. Captura en sesión (no versionada).
+- Evidencia capturada: `feature_list.json` (`cierre-de-sesion` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `android/.../MainActivity.kt` (`AlmacenSesiones.borrar`, botón "Cerrar sesión"), `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: el cierre es solo local (el token emitido sigue siendo válido hasta caducar; aceptable en el MVP y coherente con JWT sin lista de revocación); pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `panel-campana-actual` (panel con las cifras oficiales de la campaña en curso).

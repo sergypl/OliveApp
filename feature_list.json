@@ -98,12 +98,15 @@
     "title": "El socio cierra sesión",
     "user_visible_behavior": "El socio pulsa cerrar sesión, el token se borra del dispositivo y la app vuelve a la pantalla de acceso; las pantallas dejan de ser accesibles sin entrar de nuevo.",
     "depends_on": ["inicio-de-sesion"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Cerrar sesión y comprobar que no queda token en el dispositivo y que se requiere login de nuevo"
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: 'Cerrar sesión' desde la app -> vuelve a la pantalla de acceso; preferencias cifradas sin token (0 apariciones de JWT, clave token borrada); app cerrada y reabierta -> pide iniciar sesión de nuevo (captura en sesión)"
+    ],
     "notes": "Escenario pequeño y acotado; no confundir con baja de cuenta (fuera del MVP)."
   },
   {

@@ -84,7 +84,7 @@ fun OlivApp() {
             onCrearCuenta = { pantalla = "registro" },
             onSesionAbierta = { pantalla = "sesion" }
         )
-        "sesion" -> PantallaSesionAbierta()
+        "sesion" -> PantallaSesionAbierta(onSesionCerrada = { pantalla = "inicio" })
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
             onCrearCuenta = { pantalla = "registro" }
@@ -287,7 +287,7 @@ fun PantallaInicioSesion(
 }
 
 @Composable
-fun PantallaSesionAbierta() {
+fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
     val contexto = LocalContext.current
     var email by remember { mutableStateOf<String?>(null) }
     var mensaje by remember { mutableStateOf<String?>(null) }
@@ -347,6 +347,15 @@ fun PantallaSesionAbierta() {
                 textAlign = TextAlign.Center
             )
         }
+        Spacer(modifier = Modifier.height(32.dp))
+        BotonSecundario(
+            texto = "Cerrar sesión",
+            alPulsar = {
+                // Se borra el token del dispositivo: sin él no hay acceso.
+                AlmacenSesiones(contexto).borrar()
+                onSesionCerrada()
+            }
+        )
     }
 }
 
@@ -430,6 +439,10 @@ class AlmacenSesiones(contexto: Context) {
     fun token(): String? = preferencias.getString("token", null)
 
     fun hayToken(): Boolean = token() != null
+
+    fun borrar() {
+        preferencias.edit().remove("token").apply()
+    }
 }
 
 /** Llamadas al backend para cuentas y sesión. Responde siempre en el hilo principal. */
