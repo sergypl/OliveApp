@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `datos-sembrados-cooperativa`
+- Siguiente feature lista actual: `registro-cuenta-socio`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-05 (`./init.sh` completo + APK instalado y abierto en el dispositivo, con captura de la pantalla mínima)
+- Última verificación: 2026-10-05 (`./init.sh` completo: pytest 11/11, healthcheck 200, datos sembrados OK, APK instalado y abierto en el dispositivo)
 
 ## Registro de sesiones
 
@@ -109,3 +109,14 @@
 - Ficheros o artefactos actualizados: `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: sin cambios respecto a la sesión 008 (móvil físico de la demo por fijar, firma del APK release pendiente, base de datos sin elegir, validación empírica del pipeline de voz pendiente).
 - Mejor siguiente paso: `datos-sembrados-cooperativa` (sembrar el dataset de ADR 0006/0007 en el backend).
+
+### Sesión 010
+
+- Fecha: 2026-10-05
+- Objetivo: feature `datos-sembrados-cooperativa` (dataset de campañas en el backend).
+- Completado: seed versionado `backend/data/seed.json` (ADR 0006/0007: 1 cooperativa, 4 campañas con 2025/2026 actual, 2 socios, 8 datos oficiales — socio 1 de 25/26 con datos reales anonimizados — y 7 parcelas) con carga automática e idempotente si la base está vacía; esquema SQLite (`backend/app/db.py`); API de solo lectura (`GET /api/v1/cooperativa`, `/socios`, `/socios/{id}/campanas`, `/socios/{id}/parcelas`) con declaración de datos de demostración.
+- Verificación ejecutada: `./init.sh` completo (pytest 11/11 — 8 nuevos: volumen, campaña actual + anteriores, regla de coherencia en dos etapas en las 8 filas, datos reales de 25/26, parcelas, rechazo de escrituras con 405, socio desconocido 404 e idempotencia del seed —, healthcheck 200 y `GET /api/v1/socios` OK) y comprobación en vivo de la API con el dataset real y del 405 ante POST.
+- Evidencia capturada: `feature_list.json` (`datos-sembrados-cooperativa` → `passing`, con evidencias) y respuestas de la API en sesión.
+- Ficheros o artefactos actualizados: `backend/data/seed.json`, `backend/app/db.py`, `backend/app/seed.py`, `backend/app/main.py`, `backend/tests/` (conftest + tests del seed), `init.sh`, `.gitignore`, `feature_list.json`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: SQLite puede no persistir en el free tier con disco efímero (anotado en riesgos; alternativa PostgreSQL del PaaS); pendientes: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `registro-cuenta-socio` (alta con email y contraseña asociada a la cooperativa sembrada).

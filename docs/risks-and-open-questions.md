@@ -19,7 +19,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 - Política mínima de contraseñas (sin reset por email en el MVP: limitación documentada).
 - Almacenamiento seguro del token en Android (EncryptedSharedPreferences/Keystore).
 - Prefill del simulador con los kilos de la campaña o con los kilos entregados a la cooperativa (opcional; solo si es barato).
-- Elección concreta de base de datos dentro del PaaS elegido (ver ADR 0003). El backend ya está elegido: FastAPI/Python (feature `bootstrap-backend`).
+- Elección concreta de base de datos dentro del PaaS elegido (ver ADR 0003). El backend ya está elegido: FastAPI/Python con **SQLite** para desarrollo y MVP (feature `datos-sembrados-cooperativa`, ruta configurable por `OLIVAPP_DB`). Pendiente al desplegar: confirmar persistencia del fichero en el free tier (disco efímero en algunos PaaS; si no, PostgreSQL gratuito del propio PaaS).
 
 ## Later / Not MVP
 - Administración por parte de la cooperativa (rol y pantallas propios) e importación real de sus datos.
