@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- El backend vive en el Mac de desarrollo (el emulador lo alcanza por 10.0.2.2). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="OlivApp"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.OlivApp">
         <activity
             android:name=".MainActivity"
