@@ -60,7 +60,7 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 APK="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 echo "APK compilado: $APK"
 
-if "$ADB" get-state >/dev/null 2>&1; then
+if "$ADB" devices | grep -qE '^[^[:space:]]+[[:space:]]+device$'; then
   echo "Instalando y abriendo en el dispositivo conectado..."
   "$ADB" install -r "$APK"
   "$ADB" shell am start -n com.olivapp.app/.MainActivity

@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `registro-cuenta-socio`
+- Siguiente feature lista actual: `inicio-de-sesion`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-05 (`./init.sh` completo: pytest 11/11, healthcheck 200, datos sembrados OK, APK instalado y abierto en el dispositivo)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 17/17, healthcheck 200, datos sembrados OK, APK instalado y abierto; registro verificado desde la app)
 
 ## Registro de sesiones
 
@@ -120,3 +120,14 @@
 - Ficheros o artefactos actualizados: `backend/data/seed.json`, `backend/app/db.py`, `backend/app/seed.py`, `backend/app/main.py`, `backend/tests/` (conftest + tests del seed), `init.sh`, `.gitignore`, `feature_list.json`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: SQLite puede no persistir en el free tier con disco efímero (anotado en riesgos; alternativa PostgreSQL del PaaS); pendientes: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `registro-cuenta-socio` (alta con email y contraseña asociada a la cooperativa sembrada).
+
+### Sesión 011
+
+- Fecha: 2026-10-09
+- Objetivo: feature `registro-cuenta-socio` (alta de cuenta con email y contraseña).
+- Completado: backend con `POST /api/v1/registro` + módulo `cuentas.py` (validación de email y contraseña mínima de 8 caracteres, email único sin distinguir mayúsculas, hasheado PBKDF2-HMAC-SHA256 con sal y 200.000 iteraciones, cuenta asociada a coop-demo) y pantalla "Crear cuenta" en la app (campos con etiqueta grande, botón de 64dp, mensajes en frases claras) llamando al backend por OkHttp. Decisiones: política de contraseñas (registrada en riesgos) y vocabulario "Cuenta" añadido a `CONTEXT.md`.
+- Verificación ejecutada: `./init.sh` completo (pytest 17/17 con 6 tests nuevos, healthcheck, datos sembrados, APK instalado y abierto) y verificación real desde la app en el emulador: registro de socio.nuevo@ejemplo.com → "Cuenta creada…", fila en `cuenta` con hash `pbkdf2_sha256$…` (sin texto claro) y `cooperativa_id = coop-demo`; segundo registro del mismo email → "Ese email ya está registrado. Usa el inicio de sesión." sin fila duplicada. Capturas en sesión (no versionadas).
+- Evidencia capturada: `feature_list.json` (`registro-cuenta-socio` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/cuentas.py`, `backend/app/db.py` (tabla `cuenta`), `backend/app/main.py`, `backend/tests/test_registro.py`, `android/` (pantallas + OkHttp + permiso INTERNET), `init.sh` (detección de dispositivo robustecida), `CONTEXT.md`, `docs/risks-and-open-questions.md`, `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: incidencias de entorno resueltas en sesión (ANR del AVD nuevo por carga del sistema en el primer boot con render por software; `avdmanager` legacy incompatible con JDK 22 → cmdline-tools modernos instalados; AVD dedicado `OlivApp_API_34` creado como dispositivo objetivo pero la verificación se hizo en el emulador `Pixel_9_API_34` lanzado desde Android Studio, que quedó como único dispositivo). Sigue pendiente fijar el móvil físico de la demo; y queda abierta la vinculación entre la cuenta registrada y los datos oficiales del socio del seed (se decidirá en `panel-campana-actual`).
+- Mejor siguiente paso: `inicio-de-sesion` (email + contraseña → sesión con token JWT).

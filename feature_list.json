@@ -60,14 +60,18 @@
     "title": "El socio crea su cuenta con email y contraseña",
     "user_visible_behavior": "Desde la app, el socio introduce email y contraseña, la cuenta se crea en el backend y queda asociada a la cooperativa sembrada.",
     "depends_on": ["bootstrap-backend", "bootstrap-android"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Registrar un socio nuevo desde la app y comprobar que aparece en el backend con la contraseña hasheada",
       "Intentar registrar el mismo email y comprobar un error claro en la app"
     ],
-    "evidence": [],
-    "notes": "Política mínima de contraseñas por decidir. Sin verificación de email ni reset en el MVP (limitación declarada)."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 17/17, healthcheck 200, datos sembrados OK, APK instalado y abierto en el dispositivo)",
+      "2026-10-09: registro real desde la app (emulador Pixel_9_API_34, Android 14) con socio.nuevo@ejemplo.com -> 'Cuenta creada. Ya puedes iniciar sesión.' y en backend: fila en cuenta con hash pbkdf2_sha256$200000$… (118 chars, sin texto claro) asociada a coop-demo (captura en sesión)",
+      "2026-10-09: segundo registro con el mismo email -> 'Ese email ya está registrado. Usa el inicio de sesión.' en la app (captura en sesión), sin fila duplicada en la base (1 cuenta)"
+    ],
+    "notes": "Política decidida: mínimo 8 caracteres, email único sin distinguir mayúsculas y hasheado PBKDF2-HMAC-SHA256 con sal (200.000 iteraciones). Sin verificación de email ni reset de contraseña en el MVP (limitación declarada). Cuenta asociada a la cooperativa sembrada (coop-demo). Backend: POST /api/v1/registro (201; 409 email duplicado; 400 datos inválidos)."
   },
   {
     "id": "inicio-de-sesion",

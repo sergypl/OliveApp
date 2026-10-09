@@ -43,6 +43,14 @@ CREATE TABLE IF NOT EXISTS dato_oficial (
     aceite_obtenido REAL NOT NULL,
     PRIMARY KEY (socio_id, campana_id)
 );
+
+CREATE TABLE IF NOT EXISTS cuenta (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    contrasena_hash TEXT NOT NULL,
+    cooperativa_id TEXT NOT NULL REFERENCES cooperativa(id),
+    creada_en TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 

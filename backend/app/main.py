@@ -10,7 +10,9 @@ import sqlite3
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 
+from app import cuentas
 from app import db as basedatos
 from app import seed
 
@@ -51,6 +53,31 @@ def conexion():
 
 
 app = FastAPI(title="OlivApp API", lifespan=lifespan)
+
+
+class RegistroEntrada(BaseModel):
+    email: str
+    contrasena: str
+
+
+@app.post("/api/v1/registro", status_code=201)
+def registro(entrada: RegistroEntrada, conn: sqlite3.Connection = Depends(conexion)):
+    """El socio crea su cuenta con email y contraseña (asociada a la cooperativa).
+
+    La contraseña se guarda hasheada y nunca se devuelve. Sin verificación de
+    email ni reset de contraseña en el MVP (limitación declarada).
+    """
+    cooperativa = conn.execute("SELECT id FROM cooperativa").fetchone()
+    try:
+        return cuentas.crear_cuenta(
+            conn, cooperativa["id"], entrada.email, entrada.contrasena
+        )
+    except cuentas.DatosInvalidos as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except cuentas.EmailDuplicado:
+        raise HTTPException(
+            status_code=409, detail="Ese email ya está registrado. Usa el inicio de sesión."
+        )
 
 
 @app.get("/health")
