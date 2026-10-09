@@ -115,13 +115,16 @@
     "title": "El panel muestra la campaña actual con los datos oficiales",
     "user_visible_behavior": "Tras entrar, el socio ve la campaña actual (año agrícola) con sus datos oficiales de cooperativa: kilos entregados, rendimiento graso y aceite obtenido; además ve el acceso al cuaderno y al simulador.",
     "depends_on": ["inicio-de-sesion", "datos-sembrados-cooperativa"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Entrar como socio y comprobar que el panel muestra la campaña actual con los tres datos oficiales sembrados, separados de las labores"
     ],
-    "evidence": [],
-    "notes": "Pantalla de aterrizaje (ver CONTEXT.md: 'Panel'). Decidir cómo se determina la campaña actual (docs/risks-and-open-questions.md)."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 30/30, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: entrada como socio desde la app -> panel 'Campaña 2025/2026' con los tres datos oficiales sembrados tal cual ('Kilos entregados 10.958 kg', 'Rendimiento graso 17,93 %', 'Aceite obtenido 1.774 kg') en el bloque 'Datos oficiales de la cooperativa', con nota de separación de las labores y acceso a 'Cuaderno de campo' y 'Simulador de liquidación' (estos, con aviso de disponibilidad futura). Capturas en sesión"
+    ],
+    "notes": "Pantalla de aterrizaje (Panel). Decisiones tomadas aquí: (1) la campaña actual es la marcada como actual en los datos de la cooperativa, no la derivada de la fecha del sistema; (2) cada cuenta nueva queda vinculada al socio de demostración socio-001 (columna cuenta.socio_id, con migración de bases antiguas); el panel se sirve por cuenta vía GET /api/v1/mi-panel. Los datos oficiales van en bloque aparte de las labores."
   },
   {
     "id": "consulta-campanas-anteriores",
@@ -129,13 +132,17 @@
     "title": "El socio abre una campaña anterior desde el panel",
     "user_visible_behavior": "Desde el panel, el socio elige una campaña cerrada y ve sus datos oficiales de cooperativa y sus labores de 'Mi cuaderno' por separado, en modo solo consulta.",
     "depends_on": ["panel-campana-actual"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Abrir una campaña anterior y comprobar que muestra datos oficiales y labores por separado y que no admite nuevas labores"
     ],
-    "evidence": [],
-    "notes": "Estado 'cerrada' de Campaña en docs/domain-model.md: solo consulta."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 35/35, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: desde el panel se abre 'Campaña 2024/2025' -> aviso 'Campaña cerrada: solo consulta. No se pueden añadir labores.', bloque 'Datos oficiales de la cooperativa' con los datos sembrados (6.200 kg / 21,40 % / 1.198 kg) y bloque 'Mi cuaderno' aparte ('Todavía no has apuntado labores en esta campaña.'), sin ningún control para añadir labores (captura en sesión)",
+      "2026-10-09: en vivo, POST a la ruta de la campaña -> 405 (solo lectura) y GET devuelve datos_oficiales y labores en claves separadas"
+    ],
+    "notes": "Estados de Campaña según docs/domain-model.md: actual | cerrada; las cerradas son de solo consulta. GET /api/v1/mi-campanas (listado con estado) y GET /api/v1/mi-campanas/{id} (detalle con datos_oficiales y labores en claves separadas). La sección 'labores' llega vacía hasta que exista el cuaderno de campo (separación de secciones ya modelada en API y UI)."
   },
   {
     "id": "alta-de-parcela",
