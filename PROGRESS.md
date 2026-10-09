@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `registro-cuenta-socio`
+- Siguiente feature lista actual: `cierre-de-sesion`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-05 (`./init.sh` completo: pytest 11/11, healthcheck 200, datos sembrados OK, APK instalado y abierto en el dispositivo)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; inicio de sesión verificado desde la app con sesión persistente)
 
 ## Registro de sesiones
 
@@ -120,3 +120,26 @@
 - Ficheros o artefactos actualizados: `backend/data/seed.json`, `backend/app/db.py`, `backend/app/seed.py`, `backend/app/main.py`, `backend/tests/` (conftest + tests del seed), `init.sh`, `.gitignore`, `feature_list.json`, `docs/risks-and-open-questions.md`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: SQLite puede no persistir en el free tier con disco efímero (anotado en riesgos; alternativa PostgreSQL del PaaS); pendientes: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `registro-cuenta-socio` (alta con email y contraseña asociada a la cooperativa sembrada).
+
+### Sesión 011
+
+- Fecha: 2026-10-09
+- Objetivo: feature `registro-cuenta-socio` (alta de cuenta con email y contraseña).
+- Completado: backend con `POST /api/v1/registro` + módulo `cuentas.py` (validación de email y contraseña mínima de 8 caracteres, email único sin distinguir mayúsculas, hasheado PBKDF2-HMAC-SHA256 con sal y 200.000 iteraciones, cuenta asociada a coop-demo) y pantalla "Crear cuenta" en la app (campos con etiqueta grande, botón de 64dp, mensajes en frases claras) llamando al backend por OkHttp. Decisiones: política de contraseñas (registrada en riesgos) y vocabulario "Cuenta" añadido a `CONTEXT.md`.
+- Verificación ejecutada: `./init.sh` completo (pytest 17/17 con 6 tests nuevos, healthcheck, datos sembrados, APK instalado y abierto) y verificación real desde la app en el emulador: registro de socio.nuevo@ejemplo.com → "Cuenta creada…", fila en `cuenta` con hash `pbkdf2_sha256$…` (sin texto claro) y `cooperativa_id = coop-demo`; segundo registro del mismo email → "Ese email ya está registrado. Usa el inicio de sesión." sin fila duplicada. Capturas en sesión (no versionadas).
+- Evidencia capturada: `feature_list.json` (`registro-cuenta-socio` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/cuentas.py`, `backend/app/db.py` (tabla `cuenta`), `backend/app/main.py`, `backend/tests/test_registro.py`, `android/` (pantallas + OkHttp + permiso INTERNET), `init.sh` (detección de dispositivo robustecida), `CONTEXT.md`, `docs/risks-and-open-questions.md`, `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: incidencias de entorno resueltas en sesión (ANR del AVD nuevo por carga del sistema en el primer boot con render por software; `avdmanager` legacy incompatible con JDK 22 → cmdline-tools modernos instalados; AVD dedicado `OlivApp_API_34` creado como dispositivo objetivo pero la verificación se hizo en el emulador `Pixel_9_API_34` lanzado desde Android Studio, que quedó como único dispositivo). Sigue pendiente fijar el móvil físico de la demo; y queda abierta la vinculación entre la cuenta registrada y los datos oficiales del socio del seed (se decidirá en `panel-campana-actual`).
+- Mejor siguiente paso: `inicio-de-sesion` (email + contraseña → sesión con token JWT).
+
+### Sesión 012
+
+- Fecha: 2026-10-09
+- Objetivo: feature `inicio-de-sesion` (login con sesión persistente y llamadas autenticadas).
+- Completado: backend con `POST /api/v1/login` (JWT HS256 vía PyJWT, caducidad 30 días, error único "Email o contraseña incorrectos." que no revela qué falla), verificación de contraseña PBKDF2 en `cuentas.py`, endpoints de datos protegidos con Bearer (`/api/v1/mi-cuenta` nuevo como prueba de llamada autenticada; públicos `/health`, `/api/v1/registro`, `/api/v1/login`) y app con pantalla "Iniciar sesión", pantalla "Sesión iniciada" y token en EncryptedSharedPreferences (clave del Keystore, AES-256) que mantiene la sesión tras reiniciar. Decisiones: almacenamiento del token resuelto (riesgos) y nota operativa `JWT_SECRET` ≥ 32 bytes.
+- Cambio de verificación declarado (no en silencio): la comprobación de datos sembrados de `init.sh` ahora crea o reutiliza una cuenta de verificación y consulta `/api/v1/socios` con token, porque desde esta feature las llamadas de datos van autenticadas (comportamiento objetivo de la propia feature).
+- Verificación ejecutada: `./init.sh` completo (pytest 24/24 con 7 tests nuevos de sesión, healthcheck, datos sembrados con token, APK instalado y abierto) y verificación real desde la app en el emulador: login de socio.nuevo@ejemplo.com → "Sesión iniciada" con email obtenido del endpoint protegido; en vivo `GET /api/v1/socios/socio-001/campanas` → 401 sin token, 401 con token inventado, 200 con token de sesión; app cerrada en seco y reabierta → sesión sigue abierta, con el token cifrado en preferencias (0 apariciones de JWT en claro). Capturas en sesión (no versionadas).
+- Evidencia capturada: `feature_list.json` (`inicio-de-sesion` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/sesiones.py`, `backend/app/cuentas.py`, `backend/app/main.py`, `backend/requirements.txt` (PyJWT), `backend/tests/test_sesiones.py`, `backend/tests/test_datos_sembrados.py` (autenticación en los tests), `android/` (pantallas de login y sesión + EncryptedSharedPreferences), `init.sh` (comprobación de seed autenticada), `docs/risks-and-open-questions.md` (token resuelto), `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: PR #4 (`registro-cuenta-socio`) aún pendiente de fusionar en main (esta rama está apilada sobre él); queda fuera de alcance el cierre de sesión (siguiente feature), por lo que ahora mismo la sesión solo se abandona desinstalando o limpiando datos; pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `cierre-de-sesion` (abandonar la sesión y borrar el token guardado).

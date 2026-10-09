@@ -60,14 +60,18 @@
     "title": "El socio crea su cuenta con email y contraseña",
     "user_visible_behavior": "Desde la app, el socio introduce email y contraseña, la cuenta se crea en el backend y queda asociada a la cooperativa sembrada.",
     "depends_on": ["bootstrap-backend", "bootstrap-android"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Registrar un socio nuevo desde la app y comprobar que aparece en el backend con la contraseña hasheada",
       "Intentar registrar el mismo email y comprobar un error claro en la app"
     ],
-    "evidence": [],
-    "notes": "Política mínima de contraseñas por decidir. Sin verificación de email ni reset en el MVP (limitación declarada)."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 17/17, healthcheck 200, datos sembrados OK, APK instalado y abierto en el dispositivo)",
+      "2026-10-09: registro real desde la app (emulador Pixel_9_API_34, Android 14) con socio.nuevo@ejemplo.com -> 'Cuenta creada. Ya puedes iniciar sesión.' y en backend: fila en cuenta con hash pbkdf2_sha256$200000$… (118 chars, sin texto claro) asociada a coop-demo (captura en sesión)",
+      "2026-10-09: segundo registro con el mismo email -> 'Ese email ya está registrado. Usa el inicio de sesión.' en la app (captura en sesión), sin fila duplicada en la base (1 cuenta)"
+    ],
+    "notes": "Política decidida: mínimo 8 caracteres, email único sin distinguir mayúsculas y hasheado PBKDF2-HMAC-SHA256 con sal (200.000 iteraciones). Sin verificación de email ni reset de contraseña en el MVP (limitación declarada). Cuenta asociada a la cooperativa sembrada (coop-demo). Backend: POST /api/v1/registro (201; 409 email duplicado; 400 datos inválidos)."
   },
   {
     "id": "inicio-de-sesion",
@@ -75,14 +79,18 @@
     "title": "El socio inicia sesión y la sesión persiste",
     "user_visible_behavior": "El socio entra con email y contraseña, recibe un token que la app guarda en almacenamiento seguro del dispositivo y sigue con sesión abierta tras reiniciar la app; las llamadas a la API van autenticadas.",
     "depends_on": ["registro-cuenta-socio"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Iniciar sesión y comprobar que el panel accesible exige token válido",
       "Cerrar y reabrir la app comprobando que la sesión sigue abierta (token en almacenamiento seguro)"
     ],
-    "evidence": [],
-    "notes": "JWT con caducidad. Token en EncryptedSharedPreferences/Keystore (ver docs/risks-and-open-questions.md)."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto) y re-ejecución correcta sobre estado previo (repo reiniciable)",
+      "2026-10-09: inicio de sesión real desde la app -> 'Sesión iniciada' con el email obtenido del endpoint protegido /api/v1/mi-cuenta (llamada autenticada); en vivo: GET /api/v1/socios/socio-001/campanas -> 401 sin token, 401 con token inventado, 200 con el token de la sesión (captura en sesión)",
+      "2026-10-09: app cerrada en seco y reabierta -> abre directamente en 'Sesión iniciada' con el email; token guardado en EncryptedSharedPreferences sin texto claro (0 apariciones de JWT en las preferencias) (captura en sesión)"
+    ],
+    "notes": "JWT HS256 (PyJWT) con caducidad de 30 días. Token en EncryptedSharedPreferences (clave del Keystore, AES-256). Endpoints de datos protegidos con Bearer; públicos: /health, /api/v1/registro, /api/v1/login. Error de acceso 'Email o contraseña incorrectos.' sin revelar cuál falla. Cambio de verificación declarado: la comprobación de datos sembrados de init.sh ahora se autentica con una cuenta de verificación."
   },
   {
     "id": "cierre-de-sesion",
