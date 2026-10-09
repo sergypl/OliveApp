@@ -228,13 +228,17 @@
     "depends_on": [
       "alta-manual-labor"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Editar campos de una labor (incluido moverla de fecha o de parcela) y comprobar el cambio en el listado"
     ],
-    "evidence": [],
-    "notes": "Escenario 'Corrección manual' de docs/domain-model.md."
+    "evidence": [
+      "./init.sh completo el 2026-10-09 (pytest 70/70 con 5 tests nuevos de edición, healthcheck, datos sembrados con token, APK instalado y abierto).",
+      "Verificación real desde la app en el emulador OlivApp_API_34: desde 'Mi cuaderno', el botón 'Editar' de una labor abre el formulario precargado ('Editar labor' con fecha, parcela, categoría, campos y observaciones rellenados); se cambiaron la fecha (15/02/2026 → 05/03/2026), la parcela (La Noria → La Umbría) y los kilos (850 → 920) y, tras 'Cambios guardados en tu cuaderno.', el listado refleja los tres cambios y la labor reordena sola al primer puesto de la cronología. Capturas en sesión (no versionadas).",
+      "Cobertura de casos por tests: edición de todos los campos (incluidos fecha y parcela) reflejada en el listado, reordenación cronológica al mover la fecha, rechazo con mensaje claro al mover la fecha a campaña cerrada (la labor conserva su fecha original), labor ajena como 404 y token obligatorio."
+    ],
+    "notes": "Escenario 'Corrección manual' de docs/domain-model.md. La campaña de la labor se deriva de su fecha también al editar: solo la campaña actual admite labores. La labor de demostración editada en la verificación (05/03/2026, La Umbría, 920 kg) se queda así en la base de desarrollo como estado de demo."
   },
   {
     "id": "eliminacion-de-labor",

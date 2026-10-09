@@ -282,6 +282,38 @@ def crear_labor(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@app.put("/api/v1/mis-labores/{labor_id}")
+def editar_labor(
+    labor_id: str,
+    entrada: LaborEntrada,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
+    """Edita cualquier campo de una labor del socio ('Corrección manual').
+
+    La campaña de la labor se deriva de su fecha: solo la campaña actual
+    admite labores (las cerradas son de solo consulta).
+    """
+    cuenta = _cuenta_del_socio(conn, sesion)
+    try:
+        return labores.actualizar_labor(
+            conn,
+            cuenta["socio_id"],
+            labor_id,
+            entrada.fecha,
+            entrada.parcela_id,
+            entrada.categoria,
+            entrada.campos,
+            entrada.observaciones,
+        )
+    except labores.LaborAjena:
+        raise HTTPException(status_code=404, detail="No existe esa labor.")
+    except labores.ParcelaAjena:
+        raise HTTPException(status_code=404, detail="No existe esa parcela.")
+    except labores.DatosInvalidos as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 @app.post("/api/v1/mis-notas-voz/transcripcion")
 async def transcribir_nota(
     audio: UploadFile = File(...),
