@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/<usuario>/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `panel-campana-actual`
+- Siguiente feature lista actual: `consulta-campanas-anteriores`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 24/24, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; cierre de sesión verificado desde la app: sin token en el dispositivo y login exigido de nuevo)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 30/30, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; panel de la campaña actual verificado desde la app con los tres datos oficiales sembrados)
 
 ## Registro de sesiones
 
@@ -154,3 +154,14 @@
 - Ficheros o artefactos actualizados: `android/.../MainActivity.kt` (`AlmacenSesiones.borrar`, botón "Cerrar sesión"), `feature_list.json`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: el cierre es solo local (el token emitido sigue siendo válido hasta caducar; aceptable en el MVP y coherente con JWT sin lista de revocación); pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `panel-campana-actual` (panel con las cifras oficiales de la campaña en curso).
+
+### Sesión 014
+
+- Fecha: 2026-10-09
+- Objetivo: feature `panel-campana-actual` (panel de aterrizaje con la campaña actual y los datos oficiales).
+- Completado: `GET /api/v1/mi-panel` (autenticado) que sirve la campaña actual con los tres datos oficiales del socio de la cuenta, y pantalla "Panel" como aterrizaje tras entrar: "Campaña 2025/2026" con bloque "Datos oficiales de la cooperativa" (kilos entregados, rendimiento graso y aceite obtenido, formato español), nota de separación de las labores y acceso a "Cuaderno de campo" y "Simulador de liquidación" (con aviso de disponibilidad futura). Decisiones tomadas y registradas en riesgos: la campaña actual es la marcada en los datos de la cooperativa (no por fecha del sistema) y cada cuenta nueva queda vinculada al socio de demostración `socio-001` (columna `cuenta.socio_id` con migración de bases antiguas).
+- Verificación ejecutada: `./init.sh` completo (pytest 30/30 con 6 tests nuevos del panel, healthcheck, datos sembrados con token, APK instalado y abierto) y verificación real desde la app en el emulador: entrada como socio → panel con "Campaña 2025/2026" y los tres datos oficiales sembrados tal cual ("10.958 kg", "17,93 %", "1.774 kg") en bloque propio, separados de las labores (nota visible) y con los dos accesos; el acceso al cuaderno responde "El cuaderno de campo estará disponible próximamente." Capturas en sesión (no versionadas).
+- Evidencia capturada: `feature_list.json` (`panel-campana-actual` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/db.py` (`cuenta.socio_id` + migración), `backend/app/cuentas.py` (`SOCIO_DE_DEMOSTRACION`), `backend/app/main.py` (`GET /api/v1/mi-panel`), `backend/tests/test_panel.py`, `android/.../MainActivity.kt` (pantalla Panel con formato español), `docs/risks-and-open-questions.md` (campaña actual y vinculación cuenta↔socio resueltas), `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: la vinculación cuenta ↔ socio es la de demostración (`socio-001` para todas las cuentas); la separación real por socio queda para `aislamiento-de-datos-por-socio`. Pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `consulta-campanas-anteriores` (abrir una campaña anterior desde el panel).

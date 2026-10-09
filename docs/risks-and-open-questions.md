@@ -12,12 +12,13 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 
 ## Implementation-Time Questions
 - Modelo de campaña: ¿el año agrícola se introduce a mano, se deriva de la fecha de la labor o se hereda de la campaña activa?
-- ¿Cómo se determina la "campaña actual" (fecha del sistema, campaña marcada como abierta en el backend)?
+- ¿Cómo se determina la "campaña actual"?: resuelto en la feature `panel-campana-actual` (es la campaña marcada como actual en los datos de la cooperativa; no se deriva de la fecha del sistema, para que la demo siempre muestre la campaña sembrada).
 - Valor por defecto y editabilidad del ajuste industrial: resueltos en [ADR 0007](adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md) (por defecto 10 %, editable).
 - Límite de duración de una nota de voz y formato de audio nativo.
 - Resolución de fechas relativas ("ayer") y comportamiento cuando la fecha quede ambigua.
 - Política mínima de contraseñas: resuelta en la feature `registro-cuenta-socio` (mínimo 8 caracteres, email único sin distinguir mayúsculas, hasheado PBKDF2-HMAC-SHA256 con sal). Sin reset por email en el MVP: limitación documentada.
 - Almacenamiento seguro del token en Android: resuelto en la feature `inicio-de-sesion` (EncryptedSharedPreferences con clave del Keystore del dispositivo, AES-256; token JWT HS256 con caducidad de 30 días). Nota operativa: `JWT_SECRET` debe tener 32 bytes o más (recomendación RFC 7518 para HS256).
+- Vinculación cuenta ↔ socio del seed: resuelto en la feature `panel-campana-actual` (cada cuenta nueva queda vinculada al socio de demostración `socio-001`, con migración de bases creadas antes). La separación por socio real queda para `aislamiento-de-datos-por-socio`.
 - Prefill del simulador con los kilos de la campaña o con los kilos entregados a la cooperativa (opcional; solo si es barato).
 - Elección concreta de base de datos dentro del PaaS elegido (ver ADR 0003). El backend ya está elegido: FastAPI/Python con **SQLite** para desarrollo y MVP (feature `datos-sembrados-cooperativa`, ruta configurable por `OLIVAPP_DB`). Pendiente al desplegar: confirmar persistencia del fichero en el free tier (disco efímero en algunos PaaS; si no, PostgreSQL gratuito del propio PaaS).
 

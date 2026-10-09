@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS cuenta (
     email TEXT NOT NULL UNIQUE,
     contrasena_hash TEXT NOT NULL,
     cooperativa_id TEXT NOT NULL REFERENCES cooperativa(id),
+    socio_id TEXT NOT NULL DEFAULT 'socio-001' REFERENCES socio(id),
     creada_en TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
@@ -67,4 +68,18 @@ def conectar():
 
 def crear_esquema(conn):
     conn.executescript(ESQUEMA)
+    _migrar_socio_en_cuenta(conn)
     conn.commit()
+
+
+def _migrar_socio_en_cuenta(conn):
+    """Bases creadas antes de `panel-campana-actual`.
+
+    La cuenta queda vinculada al socio de demostración (decisión registrada
+    en esa feature): todas las cuentas del MVP se asocian a `socio-001`.
+    """
+    columnas = [fila[1] for fila in conn.execute("PRAGMA table_info(cuenta)")]
+    if "socio_id" not in columnas:
+        conn.execute(
+            "ALTER TABLE cuenta ADD COLUMN socio_id TEXT NOT NULL DEFAULT 'socio-001'"
+        )

@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -84,7 +86,7 @@ fun OlivApp() {
             onCrearCuenta = { pantalla = "registro" },
             onSesionAbierta = { pantalla = "sesion" }
         )
-        "sesion" -> PantallaSesionAbierta(onSesionCerrada = { pantalla = "inicio" })
+        "sesion" -> PantallaPanel(onSesionCerrada = { pantalla = "inicio" })
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
             onCrearCuenta = { pantalla = "registro" }
@@ -286,11 +288,19 @@ fun PantallaInicioSesion(
     }
 }
 
+/**
+ * Panel de la campaña actual (pantalla de aterrizaje tras entrar).
+ *
+ * Muestra los datos oficiales de la cooperativa en su propio bloque,
+ * separados de las labores (que vivirán en el cuaderno de campo), y el
+ * acceso al cuaderno y al simulador de liquidación.
+ */
 @Composable
-fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
+fun PantallaPanel(onSesionCerrada: () -> Unit) {
     val contexto = LocalContext.current
-    var email by remember { mutableStateOf<String?>(null) }
+    var datos by remember { mutableStateOf<DatosPanel?>(null) }
     var mensaje by remember { mutableStateOf<String?>(null) }
+    var aviso by remember { mutableStateOf<String?>(null) }
 
     // Llamada autenticada: el token guardado acompaña a la petición.
     remember {
@@ -298,8 +308,8 @@ fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
         if (token == null) {
             mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
         } else {
-            ServicioCuentas.cargarMiCuenta(token) { correo, texto ->
-                email = correo
+            ServicioCuentas.cargarMiPanel(token) { cargados, texto ->
+                datos = cargados
                 mensaje = texto
             }
         }
@@ -310,33 +320,50 @@ fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Sesión iniciada",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        email?.let {
+        datos?.let {
             Text(
-                text = it,
-                fontSize = 18.sp,
-                color = TextoMarron,
-                textAlign = TextAlign.Center
+                text = "Campaña ${it.campana}",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoMarron
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Tu sesión se mantiene abierta\nen este dispositivo.",
+                text = "Datos oficiales de la cooperativa",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .padding(16.dp)
+            ) {
+                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados)
+                Spacer(modifier = Modifier.height(12.dp))
+                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso)
+                Spacer(modifier = Modifier.height(12.dp))
+                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Estos son los datos que declara la cooperativa.\nTus labores van aparte, en el cuaderno de campo.",
                 fontSize = 18.sp,
                 lineHeight = 26.sp,
                 color = TextoMarron,
                 textAlign = TextAlign.Center
             )
-        }
+        } ?: Text(
+            text = "Cargando tus datos…",
+            fontSize = 18.sp,
+            color = TextoMarron
+        )
         mensaje?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -344,6 +371,33 @@ fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
                 fontSize = 18.sp,
                 lineHeight = 26.sp,
                 color = TextoError,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "Tus herramientas",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = VerdeOliva
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        BotonSecundario(
+            texto = "Cuaderno de campo",
+            alPulsar = { aviso = "El cuaderno de campo estará disponible próximamente." }
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        BotonSecundario(
+            texto = "Simulador de liquidación",
+            alPulsar = { aviso = "El simulador de liquidación estará disponible próximamente." }
+        )
+        aviso?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron,
                 textAlign = TextAlign.Center
             )
         }
@@ -357,6 +411,44 @@ fun PantallaSesionAbierta(onSesionCerrada: () -> Unit) {
             }
         )
     }
+}
+
+/** Una fila del bloque de datos oficiales: etiqueta grande y valor destacado. */
+@Composable
+fun FilaDato(etiqueta: String, valor: String) {
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = etiqueta,
+            fontSize = 18.sp,
+            color = TextoMarron
+        )
+        Text(
+            text = valor,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+    }
+}
+
+/** Datos oficiales del panel, ya formateados para enseñar (formato español). */
+class DatosPanel(
+    val campana: String,
+    val kilosEntregados: String,
+    val rendimientoGraso: String,
+    val aceiteObtenido: String
+)
+
+/** Números en formato español: 10.958 y 17,93. */
+private fun formatearNumero(valor: Double, decimales: Int): String {
+    val formato = java.text.NumberFormat.getNumberInstance(java.util.Locale.forLanguageTag("es-ES"))
+    formato.minimumFractionDigits = decimales
+    formato.maximumFractionDigits = decimales
+    return formato.format(valor)
 }
 
 @Composable
@@ -508,6 +600,50 @@ object ServicioCuentas {
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo iniciar sesión. Revisa los datos." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Consulta los datos del panel del socio (llamada autenticada). */
+    fun cargarMiPanel(token: String, alTerminar: (DatosPanel?, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mi-panel")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val cuerpo = JSONObject(it.body?.string() ?: "")
+                        val campana = cuerpo.optJSONObject("campana")?.optString("nombre") ?: ""
+                        val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
+                        val datos = DatosPanel(
+                            campana = campana,
+                            kilosEntregados = formatearNumero(
+                                oficiales.optDouble("kilos_entregados"), 0
+                            ) + " kg",
+                            rendimientoGraso = formatearNumero(
+                                oficiales.optDouble("rendimiento_graso"), 2
+                            ) + " %",
+                            aceiteObtenido = formatearNumero(
+                                oficiales.optDouble("aceite_obtenido"), 0
+                            ) + " kg"
+                        )
+                        principal.post { alTerminar(datos, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudieron cargar tus datos." }
                         principal.post { alTerminar(null, detalle) }
                     }
                 }
