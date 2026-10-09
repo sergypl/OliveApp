@@ -310,13 +310,19 @@
       "grabacion-de-nota-voz",
       "bootstrap-backend"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Enviar una nota de voz real en español grabada desde Android y comprobar que devuelve la transcripción y que el audio se borra del servidor tras transcribir"
     ],
-    "evidence": [],
-    "notes": "Bloqueante: confirmar en inference.devexpert.io el endpoint exacto de audio y modelo, y validar formato/latencia/coste (docs/risks-and-open-questions.md). Clave DEVEXPERT_API_KEY solo en servidor."
+    "evidence": [
+      "./init.sh completo el 2026-10-09 (pytest 61/61 con 8 tests nuevos de transcripción, healthcheck, datos sembrados con token, APK instalado y abierto).",
+      "Validación empírica del ADR 0004 (2026-10-09): nota real en español en el formato nativo de Android (MPEG-4/AAC 16 kHz) aceptada por el alias `transcribe` (1,7 s, 85 tokens) y extracción con `chat` y JSON forzado (5,7 s); datos registrados en el ADR.",
+      "Verificación real desde la app en el emulador OlivApp_API_34 con voz real en español del usuario (6 s, formato nativo de la app): la nota pasó de 'Pendiente de transcripción' a 'Transcrita' con el texto visible ('He hecho un tratamiento en la parcela La Noria contra la mosca del olivo con dos litros de producto el veinte de enero.'), transcrita por la ruta real app → POST /api/v1/mis-notas-voz/transcripcion → gateway `transcribe`. Captura en sesión (no versionada).",
+      "El audio no se conserva en el servidor: test `test_transcribe_un_audio_y_lo_borra_del_servidor` comprueba que el fichero temporal desaparece tras transcribir y el endpoint no guarda nada.",
+      "Ruta de error verificada en vivo con el gateway real: nota sin voz → 'No se ha entendido el audio. Vuelve a grabar la nota.' con error visible y botón Reintentar."
+    ],
+    "notes": "Bloqueo del ADR 0004 resuelto: pipeline validado empíricamente (formato, latencia, coste y JSON forzado) y clave DEVEXPERT_API_KEY solo en servidor. Matiz honesto: el micrófono virtual del emulador solo captura silencio (limitación del emulador confirmada por el usuario), así que la nota de voz real en español se registró en la app con el formato y la estructura exactos de una nota grabada (audio real del usuario) y se transcribió por la ruta completa de la app; la grabación por micrófono quedó verificada en la feature anterior."
   },
   {
     "id": "reintento-de-transcripcion-fallida",
@@ -332,7 +338,7 @@
       "Simular un fallo del endpoint de transcripción y comprobar el error visible y que el reintento completa la nota"
     ],
     "evidence": [],
-    "notes": "Ciclo de vida de Nota de voz en docs/domain-model.md y caso borde 'audio demasiado corto o ilegible'."
+    "notes": "Ciclo de vida de Nota de voz en docs/domain-model.md y caso borde 'audio demasiado corto o ilegible'. Parte de su comportamiento ya existe desde transcripcion-de-nota-voz (error visible + botón 'Reintentar', verificado en vivo con el gateway real); falta su verificación propia: simular un fallo del endpoint y comprobar que el reintento completa la nota."
   },
   {
     "id": "sincronizacion-pendientes-al-reconectar",
@@ -349,7 +355,7 @@
       "Con dos notas pendientes, restaurar la conexión y comprobar que se transcriben en orden de grabación y sin duplicados"
     ],
     "evidence": [],
-    "notes": "Idempotencia básica al confirmar para evitar duplicados al reconectar (docs/risks-and-open-questions.md)."
+    "notes": "Idempotencia básica al confirmar para evitar duplicados al reconectar (docs/risks-and-open-questions.md). Ya existe el envío automático de las notas pendientes al abrir la pantalla de notas de voz (transcripcion-de-nota-voz); falta el disparo por reconexión y el orden de grabación."
   },
   {
     "id": "borrador-ia-desde-transcripcion",
