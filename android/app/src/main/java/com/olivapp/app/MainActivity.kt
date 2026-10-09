@@ -60,8 +60,10 @@ import kotlinx.coroutines.delay
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
@@ -864,11 +866,11 @@ fun Desplegable(
 }
 
 /**
- * Pantalla de notas de voz (feature grabacion-de-nota-voz).
+ * Pantalla de notas de voz (features grabacion-de-nota-voz y transcripcion-de-nota-voz).
  *
- * El socio graba una nota corta con el botón grande y la grabación queda
- * registrada como nota de voz con estado visible. El audio vive en el
- * dispositivo hasta que la transcripción lo envíe al backend.
+ * El socio graba una nota corta con el botón grande; la grabación queda
+ * registrada como nota de voz con estado visible y se envía al backend para
+ * transcribirla (el servidor no conserva el audio).
  */
 @Composable
 fun PantallaNotasVoz(onVolver: () -> Unit) {
@@ -893,18 +895,50 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
             mensaje = "No se pudo empezar a grabar. Comprueba el permiso de micrófono."
         }
     }
+    val transcribirNota = { nota: AlmacenNotasVoz.NotaDeVoz ->
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            almacen.marcar(nota.id, "error", "")
+            notas = almacen.notas()
+            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+        } else {
+            almacen.marcar(nota.id, "transcribiendo", "")
+            notas = almacen.notas()
+            ServicioCuentas.transcribirNota(token, File(nota.fichero)) { texto, error ->
+                if (texto != null) {
+                    almacen.marcar(nota.id, "transcrita", texto)
+                    mensaje = "Nota transcrita. Ya puedes leer el texto."
+                } else {
+                    almacen.marcar(nota.id, "error", "")
+                    mensaje = error
+                }
+                notas = almacen.notas()
+            }
+        }
+    }
     val pararGrabacion = {
         val duracion = grabador.parar()
         val fichero = ficheroActual
         ficheroActual = null
         grabando = false
         if (duracion >= 1 && fichero != null) {
-            almacen.guardar(fichero, duracion)
+            val nota = almacen.guardar(fichero, duracion)
             notas = almacen.notas()
-            mensaje = "Nota de voz guardada. Pendiente de transcripción."
+            mensaje = "Nota de voz guardada. Transcribiendo…"
+            transcribirNota(nota)
         } else {
             fichero?.delete()
             mensaje = "La grabación ha sido demasiado corta. Vuelve a intentarlo."
+        }
+    }
+
+    // Al abrir la pantalla, las notas pendientes se envían a transcribir.
+    LaunchedEffect(Unit) {
+        val token = AlmacenSesiones(contexto).token()
+        for (nota in almacen.notas()) {
+            if (nota.estado == "pendiente" && token != null) {
+                transcribirNota(nota)
+            }
         }
     }
 
@@ -915,7 +949,7 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
             segundos += 1
             if (segundos >= LIMITE_SEGUNDOS_NOTA) {
                 pararGrabacion()
-                mensaje = "Has llegado a los $LIMITE_SEGUNDOS_NOTA segundos. Nota guardada."
+                mensaje = "Has llegado a los $LIMITE_SEGUNDOS_NOTA segundos. Nota guardada y en transcripción."
             }
         }
     }
@@ -1030,7 +1064,7 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                     if (indice > 0) {
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    FilaNotaVoz(nota)
+                    FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
                 }
             }
         }
@@ -1052,9 +1086,9 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
 /** Límite de duración de una nota de voz (decisión de esta feature). */
 private const val LIMITE_SEGUNDOS_NOTA = 60
 
-/** Una nota de voz de la cola local: cuándo se grabó, cuánto dura y su estado. */
+/** Una nota de voz de la cola local: cuándo se grabó, cuánto dura, su estado y su texto. */
 @Composable
-fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz) {
+fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = nota.cuando + " · " + nota.segundos + " s",
@@ -1067,8 +1101,21 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz) {
             text = nota.estadoVisible,
             fontSize = 18.sp,
             lineHeight = 26.sp,
-            color = VerdeOliva
+            color = if (nota.estado == "error") TextoError else VerdeOliva
         )
+        if (nota.texto.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = nota.texto,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron
+            )
+        }
+        if (nota.estado == "error") {
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonSecundario(texto = "Reintentar", alPulsar = alReintentar)
+        }
     }
 }
 
@@ -1078,7 +1125,22 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz) {
  */
 class AlmacenNotasVoz(private val contexto: Context) {
 
-    class NotaDeVoz(val cuando: String, val segundos: Int, val estadoVisible: String)
+    class NotaDeVoz(
+        val id: String,
+        val fichero: String,
+        val cuando: String,
+        val segundos: Int,
+        val estado: String,
+        val texto: String
+    ) {
+        val estadoVisible: String
+            get() = when (estado) {
+                "transcribiendo" -> "Transcribiendo…"
+                "transcrita" -> "Transcrita"
+                "error" -> "No se ha podido transcribir. Toca para reintentar."
+                else -> "Pendiente de transcripción"
+            }
+    }
 
     private val carpeta = File(contexto.filesDir, "notas-voz")
     private val indice = File(contexto.filesDir, "notas-voz.json")
@@ -1090,18 +1152,42 @@ class AlmacenNotasVoz(private val contexto: Context) {
     }
 
     /** Registra una nota grabada (la más reciente la primera). */
-    fun guardar(fichero: File, segundos: Int) {
+    fun guardar(fichero: File, segundos: Int): NotaDeVoz {
         val nota = JSONObject()
             .put("id", fichero.name)
             .put("fichero", fichero.absolutePath)
             .put("creada_en", LocalDateTime.now().toString())
             .put("segundos", segundos)
             .put("estado", "pendiente")
+            .put("texto", "")
         val lista = JSONArray()
         lista.put(nota)
         val anteriores = leer()
         for (i in 0 until anteriores.length()) {
             lista.put(anteriores.getJSONObject(i))
+        }
+        indice.writeText(lista.toString())
+        return NotaDeVoz(
+            id = fichero.name,
+            fichero = fichero.absolutePath,
+            cuando = LocalDateTime.now().format(formato),
+            segundos = segundos,
+            estado = "pendiente",
+            texto = ""
+        )
+    }
+
+    /** Cambia el estado de una nota (y guarda su transcripción cuando llega). */
+    fun marcar(id: String, estado: String, texto: String) {
+        val anteriores = leer()
+        val lista = JSONArray()
+        for (i in 0 until anteriores.length()) {
+            val fila = anteriores.getJSONObject(i)
+            if (fila.optString("id") == id) {
+                fila.put("estado", estado)
+                fila.put("texto", texto)
+            }
+            lista.put(fila)
         }
         indice.writeText(lista.toString())
     }
@@ -1118,9 +1204,12 @@ class AlmacenNotasVoz(private val contexto: Context) {
             }
             resultado.add(
                 NotaDeVoz(
+                    id = fila.optString("id"),
+                    fichero = fila.optString("fichero"),
                     cuando = creada,
                     segundos = fila.optInt("segundos"),
-                    estadoVisible = "Pendiente de transcripción"
+                    estado = fila.optString("estado"),
+                    texto = fila.optString("texto")
                 )
             )
         }
@@ -1800,6 +1889,45 @@ object ServicioCuentas {
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo guardar la labor." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Envía una nota de voz al backend para transcribirla (llamada autenticada). */
+    fun transcribirNota(token: String, fichero: java.io.File, alTerminar: (String?, String) -> Unit) {
+        val cuerpo = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "audio",
+                fichero.name,
+                fichero.asRequestBody("audio/mp4".toMediaType())
+            )
+            .build()
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-notas-voz/transcripcion")
+            .header("Authorization", "Bearer $token")
+            .post(cuerpo)
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val respuesta = JSONObject(it.body?.string() ?: "")
+                        val texto = respuesta.optString("texto")
+                        principal.post { alTerminar(texto, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudo transcribir la nota." }
                         principal.post { alTerminar(null, detalle) }
                     }
                 }
