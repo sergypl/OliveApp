@@ -272,12 +272,17 @@
     "depends_on": [
       "inicio-de-sesion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Conceder el permiso de micrófono y grabar una nota corta en el dispositivo, comprobando que el audio queda asociado a la nota de voz"
     ],
-    "evidence": [],
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 53/53, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: permiso de micrófono concedido desde la app ('¿Permitir que OlivApp grabe audio?' → 'Mientras se usa la aplicación') y grabación real desde 'Notas de voz' con el botón grande Grabar/Parar y contador visible ('Grabando… 2 de 60 segundos')",
+      "2026-10-09: dos notas grabadas (6 s y 3 s) registradas y listadas como 'Pendiente de transcripción' en 'Tus notas de voz', cada una con su audio asociado en el dispositivo (ficheros .m4a no vacíos de 13 KB y 7,9 KB, contenedor ISO Media MP4 v2 = MPEG-4/AAC; en la cola local cada entrada lleva su fichero, segundos, fecha y estado)",
+      "2026-10-09: grabación demasiado corta comprobada en vivo: se descarta con 'La grabación ha sido demasiado corta. Vuelve a intentarlo.' y no se registra en la cola"
+    ],
     "notes": "Riesgo de permisos y fabricantes Android: probar en el móvil real pronto. Definir límite de duración y formato de audio (docs/risks-and-open-questions.md)."
   },
   {
