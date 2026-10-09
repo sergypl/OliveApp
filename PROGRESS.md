@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/<usuario>/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `alta-de-parcela`
+- Siguiente feature lista actual: `alta-manual-labor`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 35/35, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; campaña anterior verificada desde la app: datos oficiales y labores por separado, solo consulta)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 43/43, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; alta de parcela verificada desde la app con aislamiento por socio)
 
 ## Registro de sesiones
 
@@ -176,3 +176,14 @@
 - Ficheros o artefactos actualizados: `backend/app/main.py` (`/api/v1/mi-campanas` y detalle), `backend/tests/test_campanas_anteriores.py`, `android/.../MainActivity.kt` (sección de campañas anteriores y pantalla de campaña), `feature_list.json`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: la sección de labores está vacía hasta que llegue el cuaderno de campo (comportamiento esperado en esta etapa, documentado); pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `alta-de-parcela` (crear una parcela con nombre propio).
+
+### Sesión 016
+
+- Fecha: 2026-10-09
+- Objetivo: feature `alta-de-parcela` (alta de parcelas con nombre propio).
+- Completado: módulo `parcelas.py` (nombre obligatorio, máximo 60 caracteres, sin borrado ni archivo en el MVP) con `GET/POST /api/v1/mis-parcelas` autenticados (la parcela se asocia al socio de la cuenta) y pantalla "Tus parcelas" en la app (alta por nombre + lista del socio + aviso "Las parcelas no se borran en esta versión."), accesible desde el panel. Sin cambios de reglas: se confirmó mantener el flujo secuencial de una feature cada vez.
+- Verificación ejecutada: `./init.sh` completo (pytest 43/43 con 8 tests nuevos, healthcheck, datos sembrados con token, APK instalado y abierto) y verificación real desde la app en el emulador: alta de "La Noria" → "Parcela creada." y visible en la lista del socio (4 parcelas sembradas + nueva); aislamiento en vivo: la lista de `socio-001` la contiene y la de `socio-002` no (tampoco al revés), con `socio_id = socio-001` en la base. Captura en sesión (no versionada).
+- Evidencia capturada: `feature_list.json` (`alta-de-parcela` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/parcelas.py`, `backend/app/main.py` (rutas de parcelas), `backend/tests/test_parcelas.py`, `android/.../MainActivity.kt` (pantalla Tus parcelas), `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: (1) artefacto de pilotaje anotado: `adb input text` no admite espacios (usa `%s`); un intento creó la fila "La", borrada de la base de desarrollo como error de tecleado antes de la captura final; (2) observación de entorno: en un arranque en frío del backend la app mostró "No se pudieron cargar tus datos." una vez (transitorio; sin reintento automático en la app, comportamiento a revisar si se repite). Pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `alta-manual-labor` (crear una labor con el formulario manual).
