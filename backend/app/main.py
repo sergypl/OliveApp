@@ -246,6 +246,13 @@ def mi_campana(
     }
 
 
+@app.get("/api/v1/mis-labores")
+def mis_labores(conn: sqlite3.Connection = Depends(conexion), sesion=Depends(sesion_actual)):
+    """Historial de labores del socio agrupado por campaña ('Mi cuaderno')."""
+    cuenta = _cuenta_del_socio(conn, sesion)
+    return {"campanas": labores.labores_del_socio_por_campana(conn, cuenta["socio_id"])}
+
+
 @app.post("/api/v1/mis-labores", status_code=201)
 def crear_labor(
     entrada: LaborEntrada,
