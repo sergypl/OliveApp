@@ -7,7 +7,7 @@
 - **Datos de campaña (oficiales):** kilos entregados, rendimiento graso y aceite obtenido que la cooperativa registra para el socio en una campaña. Solo lectura en el MVP.
 - **Parcela:** unidad de terreno con nombre; pertenece a un socio.
 - **Labor:** registro cronológico de una tarea (tratamiento, riego o cosecha) en una parcela y fecha, dentro de una campaña. Puede originarse por voz o por formulario manual.
-- **Nota de voz:** audio grabado + transcripción + borrador IA. Es el origen más común de una labor.
+- **Nota de voz:** audio grabado + transcripción + borrador IA. Es el origen más común de una labor. Grabación de hasta 60 segundos en MPEG-4/AAC (`.m4a`), guardada en el dispositivo y registrada en una cola local con su estado hasta que se transcribe.
 - **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación.
 - **Simulación:** cálculo bajo demanda de liquidación en limpio (kilos × rendimiento graso − ajuste industrial). No se persiste como entidad en el MVP ni se compara con el dato oficial.
 
@@ -56,6 +56,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 - Fecha dictada fuera de la campaña actual: el borrador propone la campaña que corresponde a la fecha (actual o anterior) y el socio confirma.
 - Dos dictados del mismo día y parcela: dos labores separadas (no se fusionan).
 - Audio demasiado corto o ilegible: pedir repetir el dictado.
+- Audio demasiado largo: la grabación se detiene sola a los 60 segundos y la nota queda guardada.
 - Varios pendientes en cola: se transcriben en orden de grabación.
 - Eliminar una parcela con labores: fuera del MVP; las parcelas no se eliminan.
 - Del socio solo existen datos oficiales (sin labores propias): la campaña muestra los datos de cooperativa con el cuaderno vacío.

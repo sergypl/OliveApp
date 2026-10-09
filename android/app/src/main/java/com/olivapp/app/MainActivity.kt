@@ -1,11 +1,16 @@
 package com.olivapp.app
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +22,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,8 +53,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.delay
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -56,7 +66,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 // Dirección visual de DESIGN.md: fondo crema, texto marrón oscuro, cuerpo 18sp mínimo.
 private val FondoCrema = Color(0xFFFAF7F0)
@@ -100,12 +113,14 @@ fun OlivApp() {
             onSesionCerrada = { pantalla = "inicio" },
             onAbrirParcelas = { pantalla = "parcelas" },
             onAbrirCuaderno = { pantalla = "nueva_labor" },
+            onAbrirNotasVoz = { pantalla = "notas_voz" },
             onAbrirCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
             }
         )
         "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
+        "notas_voz" -> PantallaNotasVoz(onVolver = { pantalla = "sesion" })
         "nueva_labor" -> PantallaNuevaLabor(
             onVolver = { pantalla = "sesion" },
             onVerCampana = { id ->
@@ -326,6 +341,7 @@ fun PantallaPanel(
     onSesionCerrada: () -> Unit,
     onAbrirParcelas: () -> Unit,
     onAbrirCuaderno: () -> Unit,
+    onAbrirNotasVoz: () -> Unit,
     onAbrirCampana: (String) -> Unit
 ) {
     val contexto = LocalContext.current
@@ -439,6 +455,32 @@ fun PantallaPanel(
             color = VerdeOliva
         )
         Spacer(modifier = Modifier.height(12.dp))
+        // Botón grande de micrófono del panel: grabar una nota de voz.
+        Button(
+            onClick = onAbrirNotasVoz,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(88.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = VerdeOliva,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "Dictar una nota de voz",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Graba una nota corta para apuntar una labor.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
         Spacer(modifier = Modifier.height(12.dp))
         BotonSecundario(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
         Spacer(modifier = Modifier.height(12.dp))
@@ -818,6 +860,314 @@ fun Desplegable(
                 )
             }
         }
+    }
+}
+
+/**
+ * Pantalla de notas de voz (feature grabacion-de-nota-voz).
+ *
+ * El socio graba una nota corta con el botón grande y la grabación queda
+ * registrada como nota de voz con estado visible. El audio vive en el
+ * dispositivo hasta que la transcripción lo envíe al backend.
+ */
+@Composable
+fun PantallaNotasVoz(onVolver: () -> Unit) {
+    val contexto = LocalContext.current
+    val almacen = remember { AlmacenNotasVoz(contexto) }
+    val grabador = remember { GrabadorNotas() }
+    var notas by remember { mutableStateOf(almacen.notas()) }
+    var grabando by remember { mutableStateOf(false) }
+    var segundos by remember { mutableStateOf(0) }
+    var ficheroActual by remember { mutableStateOf<File?>(null) }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+
+    val empezarGrabacion = {
+        try {
+            val fichero = almacen.nuevaRutaDeAudio()
+            grabador.empezar(fichero)
+            ficheroActual = fichero
+            segundos = 0
+            grabando = true
+            mensaje = null
+        } catch (e: Exception) {
+            mensaje = "No se pudo empezar a grabar. Comprueba el permiso de micrófono."
+        }
+    }
+    val pararGrabacion = {
+        val duracion = grabador.parar()
+        val fichero = ficheroActual
+        ficheroActual = null
+        grabando = false
+        if (duracion >= 1 && fichero != null) {
+            almacen.guardar(fichero, duracion)
+            notas = almacen.notas()
+            mensaje = "Nota de voz guardada. Pendiente de transcripción."
+        } else {
+            fichero?.delete()
+            mensaje = "La grabación ha sido demasiado corta. Vuelve a intentarlo."
+        }
+    }
+
+    // Reloj de la grabación: se detiene sola al llegar al límite.
+    LaunchedEffect(grabando) {
+        while (grabando) {
+            delay(1000)
+            segundos += 1
+            if (segundos >= LIMITE_SEGUNDOS_NOTA) {
+                pararGrabacion()
+                mensaje = "Has llegado a los $LIMITE_SEGUNDOS_NOTA segundos. Nota guardada."
+            }
+        }
+    }
+
+    val lanzadorPermiso = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) {
+            empezarGrabacion()
+        } else {
+            mensaje = "Sin permiso de micrófono no se pueden grabar notas de voz."
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Notas de voz",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Graba una nota corta para apuntar una labor.\nMáximo $LIMITE_SEGUNDOS_NOTA segundos.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = {
+                if (grabando) {
+                    pararGrabacion()
+                } else if (
+                    ContextCompat.checkSelfPermission(
+                        contexto, Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    empezarGrabacion()
+                } else {
+                    lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            },
+            modifier = Modifier.size(120.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (grabando) TextoError else VerdeOliva,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = if (grabando) "Parar" else "Grabar",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (grabando) {
+                "Grabando… $segundos de $LIMITE_SEGUNDOS_NOTA segundos"
+            } else {
+                "Toca el botón para empezar a grabar."
+            },
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = if (grabando) TextoError else TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        mensaje?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Tus notas de voz",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = VerdeOliva
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (notas.isEmpty()) {
+                Text(
+                    text = "Todavía no has grabado ninguna nota de voz.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                for ((indice, nota) in notas.withIndex()) {
+                    if (indice > 0) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    FilaNotaVoz(nota)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        if (grabando) {
+            Text(
+                text = "Termina la grabación para volver.",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        }
+    }
+}
+
+/** Límite de duración de una nota de voz (decisión de esta feature). */
+private const val LIMITE_SEGUNDOS_NOTA = 60
+
+/** Una nota de voz de la cola local: cuándo se grabó, cuánto dura y su estado. */
+@Composable
+fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = nota.cuando + " · " + nota.segundos + " s",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = nota.estadoVisible,
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = VerdeOliva
+        )
+    }
+}
+
+/**
+ * Cola local de notas de voz: el audio vive en el dispositivo hasta que la
+ * transcripción lo envíe al backend (feature transcripcion-de-nota-voz).
+ */
+class AlmacenNotasVoz(private val contexto: Context) {
+
+    class NotaDeVoz(val cuando: String, val segundos: Int, val estadoVisible: String)
+
+    private val carpeta = File(contexto.filesDir, "notas-voz")
+    private val indice = File(contexto.filesDir, "notas-voz.json")
+    private val formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+
+    fun nuevaRutaDeAudio(): File {
+        carpeta.mkdirs()
+        return File(carpeta, "nota-" + System.currentTimeMillis() + ".m4a")
+    }
+
+    /** Registra una nota grabada (la más reciente la primera). */
+    fun guardar(fichero: File, segundos: Int) {
+        val nota = JSONObject()
+            .put("id", fichero.name)
+            .put("fichero", fichero.absolutePath)
+            .put("creada_en", LocalDateTime.now().toString())
+            .put("segundos", segundos)
+            .put("estado", "pendiente")
+        val lista = JSONArray()
+        lista.put(nota)
+        val anteriores = leer()
+        for (i in 0 until anteriores.length()) {
+            lista.put(anteriores.getJSONObject(i))
+        }
+        indice.writeText(lista.toString())
+    }
+
+    fun notas(): List<NotaDeVoz> {
+        val filas = leer()
+        val resultado = mutableListOf<NotaDeVoz>()
+        for (i in 0 until filas.length()) {
+            val fila = filas.optJSONObject(i) ?: continue
+            val creada = try {
+                LocalDateTime.parse(fila.optString("creada_en")).format(formato)
+            } catch (e: Exception) {
+                fila.optString("creada_en")
+            }
+            resultado.add(
+                NotaDeVoz(
+                    cuando = creada,
+                    segundos = fila.optInt("segundos"),
+                    estadoVisible = "Pendiente de transcripción"
+                )
+            )
+        }
+        return resultado
+    }
+
+    private fun leer(): JSONArray {
+        if (!indice.exists()) return JSONArray()
+        return try {
+            JSONArray(indice.readText())
+        } catch (e: Exception) {
+            JSONArray()
+        }
+    }
+}
+
+/** Grabadora de una nota de voz: MPEG-4 con audio AAC. */
+class GrabadorNotas {
+    private var grabador: MediaRecorder? = null
+    private var empezadoEn = 0L
+
+    @Suppress("DEPRECATION")
+    fun empezar(fichero: File) {
+        val r = MediaRecorder()
+        r.setAudioSource(MediaRecorder.AudioSource.MIC)
+        r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        r.setAudioSamplingRate(16000)
+        r.setOutputFile(fichero.absolutePath)
+        r.prepare()
+        r.start()
+        grabador = r
+        empezadoEn = android.os.SystemClock.elapsedRealtime()
+    }
+
+    /** Para la grabación y devuelve los segundos grabados. */
+    fun parar(): Int {
+        val r = grabador ?: return 0
+        grabador = null
+        val segundos = ((android.os.SystemClock.elapsedRealtime() - empezadoEn) / 1000).toInt()
+        try {
+            r.stop()
+        } catch (e: Exception) {
+            // Grabación demasiado corta: stop() falla y el fichero no sirve.
+        }
+        r.release()
+        return segundos
     }
 }
 
