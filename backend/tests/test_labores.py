@@ -9,6 +9,9 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.labores import campana_de_la_fecha
 import datetime
+import json
+import os
+import sqlite3
 
 DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123"}
 
@@ -215,3 +218,126 @@ def test_mis_labores_exige_token_valido():
             client.get("/api/v1/mi-campanas/2025-2026", headers=cabeceras).status_code
             == 200
         )
+
+
+# --- Historial por campaña (feature consulta-cuaderno-por-campana) ---
+
+
+def _socio_de_la_cuenta():
+    conn = sqlite3.connect(os.environ["OLIVAPP_DB"])
+    try:
+        fila = conn.execute(
+            "SELECT socio_id FROM cuenta WHERE email = ?", (DATOS["email"],)
+        ).fetchone()
+        return fila[0]
+    finally:
+        conn.close()
+
+
+def _insertar_labor_directa(socio_id, parcela_id, campana_id, fecha, categoria, campos):
+    """Inserta una labor directamente: la API solo admite la campaña actual."""
+    conn = sqlite3.connect(os.environ["OLIVAPP_DB"])
+    try:
+        conn.execute(
+            "INSERT INTO labor "
+            "(id, socio_id, parcela_id, campana_id, categoria, fecha, campos) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "labor-" + fecha + "-" + socio_id,
+                socio_id,
+                parcela_id,
+                campana_id,
+                categoria,
+                fecha,
+                json.dumps(campos, ensure_ascii=False),
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_historial_agrupado_por_campana_en_orden_cronologico():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        assert _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10").status_code == 201
+        assert _crear(client, cabeceras, parcela_id, "cosecha", {"modalidad": "a vuelo", "kilos": 850}, fecha="2026-02-15").status_code == 201
+        _insertar_labor_directa(
+            _socio_de_la_cuenta(),
+            parcela_id,
+            "2024-2025",
+            "2024-12-05",
+            "tratamiento",
+            {"producto": "Azufre mojable", "plaga_a_controlar": "repilo", "cantidad": 2, "unidad": "L"},
+        )
+
+        respuesta = client.get("/api/v1/mis-labores", headers=cabeceras)
+
+        assert respuesta.status_code == 200
+        campanas = respuesta.json()["campanas"]
+        # De la campaña más reciente a la más antigua.
+        assert [c["id"] for c in campanas] == ["2025-2026", "2024-2025"]
+        assert campanas[0]["nombre"] == "2025/2026"
+        assert campanas[0]["es_actual"] is True
+        assert campanas[1]["es_actual"] is False
+        # Dentro de cada campaña, de la labor más reciente a la más antigua.
+        assert [l["fecha"] for l in campanas[0]["labores"]] == ["2026-02-15", "2025-12-10"]
+        assert [l["fecha"] for l in campanas[1]["labores"]] == ["2024-12-05"]
+
+
+def test_historial_ensena_los_campos_tipo_siex_de_cada_labor():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(
+            client,
+            cabeceras,
+            parcela_id,
+            "tratamiento",
+            {"producto": "Azufre mojable", "plaga_a_controlar": "cochinilla", "cantidad": 2.5, "unidad": "L"},
+            fecha="2025-12-10",
+            observaciones="Tratamiento preventivo.",
+        )
+        assert creada.status_code == 201, creada.text
+
+        campanas = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"]
+        labor = campanas[0]["labores"][0]
+
+        assert labor["categoria"] == "tratamiento"
+        assert labor["parcela"]["nombre"] == "La Noria"
+        assert labor["campos"] == {
+            "producto": "Azufre mojable",
+            "plaga_a_controlar": "cochinilla",
+            "cantidad": 2.5,
+            "unidad": "L",
+        }
+        assert labor["observaciones"] == "Tratamiento preventivo."
+
+
+def test_historial_solo_incluye_las_labores_del_socio():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        assert _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10").status_code == 201
+        # Una labor de otro socio no debe aparecer en el historial.
+        _insertar_labor_directa(
+            "socio-002",
+            parcela_id,
+            "2025-2026",
+            "2026-01-20",
+            "cosecha",
+            {"modalidad": "a suelo", "kilos": 100},
+        )
+
+        campanas = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"]
+        fechas = [l["fecha"] for c in campanas for l in c["labores"]]
+
+        assert fechas == ["2025-12-10"]
+
+
+def test_historial_vacio_sin_labores():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+
+        respuesta = client.get("/api/v1/mis-labores", headers=cabeceras)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json() == {"campanas": []}

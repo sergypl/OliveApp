@@ -167,6 +167,17 @@ def crear_labor(
     }
 
 
+def _labor_de_fila(f):
+    return {
+        "id": f["id"],
+        "fecha": f["fecha"],
+        "categoria": f["categoria"],
+        "campos": json.loads(f["campos"]),
+        "observaciones": f["observaciones"],
+        "parcela": {"id": f["parcela_id"], "nombre": f["parcela_nombre"]},
+    }
+
+
 def labores_de_la_campana(conn, socio_id, campana_id):
     """Las labores del socio en una campaña, de la más reciente a la más antigua."""
     filas = conn.execute(
@@ -177,14 +188,38 @@ def labores_de_la_campana(conn, socio_id, campana_id):
         "ORDER BY l.fecha DESC, l.rowid DESC",
         (socio_id, campana_id),
     ).fetchall()
-    return [
-        {
-            "id": f["id"],
-            "fecha": f["fecha"],
-            "categoria": f["categoria"],
-            "campos": json.loads(f["campos"]),
-            "observaciones": f["observaciones"],
-            "parcela": {"id": f["parcela_id"], "nombre": f["parcela_nombre"]},
-        }
-        for f in filas
-    ]
+    return [_labor_de_fila(f) for f in filas]
+
+
+def labores_del_socio_por_campana(conn, socio_id):
+    """Historial del socio: sus labores agrupadas por campaña ('Mi cuaderno').
+
+    De la campaña más reciente a la más antigua y, dentro de cada campaña,
+    de la labor más reciente a la más antigua. Solo labores vigentes (sin
+    papelera, según el ciclo de vida de Labor).
+    """
+    filas = conn.execute(
+        "SELECT l.id, l.fecha, l.categoria, l.campos, l.observaciones, "
+        "p.id AS parcela_id, p.nombre AS parcela_nombre, "
+        "c.id AS campana_id, c.nombre AS campana_nombre, c.es_actual "
+        "FROM labor l JOIN parcela p ON p.id = l.parcela_id "
+        "JOIN campana c ON c.id = l.campana_id "
+        "WHERE l.socio_id = ? "
+        "ORDER BY c.id DESC, l.fecha DESC, l.rowid DESC",
+        (socio_id,),
+    ).fetchall()
+    campanas = []
+    por_id = {}
+    for f in filas:
+        grupo = por_id.get(f["campana_id"])
+        if grupo is None:
+            grupo = {
+                "id": f["campana_id"],
+                "nombre": f["campana_nombre"],
+                "es_actual": bool(f["es_actual"]),
+                "labores": [],
+            }
+            por_id[f["campana_id"]] = grupo
+            campanas.append(grupo)
+        grupo["labores"].append(_labor_de_fila(f))
+    return campanas
