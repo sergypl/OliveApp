@@ -41,6 +41,10 @@ class ParcelaAjena(ValueError):
     """La parcela no existe o pertenece a otro socio."""
 
 
+class LaborAjena(ValueError):
+    """La labor no existe o pertenece a otro socio."""
+
+
 def campana_de_la_fecha(fecha):
     """Campaña oleícola de una fecha: del 1 de noviembre al 31 de octubre."""
     inicio = fecha.year if fecha.month >= 11 else fecha.year - 1
@@ -105,10 +109,14 @@ def _validar_campos(categoria, campos):
     )
 
 
-def crear_labor(
+def _preparar_labor(
     conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
 ):
-    """Crea una labor en la campaña que corresponde a su fecha."""
+    """Valida todos los campos de una labor y devuelve los normalizados.
+
+    Sirve para crear y para editar: la campaña se deriva de la fecha y solo
+    la campaña actual admite labores (las cerradas son de solo consulta).
+    """
     fecha = _validar_fecha(fecha_texto)
     if categoria not in CATEGORIAS:
         raise DatosInvalidos(
@@ -138,6 +146,16 @@ def crear_labor(
         raise DatosInvalidos("Esa fecha no corresponde a ninguna campaña conocida.")
     if not campana["es_actual"]:
         raise DatosInvalidos("Esa fecha corresponde a una campaña cerrada: solo consulta.")
+    return fecha, parcela, campana_id, campos, observaciones
+
+
+def crear_labor(
+    conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
+):
+    """Crea una labor en la campaña que corresponde a su fecha."""
+    fecha, parcela, campana_id, campos, observaciones = _preparar_labor(
+        conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
+    )
 
     labor_id = str(uuid.uuid4())
     conn.execute(
@@ -153,6 +171,47 @@ def crear_labor(
             fecha.isoformat(),
             json.dumps(campos, ensure_ascii=False),
             observaciones,
+        ),
+    )
+    conn.commit()
+    return {
+        "id": labor_id,
+        "fecha": fecha.isoformat(),
+        "categoria": categoria,
+        "campana_id": campana_id,
+        "campos": campos,
+        "observaciones": observaciones,
+        "parcela": {"id": parcela["id"], "nombre": parcela["nombre"]},
+    }
+
+
+def actualizar_labor(
+    conn, socio_id, labor_id, fecha_texto, parcela_id, categoria, campos, observaciones
+):
+    """Edita cualquier campo de una labor propia (escenario 'Corrección manual').
+
+    La labor puede cambiar de fecha y de parcela; si la fecha cambia, cambia
+    de campaña con ella, pero solo la campaña actual admite labores.
+    """
+    existe = conn.execute(
+        "SELECT id FROM labor WHERE id = ? AND socio_id = ?", (labor_id, socio_id)
+    ).fetchone()
+    if not existe:
+        raise LaborAjena(labor_id)
+    fecha, parcela, campana_id, campos, observaciones = _preparar_labor(
+        conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
+    )
+    conn.execute(
+        "UPDATE labor SET fecha = ?, parcela_id = ?, campana_id = ?, "
+        "categoria = ?, campos = ?, observaciones = ? WHERE id = ?",
+        (
+            fecha.isoformat(),
+            parcela["id"],
+            campana_id,
+            categoria,
+            json.dumps(campos, ensure_ascii=False),
+            observaciones,
+            labor_id,
         ),
     )
     conn.commit()
