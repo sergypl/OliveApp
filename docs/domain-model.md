@@ -3,7 +3,7 @@
 ## Core Concepts
 - **Agricultor (socio):** dueño de todos sus datos; identificado por email + contraseña. En el MVP todo usuario es socio de una cooperativa.
 - **Cooperativa:** entidad oleícola a la que pertenece el socio y que moltura su aceituna. Fuente de los datos oficiales de campaña. En el MVP es única, no tiene usuarios ni administración en la app.
-- **Campaña:** temporada de cosecha (año agrícola, p. ej. 2024/2025). Agrupa las labores de "Mi cuaderno" y los datos oficiales de la cooperativa para el socio.
+- **Campaña:** temporada de cosecha (año agrícola, p. ej. 2024/2025). Agrupa las labores de "Mi cuaderno" y los datos oficiales de la cooperativa para el socio. La campaña de una labor se deriva de su fecha: la campaña oleícola X/Y va del 1 de noviembre de X al 31 de octubre de Y (p. ej. 15/12/2025 → 2025/2026).
 - **Datos de campaña (oficiales):** kilos entregados, rendimiento graso y aceite obtenido que la cooperativa registra para el socio en una campaña. Solo lectura en el MVP.
 - **Parcela:** unidad de terreno con nombre; pertenece a un socio.
 - **Labor:** registro cronológico de una tarea (tratamiento, riego o cosecha) en una parcela y fecha, dentro de una campaña. Puede originarse por voz o por formulario manual.

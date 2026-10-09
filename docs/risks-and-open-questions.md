@@ -11,7 +11,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 - Distinción laboratorio/industrial y ajuste industrial: resueltos en [ADR 0007](adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md). Rendimiento graso = laboratorio, aceite obtenido = industrial, merma industrial del 9,7 % en el dataset (regla de coherencia en dos etapas) y ajuste industrial del simulador por defecto 10 % (medido en la cooperativa real de la [referencia de producto](referencia-sb-portal-socios.md)). El socio 1 de la campaña 2025/2026 usa datos reales anonimizados.
 
 ## Implementation-Time Questions
-- Modelo de campaña: ¿el año agrícola se introduce a mano, se deriva de la fecha de la labor o se hereda de la campaña activa?
+- Modelo de campaña: resuelto en la feature `alta-manual-labor` (la campaña de una labor se deriva de su fecha: la campaña oleícola va del 1 de noviembre al 31 de octubre, p. ej. 15/12/2025 → 2025/2026). Una fecha fuera de toda campaña conocida o de una campaña cerrada rechaza el alta, con mensaje claro.
 - ¿Cómo se determina la "campaña actual"?: resuelto en la feature `panel-campana-actual` (es la campaña marcada como actual en los datos de la cooperativa; no se deriva de la fecha del sistema, para que la demo siempre muestre la campaña sembrada).
 - Valor por defecto y editabilidad del ajuste industrial: resueltos en [ADR 0007](adr/0007-mapeo-laboratorio-industrial-y-ajuste-real.md) (por defecto 10 %, editable).
 - Límite de duración de una nota de voz y formato de audio nativo.
