@@ -18,6 +18,10 @@ import uuid
 
 ITERACIONES_PBKDF2 = 200000
 LONGITUD_MINIMA = 8
+
+# Socio de demostración al que se vincula cada cuenta nueva en el MVP
+# (decisión de la feature `panel-campana-actual`).
+SOCIO_DE_DEMOSTRACION = "socio-001"
 PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -71,7 +75,12 @@ def verificar_contrasena(contrasena, contrasena_hash):
 
 
 def crear_cuenta(conn, cooperativa_id, email, contrasena):
-    """Crea la cuenta del socio. Devuelve id y email (nunca la contraseña)."""
+    """Crea la cuenta del socio. Devuelve id y email (nunca la contraseña).
+
+    La cuenta queda vinculada al socio de demostración (decisión de la
+    feature `panel-campana-actual`): en el MVP todas las cuentas se asocian
+    a `socio-001`, el socio con datos reales anonimizados.
+    """
     email = normalizar_email(email)
     validar(email, contrasena)
 
@@ -81,9 +90,9 @@ def crear_cuenta(conn, cooperativa_id, email, contrasena):
 
     cuenta_id = str(uuid.uuid4())
     conn.execute(
-        "INSERT INTO cuenta (id, email, contrasena_hash, cooperativa_id) "
-        "VALUES (?, ?, ?, ?)",
-        (cuenta_id, email, hashear(contrasena), cooperativa_id),
+        "INSERT INTO cuenta (id, email, contrasena_hash, cooperativa_id, socio_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (cuenta_id, email, hashear(contrasena), cooperativa_id, SOCIO_DE_DEMOSTRACION),
     )
     conn.commit()
     return {"id": cuenta_id, "email": email}
