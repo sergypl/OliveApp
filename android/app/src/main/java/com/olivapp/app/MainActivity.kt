@@ -94,11 +94,13 @@ fun OlivApp() {
         )
         "sesion" -> PantallaPanel(
             onSesionCerrada = { pantalla = "inicio" },
+            onAbrirParcelas = { pantalla = "parcelas" },
             onAbrirCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
             }
         )
+        "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
             onCrearCuenta = { pantalla = "registro" }
@@ -308,7 +310,11 @@ fun PantallaInicioSesion(
  * acceso al cuaderno y al simulador de liquidación.
  */
 @Composable
-fun PantallaPanel(onSesionCerrada: () -> Unit, onAbrirCampana: (String) -> Unit) {
+fun PantallaPanel(
+    onSesionCerrada: () -> Unit,
+    onAbrirParcelas: () -> Unit,
+    onAbrirCampana: (String) -> Unit
+) {
     val contexto = LocalContext.current
     var datos by remember { mutableStateOf<DatosPanel?>(null) }
     var campanas by remember { mutableStateOf<List<DatosCampanaResumen>>(emptyList()) }
@@ -420,6 +426,9 @@ fun PantallaPanel(onSesionCerrada: () -> Unit, onAbrirCampana: (String) -> Unit)
             color = VerdeOliva
         )
         Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        BotonSecundario(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
+        Spacer(modifier = Modifier.height(12.dp))
         BotonSecundario(
             texto = "Cuaderno de campo",
             alPulsar = { aviso = "El cuaderno de campo estará disponible próximamente." }
@@ -448,6 +457,145 @@ fun PantallaPanel(onSesionCerrada: () -> Unit, onAbrirCampana: (String) -> Unit)
                 onSesionCerrada()
             }
         )
+    }
+}
+
+/**
+ * Pantalla de parcelas del socio: alta con nombre propio y lista.
+ *
+ * Las parcelas no se eliminan ni archivan en el MVP (docs/domain-model.md).
+ */
+@Composable
+fun PantallaParcelas(onVolver: () -> Unit) {
+    val contexto = LocalContext.current
+    var nombre by remember { mutableStateOf("") }
+    var parcelas by remember { mutableStateOf<List<DatosParcela>>(emptyList()) }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+    var creada by remember { mutableStateOf(false) }
+    var trabajando by remember { mutableStateOf(false) }
+
+    fun cargar() {
+        val token = AlmacenSesiones(contexto).token() ?: return
+        ServicioCuentas.cargarParcelas(token) { lista, texto ->
+            if (lista != null) {
+                parcelas = lista
+            } else {
+                mensaje = texto
+            }
+        }
+    }
+
+    remember {
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+        } else {
+            cargar()
+        }
+        true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Tus parcelas",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Aquí viven tus parcelas.\nLes pondrás labores desde el cuaderno.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        CampoDeTexto(
+            etiqueta = "Nombre de la parcela",
+            valor = nombre,
+            alCambiar = { nombre = it },
+            tipo = KeyboardType.Text
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        BotonPrincipal(
+            texto = if (trabajando) "Creando la parcela…" else "Crear parcela",
+            habilitado = !trabajando,
+            alPulsar = {
+                trabajando = true
+                mensaje = null
+                creada = false
+                val token = AlmacenSesiones(contexto).token()
+                if (token == null) {
+                    trabajando = false
+                    mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                } else {
+                    ServicioCuentas.crearParcela(token, nombre) { exitosa, texto ->
+                        trabajando = false
+                        creada = exitosa
+                        mensaje = texto
+                        if (exitosa) {
+                            nombre = ""
+                            cargar()
+                        }
+                    }
+                }
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        mensaje?.let {
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = if (creada) VerdeOliva else TextoError,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        if (parcelas.isNotEmpty()) {
+            Text(
+                text = "Parcelas de este socio",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .padding(16.dp)
+            ) {
+                for ((indice, parcela) in parcelas.withIndex()) {
+                    if (indice > 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    Text(
+                        text = parcela.nombre,
+                        fontSize = 18.sp,
+                        color = TextoMarron
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        Text(
+            text = "Las parcelas no se borran en esta versión.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
     }
 }
 
@@ -607,6 +755,9 @@ class DatosCampana(
     val rendimientoGraso: String,
     val aceiteObtenido: String
 )
+
+/** Una parcela del socio. */
+class DatosParcela(val id: String, val nombre: String)
 
 /** Números en formato español: 10.958 y 17,93. */
 private fun formatearNumero(valor: Double, decimales: Int): String {
@@ -811,6 +962,71 @@ object ServicioCuentas {
                             .ifEmpty { "No se pudieron cargar tus datos." }
                         principal.post { alTerminar(null, detalle) }
                     }
+                }
+            }
+        })
+    }
+
+    /** Consulta las parcelas del socio (llamada autenticada). */
+    fun cargarParcelas(token: String, alTerminar: (List<DatosParcela>?, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-parcelas")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val arreglo = JSONArray(it.body?.string() ?: "[]")
+                        val lista = mutableListOf<DatosParcela>()
+                        for (i in 0 until arreglo.length()) {
+                            val p = arreglo.optJSONObject(i) ?: continue
+                            lista.add(DatosParcela(p.optString("id"), p.optString("nombre")))
+                        }
+                        principal.post { alTerminar(lista, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudieron cargar tus parcelas." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Crea una parcela del socio (llamada autenticada). */
+    fun crearParcela(token: String, nombre: String, alTerminar: (Boolean, String) -> Unit) {
+        val cuerpo = JSONObject().put("nombre", nombre).toString()
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-parcelas")
+            .header("Authorization", "Bearer $token")
+            .post(cuerpo.toRequestBody(JSON))
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(false, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val exitosa = it.isSuccessful
+                    val detalle = if (exitosa) {
+                        "Parcela creada."
+                    } else {
+                        detalleDeError(it).ifEmpty { "No se pudo crear la parcela." }
+                    }
+                    principal.post { alTerminar(exitosa, detalle) }
                 }
             }
         })

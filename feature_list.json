@@ -150,13 +150,17 @@
     "title": "El socio crea una parcela con nombre propio",
     "user_visible_behavior": "El socio crea una parcela manualmente (nombre) y la ve en su lista de parcelas para poder asignarle labores.",
     "depends_on": ["inicio-de-sesion"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Crear una parcela y comprobar que aparece en la lista del socio y no en la de otro socio"
     ],
-    "evidence": [],
-    "notes": "Las parcelas no se eliminan ni archivan en el MVP (docs/domain-model.md)."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 43/43, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: alta real desde la app ('Tus parcelas' -> nombre 'La Noria' -> 'Crear parcela') con mensaje 'Parcela creada.' y 'La Noria' visible en la lista del socio (captura en sesión)",
+      "2026-10-09: aislamiento comprobado en vivo: la lista del socio de la cuenta (socio-001) contiene 'La Noria' y la del otro socio (socio-002) no; en la base la parcela queda con socio_id = socio-001"
+    ],
+    "notes": "Parcela: unidad de terreno con nombre, pertenece a un socio. En el MVP no se eliminan ni archivan (docs/domain-model.md): sin rutas de borrado (405). Nombre obligatorio (máximo 60 caracteres). Endpoints autenticados: GET/POST /api/v1/mis-parcelas (la parcela se asocia al socio de la cuenta)."
   },
   {
     "id": "alta-manual-labor",
