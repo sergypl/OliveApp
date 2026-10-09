@@ -11,6 +11,7 @@ Reglas del MVP (decididas en la feature `registro-cuenta-socio`):
 """
 
 import hashlib
+import hmac
 import re
 import secrets
 import uuid
@@ -50,6 +51,23 @@ def hashear(contrasena):
         "sha256", contrasena.encode("utf-8"), bytes.fromhex(sal), ITERACIONES_PBKDF2
     )
     return "pbkdf2_sha256${}${}${}".format(ITERACIONES_PBKDF2, sal, resumen.hex())
+
+
+def verificar_contrasena(contrasena, contrasena_hash):
+    """Compara una contraseña con su hash guardado (tiempo constante)."""
+    try:
+        algoritmo, iteraciones, sal, resumen = contrasena_hash.split("$")
+        if algoritmo != "pbkdf2_sha256":
+            return False
+        calculado = hashlib.pbkdf2_hmac(
+            "sha256",
+            contrasena.encode("utf-8"),
+            bytes.fromhex(sal),
+            int(iteraciones),
+        )
+        return hmac.compare_digest(calculado.hex(), resumen)
+    except (ValueError, TypeError):
+        return False
 
 
 def crear_cuenta(conn, cooperativa_id, email, contrasena):

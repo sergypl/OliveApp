@@ -1,4 +1,8 @@
-"""Verificación de los datos sembrados de campaña (ADR 0006 y ADR 0007)."""
+"""Verificación de los datos sembrados de campaña (ADR 0006 y ADR 0007).
+
+Desde `inicio-de-sesion` las llamadas a los datos exigen token válido; los
+tests se autentican primero con una cuenta de verificación.
+"""
 
 from fastapi.testclient import TestClient
 
@@ -6,6 +10,8 @@ from app.main import app
 
 # Regla de coherencia en dos etapas (ADR 0007).
 MERMA_INDUSTRIAL = 0.097
+
+CUENTA_DE_VERIFICACION = {"email": "verificacion@ejemplo.com", "contrasena": "segura123"}
 
 RUTAS_DE_LECTURA = [
     "/api/v1/cooperativa",
@@ -15,29 +21,39 @@ RUTAS_DE_LECTURA = [
 ]
 
 
-def _campanas_por_socio(client):
+def _cabeceras(client):
+    assert client.post("/api/v1/registro", json=CUENTA_DE_VERIFICACION).status_code == 201
+    token = client.post("/api/v1/login", json=CUENTA_DE_VERIFICACION).json()["token"]
+    return {"Authorization": "Bearer " + token}
+
+
+def _campanas_por_socio(client, cabeceras):
     return {
-        socio["id"]: client.get("/api/v1/socios/{}/campanas".format(socio["id"])).json()
-        for socio in client.get("/api/v1/socios").json()
+        socio["id"]: client.get(
+            "/api/v1/socios/{}/campanas".format(socio["id"]), headers=cabeceras
+        ).json()
+        for socio in client.get("/api/v1/socios", headers=cabeceras).json()
     }
 
 
 def test_seed_carga_una_cooperativa_dos_socios_y_cuatro_campanas():
     with TestClient(app) as client:
-        cooperativa = client.get("/api/v1/cooperativa").json()
+        cabeceras = _cabeceras(client)
+        cooperativa = client.get("/api/v1/cooperativa", headers=cabeceras).json()
         assert cooperativa["id"] == "coop-demo"
         assert "demostración" in cooperativa["declaracion"]
 
-        assert len(client.get("/api/v1/socios").json()) == 2
+        assert len(client.get("/api/v1/socios", headers=cabeceras).json()) == 2
 
-        campanas = _campanas_por_socio(client)
+        campanas = _campanas_por_socio(client, cabeceras)
         for socio_id, lista in campanas.items():
             assert len(lista) == 4, socio_id
 
 
 def test_cada_socio_tiene_datos_en_la_campana_actual_y_al_menos_una_anterior():
     with TestClient(app) as client:
-        for socio_id, campanas in _campanas_por_socio(client).items():
+        cabeceras = _cabeceras(client)
+        for socio_id, campanas in _campanas_por_socio(client, cabeceras).items():
             assert any(c["actual"] for c in campanas), socio_id
             assert any(not c["actual"] for c in campanas), socio_id
             for c in campanas:
@@ -49,7 +65,8 @@ def test_cada_socio_tiene_datos_en_la_campana_actual_y_al_menos_una_anterior():
 
 def test_regla_de_coherencia_en_dos_etapas():
     with TestClient(app) as client:
-        for socio_id, campanas in _campanas_por_socio(client).items():
+        cabeceras = _cabeceras(client)
+        for socio_id, campanas in _campanas_por_socio(client, cabeceras).items():
             for c in campanas:
                 datos = c["datos_oficiales"]
                 esperado = round(
@@ -63,7 +80,10 @@ def test_regla_de_coherencia_en_dos_etapas():
 
 def test_campana_2025_2026_del_socio_1_con_datos_reales_anonimizados():
     with TestClient(app) as client:
-        campanas = client.get("/api/v1/socios/socio-001/campanas").json()
+        cabeceras = _cabeceras(client)
+        campanas = client.get(
+            "/api/v1/socios/socio-001/campanas", headers=cabeceras
+        ).json()
         actual = next(c for c in campanas if c["id"] == "2025-2026")
         assert actual["datos_oficiales"] == {
             "kilos_entregados": 10958.0,
@@ -74,8 +94,13 @@ def test_campana_2025_2026_del_socio_1_con_datos_reales_anonimizados():
 
 def test_las_parcelas_sembradas_estan_completas():
     with TestClient(app) as client:
-        parcelas_1 = client.get("/api/v1/socios/socio-001/parcelas").json()
-        parcelas_2 = client.get("/api/v1/socios/socio-002/parcelas").json()
+        cabeceras = _cabeceras(client)
+        parcelas_1 = client.get(
+            "/api/v1/socios/socio-001/parcelas", headers=cabeceras
+        ).json()
+        parcelas_2 = client.get(
+            "/api/v1/socios/socio-002/parcelas", headers=cabeceras
+        ).json()
         assert len(parcelas_1) == 4
         assert len(parcelas_2) == 3
 
@@ -90,8 +115,15 @@ def test_los_datos_oficiales_no_admiten_escritura_desde_la_api():
 
 def test_rejecta_socio_desconocido():
     with TestClient(app) as client:
-        assert client.get("/api/v1/socios/nadie/campanas").status_code == 404
-        assert client.get("/api/v1/socios/nadie/parcelas").status_code == 404
+        cabeceras = _cabeceras(client)
+        assert (
+            client.get("/api/v1/socios/nadie/campanas", headers=cabeceras).status_code
+            == 404
+        )
+        assert (
+            client.get("/api/v1/socios/nadie/parcelas", headers=cabeceras).status_code
+            == 404
+        )
 
 
 def test_reejecutar_el_seed_no_duplica_datos():
@@ -99,11 +131,14 @@ def test_reejecutar_el_seed_no_duplica_datos():
     from app.seed import cargar_si_vacia
 
     with TestClient(app) as client:
+        cabeceras = _cabeceras(client)
         conn = basedatos.conectar()
         try:
             assert cargar_si_vacia(conn) == 0  # base ya llena: no hace nada
         finally:
             conn.close()
-        campanas = client.get("/api/v1/socios/socio-001/campanas").json()
+        campanas = client.get(
+            "/api/v1/socios/socio-001/campanas", headers=cabeceras
+        ).json()
         assert len(campanas) == 4
         assert basedatos.ruta_base_datos().name == "olivapp-test.db"
