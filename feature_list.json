@@ -207,13 +207,18 @@
     "depends_on": [
       "alta-manual-labor"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Con varias labores en dos campañas, comprobar el orden cronológico y la agrupación por campaña en 'Mi cuaderno'"
     ],
-    "evidence": [],
-    "notes": "Solo labores vigentes (sin papelera, ver ciclo de vida de Labor en docs/domain-model.md)."
+    "evidence": [
+      "./init.sh completo el 2026-10-09 (pytest 65/65 con 4 tests nuevos del historial, healthcheck, datos sembrados con token, APK instalado y abierto).",
+      "Verificación real desde la app en el emulador OlivApp_API_34 con labores en dos campañas: pantalla 'Mi cuaderno' (desde 'Cuaderno de campo' del panel) agrupa por campaña de la más reciente a la más antigua ('Campaña 2025/2026 · Campaña actual' y 'Campaña 2024/2025') y, dentro de cada campaña, de la labor más reciente a la más antigua (15/02/2026 → 20/01/2026 → 10/12/2025 y 20/01/2025 → 05/12/2024). Capturas en sesión (no versionadas).",
+      "Campos tipo SIEX legibles de un vistazo en cada labor, etiqueta y valor por línea (Parcela, Producto, Plaga a controlar, Cantidad con unidad, Modalidad, Kilos), con observaciones aparte; misma ficha en el bloque 'Mi cuaderno' del detalle de campaña.",
+      "Solo labores vigentes y del socio: tests de aislamiento (la labor de otro socio no aparece), historial vacío ('Todavía no has apuntado labores.') y agrupación/orden cronológico."
+    ],
+    "notes": "Solo labores vigentes (sin papelera, ver ciclo de vida de Labor en docs/domain-model.md). Las dos labores de la campaña cerrada 2024/2025 son datos de demostración insertados en la base de desarrollo (la API solo admite labores en la campaña actual por regla de dominio, así que no se pueden crear por la app): necesarias para verificar la agrupación por dos campañas."
   },
   {
     "id": "edicion-de-labor",

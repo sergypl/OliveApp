@@ -114,7 +114,7 @@ fun OlivApp() {
         "sesion" -> PantallaPanel(
             onSesionCerrada = { pantalla = "inicio" },
             onAbrirParcelas = { pantalla = "parcelas" },
-            onAbrirCuaderno = { pantalla = "nueva_labor" },
+            onAbrirCuaderno = { pantalla = "cuaderno" },
             onAbrirNotasVoz = { pantalla = "notas_voz" },
             onAbrirCampana = { id ->
                 idCampana = id
@@ -123,8 +123,12 @@ fun OlivApp() {
         )
         "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
         "notas_voz" -> PantallaNotasVoz(onVolver = { pantalla = "sesion" })
-        "nueva_labor" -> PantallaNuevaLabor(
+        "cuaderno" -> PantallaCuaderno(
             onVolver = { pantalla = "sesion" },
+            onApuntarLabor = { pantalla = "nueva_labor" }
+        )
+        "nueva_labor" -> PantallaNuevaLabor(
+            onVolver = { pantalla = "cuaderno" },
             onVerCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
@@ -515,6 +519,128 @@ fun PantallaPanel(
 }
 
 /**
+ * Pantalla "Mi cuaderno" (feature consulta-cuaderno-por-campana).
+ *
+ * Historial cronológico de las labores del socio agrupado por campaña: de la
+ * campaña más reciente a la más antigua y, dentro de cada campaña, de la
+ * labor más reciente a la más antigua, con los campos tipo SIEX de cada una
+ * legibles de un vistazo. Solo labores vigentes (sin papelera).
+ */
+@Composable
+fun PantallaCuaderno(onVolver: () -> Unit, onApuntarLabor: () -> Unit) {
+    val contexto = LocalContext.current
+    var campanas by remember { mutableStateOf<List<DatosCampanaDeLabores>>(emptyList()) }
+    var cargado by remember { mutableStateOf(false) }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+
+    fun cargar() {
+        val token = AlmacenSesiones(contexto).token() ?: return
+        ServicioCuentas.cargarMisLabores(token) { lista, texto ->
+            cargado = true
+            if (lista != null) {
+                campanas = lista
+            } else {
+                mensaje = texto
+            }
+        }
+    }
+
+    remember {
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+            cargado = true
+        } else {
+            cargar()
+        }
+        true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Mi cuaderno",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Historial de tus labores por campaña,\nde la más reciente a la más antigua.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonPrincipal(texto = "Apuntar una labor", alPulsar = onApuntarLabor)
+        Spacer(modifier = Modifier.height(24.dp))
+        if (!cargado) {
+            Text(
+                text = "Cargando tu cuaderno…",
+                fontSize = 18.sp,
+                color = TextoMarron
+            )
+        } else if (campanas.isEmpty() && mensaje == null) {
+            Text(
+                text = "Todavía no has apuntado labores.",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            for ((indice, campana) in campanas.withIndex()) {
+                if (indice > 0) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Campaña " + campana.nombre +
+                            if (campana.esActual) " · Campaña actual" else "",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VerdeOliva
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    ) {
+                        for ((indiceLabor, labor) in campana.labores.withIndex()) {
+                            if (indiceLabor > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            FilaLabor(labor)
+                        }
+                    }
+                }
+            }
+        }
+        mensaje?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoError,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+    }
+}
+
+/**
  * Formulario manual de una labor de "Mi cuaderno" (feature alta-manual-labor).
  *
  * Campos por categoría según ADR 0005. La labor se guarda en la campaña
@@ -765,7 +891,7 @@ fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver a Mi cuaderno", alPulsar = onVolver)
     }
 }
 
@@ -1523,7 +1649,7 @@ fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
     }
 }
 
-/** Una fila de "Mi cuaderno": fecha y categoría, con el detalle de la labor. */
+/** Una fila de "Mi cuaderno": fecha y categoría, con sus campos legibles de un vistazo. */
 @Composable
 fun FilaLabor(labor: DatosLabor) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1533,13 +1659,14 @@ fun FilaLabor(labor: DatosLabor) {
             fontWeight = FontWeight.Bold,
             color = TextoMarron
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = labor.detalle,
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron
-        )
+        if (labor.parcela.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            FilaCampoLabor(etiqueta = "Parcela", valor = labor.parcela)
+        }
+        for ((etiqueta, valor) in labor.campos) {
+            Spacer(modifier = Modifier.height(4.dp))
+            FilaCampoLabor(etiqueta = etiqueta, valor = valor)
+        }
         if (labor.observaciones.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -1549,6 +1676,25 @@ fun FilaLabor(labor: DatosLabor) {
                 color = TextoMarron
             )
         }
+    }
+}
+
+/** Un campo tipo SIEX de la labor: etiqueta en negrita y su valor. */
+@Composable
+fun FilaCampoLabor(etiqueta: String, valor: String) {
+    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "$etiqueta: ",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Text(
+            text = valor,
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron
+        )
     }
 }
 
@@ -1599,8 +1745,16 @@ class DatosCampana(
 class DatosLabor(
     val fecha: String,
     val categoria: String,
-    val detalle: String,
+    val parcela: String,
+    val campos: List<Pair<String, String>>,
     val observaciones: String
+)
+
+/** Un grupo de "Mi cuaderno": una campaña con sus labores. */
+class DatosCampanaDeLabores(
+    val nombre: String,
+    val esActual: Boolean,
+    val labores: List<DatosLabor>
 )
 
 /** Una parcela del socio. */
@@ -1639,22 +1793,29 @@ private val NOMBRES_DE_CATEGORIA = mapOf(
 private fun formatearLabor(labor: org.json.JSONObject): DatosLabor {
     val campos = labor.optJSONObject("campos") ?: org.json.JSONObject()
     val parcela = labor.optJSONObject("parcela")?.optString("nombre") ?: ""
-    val detalle = when (labor.optString("categoria")) {
-        "tratamiento" -> "$parcela · " + campos.optString("producto") +
-            " · plaga: " + campos.optString("plaga_a_controlar") +
-            " · " + formatearCantidad(campos.optDouble("cantidad")) +
-            " " + campos.optString("unidad")
-        "riego" -> "$parcela · " + formatearCantidad(campos.optDouble("cantidad")) +
-            " " + campos.optString("unidad")
-        "cosecha" -> "$parcela · " + campos.optString("modalidad") +
-            " · " + formatearNumero(campos.optDouble("kilos"), 0) + " kg"
-        else -> parcela
+    val parejas = when (labor.optString("categoria")) {
+        "tratamiento" -> listOf(
+            "Producto" to campos.optString("producto"),
+            "Plaga a controlar" to campos.optString("plaga_a_controlar"),
+            "Cantidad" to formatearCantidad(campos.optDouble("cantidad")) +
+                " " + campos.optString("unidad")
+        )
+        "riego" -> listOf(
+            "Cantidad" to formatearCantidad(campos.optDouble("cantidad")) +
+                " " + campos.optString("unidad")
+        )
+        "cosecha" -> listOf(
+            "Modalidad" to campos.optString("modalidad"),
+            "Kilos" to formatearNumero(campos.optDouble("kilos"), 0) + " kg"
+        )
+        else -> emptyList()
     }
     return DatosLabor(
         fecha = formatearFecha(labor.optString("fecha")),
         categoria = NOMBRES_DE_CATEGORIA[labor.optString("categoria")]
             ?: labor.optString("categoria"),
-        detalle = detalle,
+        parcela = parcela,
+        campos = parejas,
         observaciones = labor.optString("observaciones")
     )
 }
@@ -1963,6 +2124,54 @@ object ServicioCuentas {
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudieron cargar tus parcelas." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Carga "Mi cuaderno": las labores del socio agrupadas por campaña. */
+    fun cargarMisLabores(token: String, alTerminar: (List<DatosCampanaDeLabores>?, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-labores")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val cuerpo = JSONObject(it.body?.string() ?: "{}")
+                        val arreglo = cuerpo.optJSONArray("campanas") ?: JSONArray()
+                        val lista = mutableListOf<DatosCampanaDeLabores>()
+                        for (i in 0 until arreglo.length()) {
+                            val c = arreglo.optJSONObject(i) ?: continue
+                            val filas = c.optJSONArray("labores") ?: JSONArray()
+                            val labores = mutableListOf<DatosLabor>()
+                            for (j in 0 until filas.length()) {
+                                val l = filas.optJSONObject(j) ?: continue
+                                labores.add(formatearLabor(l))
+                            }
+                            lista.add(
+                                DatosCampanaDeLabores(
+                                    nombre = c.optString("nombre"),
+                                    esActual = c.optBoolean("es_actual"),
+                                    labores = labores
+                                )
+                            )
+                        }
+                        principal.post { alTerminar(lista, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudo cargar tu cuaderno." }
                         principal.post { alTerminar(null, detalle) }
                     }
                 }
