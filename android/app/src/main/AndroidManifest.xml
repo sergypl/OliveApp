@@ -4,6 +4,9 @@
     <!-- El backend vive en el Mac de desarrollo (el emulador lo alcanza por 10.0.2.2). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Grabación de notas de voz (feature grabacion-de-nota-voz). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:label="OlivApp"
         android:usesCleartextTraffic="true"
