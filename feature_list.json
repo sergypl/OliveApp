@@ -132,13 +132,17 @@
     "title": "El socio abre una campaña anterior desde el panel",
     "user_visible_behavior": "Desde el panel, el socio elige una campaña cerrada y ve sus datos oficiales de cooperativa y sus labores de 'Mi cuaderno' por separado, en modo solo consulta.",
     "depends_on": ["panel-campana-actual"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Abrir una campaña anterior y comprobar que muestra datos oficiales y labores por separado y que no admite nuevas labores"
     ],
-    "evidence": [],
-    "notes": "Estado 'cerrada' de Campaña en docs/domain-model.md: solo consulta."
+    "evidence": [
+      "2026-10-09: ./init.sh completo (pytest 35/35, healthcheck 200, datos sembrados con token OK, APK instalado y abierto)",
+      "2026-10-09: desde el panel se abre 'Campaña 2024/2025' -> aviso 'Campaña cerrada: solo consulta. No se pueden añadir labores.', bloque 'Datos oficiales de la cooperativa' con los datos sembrados (6.200 kg / 21,40 % / 1.198 kg) y bloque 'Mi cuaderno' aparte ('Todavía no has apuntado labores en esta campaña.'), sin ningún control para añadir labores (captura en sesión)",
+      "2026-10-09: en vivo, POST a la ruta de la campaña -> 405 (solo lectura) y GET devuelve datos_oficiales y labores en claves separadas"
+    ],
+    "notes": "Estados de Campaña según docs/domain-model.md: actual | cerrada; las cerradas son de solo consulta. GET /api/v1/mi-campanas (listado con estado) y GET /api/v1/mi-campanas/{id} (detalle con datos_oficiales y labores en claves separadas). La sección 'labores' llega vacía hasta que exista el cuaderno de campo (separación de secciones ya modelada en API y UI)."
   },
   {
     "id": "alta-de-parcela",

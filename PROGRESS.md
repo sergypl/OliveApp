@@ -5,9 +5,9 @@
 - Raíz del repositorio: `/Users/sergioperezlopez/Projects/OliveApp`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
-- Siguiente feature lista actual: `consulta-campanas-anteriores`
+- Siguiente feature lista actual: `alta-de-parcela`
 - Bloqueo actual: ninguno (las 4 decisiones bloqueantes quedaron resueltas en ADR 0003-0006; ADR 0007 cerró el mapeo lab/industrial y el ajuste industrial por defecto; pendiente solo la validación empírica del pipeline de voz antes de implementar la feature de voz)
-- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 30/30, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; panel de la campaña actual verificado desde la app con los tres datos oficiales sembrados)
+- Última verificación: 2026-10-09 (`./init.sh` completo: pytest 35/35, healthcheck 200, datos sembrados con token OK, APK instalado y abierto; campaña anterior verificada desde la app: datos oficiales y labores por separado, solo consulta)
 
 ## Registro de sesiones
 
@@ -165,3 +165,14 @@
 - Ficheros o artefactos actualizados: `backend/app/db.py` (`cuenta.socio_id` + migración), `backend/app/cuentas.py` (`SOCIO_DE_DEMOSTRACION`), `backend/app/main.py` (`GET /api/v1/mi-panel`), `backend/tests/test_panel.py`, `android/.../MainActivity.kt` (pantalla Panel con formato español), `docs/risks-and-open-questions.md` (campaña actual y vinculación cuenta↔socio resueltas), `feature_list.json`, `PROGRESS.md`.
 - Riesgo conocido o tema sin resolver: la vinculación cuenta ↔ socio es la de demostración (`socio-001` para todas las cuentas); la separación real por socio queda para `aislamiento-de-datos-por-socio`. Pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
 - Mejor siguiente paso: `consulta-campanas-anteriores` (abrir una campaña anterior desde el panel).
+
+### Sesión 015
+
+- Fecha: 2026-10-09
+- Objetivo: feature `consulta-campanas-anteriores` (abrir una campaña cerrada desde el panel, solo consulta).
+- Completado: `GET /api/v1/mi-campanas` (listado con estado `actual`/`cerrada` según docs/domain-model.md) y `GET /api/v1/mi-campanas/{id}` (detalle con `datos_oficiales` y `labores` en claves separadas; la sección de labores llega vacía hasta que exista el cuaderno de campo, separación ya modelada en API y UI). App: sección "Campañas anteriores" en el panel y pantalla de campaña con aviso "Campaña cerrada: solo consulta. No se pueden añadir labores.", bloque "Datos oficiales de la cooperativa" y bloque "Mi cuaderno" aparte, sin control para añadir labores.
+- Verificación ejecutada: `./init.sh` completo (pytest 35/35 con 5 tests nuevos, healthcheck, datos sembrados con token, APK instalado y abierto) y verificación real desde la app en el emulador: desde el panel se abre "Campaña 2024/2025" y muestra los datos sembrados (6.200 kg / 21,40 % / 1.198 kg) y "Mi cuaderno" por separado, en solo consulta; en vivo, POST a la ruta de la campaña → 405 (solo lectura). Captura en sesión (no versionada).
+- Evidencia capturada: `feature_list.json` (`consulta-campanas-anteriores` → `passing`, con evidencias).
+- Ficheros o artefactos actualizados: `backend/app/main.py` (`/api/v1/mi-campanas` y detalle), `backend/tests/test_campanas_anteriores.py`, `android/.../MainActivity.kt` (sección de campañas anteriores y pantalla de campaña), `feature_list.json`, `PROGRESS.md`.
+- Riesgo conocido o tema sin resolver: la sección de labores está vacía hasta que llegue el cuaderno de campo (comportamiento esperado en esta etapa, documentado); pendientes históricos: móvil físico de la demo, firma del APK release, validación empírica del pipeline de voz (ADR 0004).
+- Mejor siguiente paso: `alta-de-parcela` (crear una parcela con nombre propio).

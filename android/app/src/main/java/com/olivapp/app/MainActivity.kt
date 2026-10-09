@@ -50,6 +50,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
@@ -76,6 +77,7 @@ fun OlivApp() {
     var pantalla by remember {
         mutableStateOf(if (AlmacenSesiones(contexto).hayToken()) "sesion" else "inicio")
     }
+    var idCampana by remember { mutableStateOf<String?>(null) }
     when (pantalla) {
         "registro" -> PantallaRegistro(
             onVolver = { pantalla = "inicio" },
@@ -86,7 +88,17 @@ fun OlivApp() {
             onCrearCuenta = { pantalla = "registro" },
             onSesionAbierta = { pantalla = "sesion" }
         )
-        "sesion" -> PantallaPanel(onSesionCerrada = { pantalla = "inicio" })
+        "campana" -> PantallaCampana(
+            campanaId = idCampana ?: "",
+            onVolver = { pantalla = "sesion" }
+        )
+        "sesion" -> PantallaPanel(
+            onSesionCerrada = { pantalla = "inicio" },
+            onAbrirCampana = { id ->
+                idCampana = id
+                pantalla = "campana"
+            }
+        )
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
             onCrearCuenta = { pantalla = "registro" }
@@ -296,13 +308,14 @@ fun PantallaInicioSesion(
  * acceso al cuaderno y al simulador de liquidación.
  */
 @Composable
-fun PantallaPanel(onSesionCerrada: () -> Unit) {
+fun PantallaPanel(onSesionCerrada: () -> Unit, onAbrirCampana: (String) -> Unit) {
     val contexto = LocalContext.current
     var datos by remember { mutableStateOf<DatosPanel?>(null) }
+    var campanas by remember { mutableStateOf<List<DatosCampanaResumen>>(emptyList()) }
     var mensaje by remember { mutableStateOf<String?>(null) }
     var aviso by remember { mutableStateOf<String?>(null) }
 
-    // Llamada autenticada: el token guardado acompaña a la petición.
+    // Llamadas autenticadas: el token guardado acompaña a las peticiones.
     remember {
         val token = AlmacenSesiones(contexto).token()
         if (token == null) {
@@ -311,6 +324,13 @@ fun PantallaPanel(onSesionCerrada: () -> Unit) {
             ServicioCuentas.cargarMiPanel(token) { cargados, texto ->
                 datos = cargados
                 mensaje = texto
+            }
+            ServicioCuentas.cargarCampanas(token) { lista, texto ->
+                if (lista != null) {
+                    campanas = lista
+                } else {
+                    mensaje = texto
+                }
             }
         }
         true
@@ -375,6 +395,24 @@ fun PantallaPanel(onSesionCerrada: () -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
+        val cerradas = campanas.filter { it.estado == "cerrada" }
+        if (cerradas.isNotEmpty()) {
+            Text(
+                text = "Campañas anteriores",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            for (c in cerradas) {
+                BotonSecundario(
+                    texto = "Campaña ${c.nombre}",
+                    alPulsar = { onAbrirCampana(c.id) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+        }
         Text(
             text = "Tus herramientas",
             fontSize = 20.sp,
@@ -413,6 +451,121 @@ fun PantallaPanel(onSesionCerrada: () -> Unit) {
     }
 }
 
+/**
+ * Pantalla de una campaña anterior (modo solo consulta).
+ *
+ * Muestra los datos oficiales de la cooperativa y las labores de "Mi
+ * cuaderno" por separado. Al estar cerrada la campaña, no se pueden añadir
+ * labores nuevas (estado `cerrada` de Campaña en docs/domain-model.md).
+ */
+@Composable
+fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
+    val contexto = LocalContext.current
+    var datos by remember { mutableStateOf<DatosCampana?>(null) }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+
+    // Llamada autenticada: el token guardado acompaña a la petición.
+    remember {
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+        } else {
+            ServicioCuentas.cargarCampana(token, campanaId) { cargada, texto ->
+                datos = cargada
+                mensaje = texto
+            }
+        }
+        true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        datos?.let {
+            Text(
+                text = "Campaña ${it.nombre}",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoMarron
+            )
+            if (it.estado == "cerrada") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Campaña cerrada: solo consulta.\nNo se pueden añadir labores.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Datos oficiales de la cooperativa",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .padding(16.dp)
+            ) {
+                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados)
+                Spacer(modifier = Modifier.height(12.dp))
+                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso)
+                Spacer(modifier = Modifier.height(12.dp))
+                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Mi cuaderno",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Todavía no has apuntado labores en esta campaña.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } ?: Text(
+            text = "Cargando los datos de la campaña…",
+            fontSize = 18.sp,
+            color = TextoMarron
+        )
+        mensaje?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoError,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+    }
+}
+
 /** Una fila del bloque de datos oficiales: etiqueta grande y valor destacado. */
 @Composable
 fun FilaDato(etiqueta: String, valor: String) {
@@ -438,6 +591,18 @@ fun FilaDato(etiqueta: String, valor: String) {
 /** Datos oficiales del panel, ya formateados para enseñar (formato español). */
 class DatosPanel(
     val campana: String,
+    val kilosEntregados: String,
+    val rendimientoGraso: String,
+    val aceiteObtenido: String
+)
+
+/** Resumen de una campaña en el listado del panel. */
+class DatosCampanaResumen(val id: String, val nombre: String, val estado: String)
+
+/** Detalle de una campaña en modo consulta (labores aparte, aún vacías). */
+class DatosCampana(
+    val nombre: String,
+    val estado: String,
     val kilosEntregados: String,
     val rendimientoGraso: String,
     val aceiteObtenido: String
@@ -644,6 +809,99 @@ object ServicioCuentas {
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudieron cargar tus datos." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Consulta el listado de campañas del socio (llamada autenticada). */
+    fun cargarCampanas(
+        token: String,
+        alTerminar: (List<DatosCampanaResumen>?, String) -> Unit
+    ) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mi-campanas")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val arreglo = JSONArray(it.body?.string() ?: "[]")
+                        val lista = mutableListOf<DatosCampanaResumen>()
+                        for (i in 0 until arreglo.length()) {
+                            val c = arreglo.optJSONObject(i) ?: continue
+                            lista.add(
+                                DatosCampanaResumen(
+                                    id = c.optString("id"),
+                                    nombre = c.optString("nombre"),
+                                    estado = c.optString("estado")
+                                )
+                            )
+                        }
+                        principal.post { alTerminar(lista, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudieron cargar tus campañas." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Consulta una campaña del socio (llamada autenticada). */
+    fun cargarCampana(
+        token: String,
+        campanaId: String,
+        alTerminar: (DatosCampana?, String) -> Unit
+    ) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mi-campanas/$campanaId")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val cuerpo = JSONObject(it.body?.string() ?: "")
+                        val campana = cuerpo.optJSONObject("campana") ?: JSONObject()
+                        val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
+                        val datos = DatosCampana(
+                            nombre = campana.optString("nombre"),
+                            estado = campana.optString("estado"),
+                            kilosEntregados = formatearNumero(
+                                oficiales.optDouble("kilos_entregados"), 0
+                            ) + " kg",
+                            rendimientoGraso = formatearNumero(
+                                oficiales.optDouble("rendimiento_graso"), 2
+                            ) + " %",
+                            aceiteObtenido = formatearNumero(
+                                oficiales.optDouble("aceite_obtenido"), 0
+                            ) + " kg"
+                        )
+                        principal.post { alTerminar(datos, "") }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudo cargar la campaña." }
                         principal.post { alTerminar(null, detalle) }
                     }
                 }
