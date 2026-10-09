@@ -11,3 +11,4 @@ build/
 .gradle/
 android/local.properties
 .idea/
+*.db

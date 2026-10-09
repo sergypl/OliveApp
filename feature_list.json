@@ -41,14 +41,18 @@
     "title": "Los datos de campaña de la cooperativa se siembran en el backend",
     "user_visible_behavior": "El backend contiene una cooperativa única y varias campañas (una actual y anteriores) con datos oficiales por socio: kilos entregados, rendimiento graso y aceite obtenido.",
     "depends_on": ["bootstrap-backend"],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Cargar el juego de datos sembrados y consultar la API: cada socio tiene datos oficiales en la campaña actual y al menos una anterior",
       "Comprobar que los datos oficiales no admiten escritura desde la API de la app"
     ],
-    "evidence": [],
-    "notes": "Según ADR 0006 y ADR 0007: fichero de seed versionado (JSON) + script de carga si la base está vacía. Volumen: 1 cooperativa, 4 campañas (2022/2023 a 2025/2026, actual 2025/2026 con datos completos), 2 socios con 3-4 parcelas sembradas cada uno. Socio 1 de 2025/2026 con datos reales anonimizados (5 vales, 10.958 kg, rdto lab 17,93 %, aceite industrial 1.774 kg); resto calibrado con datos reales (MAPA REDES TECO, liquidaciones publicadas). Regla de coherencia en dos etapas (ADR 0007): aceite = round(kilos × rendimiento lab × (1 − 0,097)). Datos de solo lectura y declarados como demo."
+    "evidence": [
+      "2026-10-05: ./init.sh completo (pytest 11/11, healthcheck 200 y GET /api/v1/socios -> 2 socios sembrados)",
+      "2026-10-05: API en vivo: socio-001 con 4 campañas (actual 2025/2026: 10.958 kg / 17,93 % / 1.774 kg, datos reales anonimizados; y 3 anteriores), socio-002 equivalente, parcelas 4+3",
+      "2026-10-05: regla de coherencia en dos etapas (ADR 0007) verificada por test en las 8 filas; POST/PUT/PATCH/DELETE a las rutas de datos -> 405 (test y comprobación en vivo)"
+    ],
+    "notes": "Según ADR 0006 y ADR 0007: fichero de seed versionado (backend/data/seed.json) + carga automática si la base está vacía (idempotente). Volumen: 1 cooperativa, 4 campañas (2022/2023 a 2025/2026, actual 2025/2026 con datos completos), 2 socios con 3-4 parcelas sembradas cada uno. Socio 1 de 2025/2026 con datos reales anonimizados (5 vales, 10.958 kg, rdto lab 17,93 %, aceite industrial 1.774 kg); resto calibrado con datos reales (MAPA REDES TECO, liquidaciones publicadas). Regla de coherencia en dos etapas (ADR 0007): aceite = round(kilos × rendimiento lab × (1 − 0,097)). API de solo lectura (solo GET) y declaración de datos de demostración en GET /api/v1/cooperativa. Base de datos SQLite (backend/olivapp.db, OLIVAPP_DB para cambiar la ruta)."
   },
   {
     "id": "registro-cuenta-socio",
