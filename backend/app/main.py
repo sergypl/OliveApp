@@ -9,10 +9,13 @@ import os
 import sqlite3
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel
 
+from app import cuentas
 from app import db as basedatos
 from app import seed
+from app import sesiones
 
 # Variables de entorno obligatorias del servidor (ADR 0003).
 REQUIRED_ENV_VARS = ("DEVEXPERT_API_KEY", "JWT_SECRET")
@@ -50,7 +53,73 @@ def conexion():
         conn.close()
 
 
+def sesion_actual(authorization: str = Header(default="")):
+    """Devuelve el contenido del token de sesión o rechaza con 401."""
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Inicia sesión para ver tus datos.")
+    try:
+        return sesiones.leer_token(authorization[len("Bearer "):])
+    except sesiones.SesionInvalida:
+        raise HTTPException(
+            status_code=401,
+            detail="Sesión caducada o no válida. Vuelve a iniciar sesión.",
+        )
+
+
 app = FastAPI(title="OlivApp API", lifespan=lifespan)
+
+
+class RegistroEntrada(BaseModel):
+    email: str
+    contrasena: str
+
+
+class LoginEntrada(BaseModel):
+    email: str
+    contrasena: str
+
+
+@app.post("/api/v1/registro", status_code=201)
+def registro(entrada: RegistroEntrada, conn: sqlite3.Connection = Depends(conexion)):
+    """El socio crea su cuenta con email y contraseña (asociada a la cooperativa).
+
+    La contraseña se guarda hasheada y nunca se devuelve. Sin verificación de
+    email ni reset de contraseña en el MVP (limitación declarada).
+    """
+    cooperativa = conn.execute("SELECT id FROM cooperativa").fetchone()
+    try:
+        return cuentas.crear_cuenta(
+            conn, cooperativa["id"], entrada.email, entrada.contrasena
+        )
+    except cuentas.DatosInvalidos as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except cuentas.EmailDuplicado:
+        raise HTTPException(
+            status_code=409, detail="Ese email ya está registrado. Usa el inicio de sesión."
+        )
+
+
+@app.post("/api/v1/login")
+def login(entrada: LoginEntrada, conn: sqlite3.Connection = Depends(conexion)):
+    """El socio inicia sesión con email y contraseña y recibe su token.
+
+    El token (JWT con caducidad) lo guarda la app en almacenamiento seguro;
+    los errores de acceso no revelan si lo que no cuadra es el email o la
+    contraseña.
+    """
+    email = cuentas.normalizar_email(entrada.email)
+    fila = conn.execute(
+        "SELECT id, email, contrasena_hash FROM cuenta WHERE email = ?", (email,)
+    ).fetchone()
+    if not fila or not cuentas.verificar_contrasena(entrada.contrasena, fila["contrasena_hash"]):
+        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos.")
+    return {"token": sesiones.crear_token(dict(fila)), "email": fila["email"]}
+
+
+@app.get("/api/v1/mi-cuenta")
+def mi_cuenta(sesion=Depends(sesion_actual)):
+    """La cuenta del socio autenticado (prueba de llamadas con token)."""
+    return {"id": sesion["sub"], "email": sesion["email"]}
 
 
 @app.get("/health")
@@ -60,21 +129,31 @@ def health():
 
 
 @app.get("/api/v1/cooperativa")
-def cooperativa(conn: sqlite3.Connection = Depends(conexion)):
+def cooperativa(
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
     """La cooperativa única del MVP, con su declaración de datos de demostración."""
     fila = conn.execute("SELECT * FROM cooperativa").fetchone()
     return dict(fila)
 
 
 @app.get("/api/v1/socios")
-def socios(conn: sqlite3.Connection = Depends(conexion)):
+def socios(
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
     """Los socios de la cooperativa (identificadores de demostración)."""
     filas = conn.execute("SELECT id, codigo FROM socio ORDER BY id").fetchall()
     return [dict(f) for f in filas]
 
 
 @app.get("/api/v1/socios/{socio_id}/campanas")
-def campanas_del_socio(socio_id: str, conn: sqlite3.Connection = Depends(conexion)):
+def campanas_del_socio(
+    socio_id: str,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
     """Campañas de un socio con sus datos oficiales (solo lectura).
 
     La campaña actual va primero y después las anteriores, de más reciente a
@@ -109,7 +188,11 @@ def campanas_del_socio(socio_id: str, conn: sqlite3.Connection = Depends(conexio
 
 
 @app.get("/api/v1/socios/{socio_id}/parcelas")
-def parcelas_del_socio(socio_id: str, conn: sqlite3.Connection = Depends(conexion)):
+def parcelas_del_socio(
+    socio_id: str,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
     """Parcelas del socio (3-4 sembradas en el seed)."""
     existe = conn.execute("SELECT 1 FROM socio WHERE id = ?", (socio_id,)).fetchone()
     if not existe:
