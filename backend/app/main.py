@@ -122,6 +122,42 @@ def mi_cuenta(sesion=Depends(sesion_actual)):
     return {"id": sesion["sub"], "email": sesion["email"]}
 
 
+@app.get("/api/v1/mi-panel")
+def mi_panel(conn: sqlite3.Connection = Depends(conexion), sesion=Depends(sesion_actual)):
+    """Panel del socio autenticado: la campaña actual con sus datos oficiales.
+
+    La campaña actual es la marcada como `es_actual` en los datos de la
+    cooperativa (decisión de esta feature): no se deriva de la fecha del
+    sistema, para que la demo siempre muestre la campaña sembrada.
+    """
+    cuenta = conn.execute(
+        "SELECT socio_id FROM cuenta WHERE id = ?", (sesion["sub"],)
+    ).fetchone()
+    if not cuenta:
+        raise HTTPException(
+            status_code=401, detail="Sesión caducada o no válida. Vuelve a iniciar sesión."
+        )
+    fila = conn.execute(
+        "SELECT c.id, c.nombre, "
+        "d.kilos_entregados, d.rendimiento_graso, d.aceite_obtenido "
+        "FROM campana c JOIN dato_oficial d ON d.campana_id = c.id "
+        "WHERE d.socio_id = ? AND c.es_actual = 1",
+        (cuenta["socio_id"],),
+    ).fetchone()
+    if not fila:
+        raise HTTPException(
+            status_code=404, detail="No hay datos oficiales de la campaña actual."
+        )
+    return {
+        "campana": {"id": fila["id"], "nombre": fila["nombre"]},
+        "datos_oficiales": {
+            "kilos_entregados": fila["kilos_entregados"],
+            "rendimiento_graso": fila["rendimiento_graso"],
+            "aceite_obtenido": fila["aceite_obtenido"],
+        },
+    }
+
+
 @app.get("/health")
 def health():
     """Comprobación de vida del servicio para el arranque y el despliegue."""
