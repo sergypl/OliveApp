@@ -9,7 +9,7 @@ import os
 import sqlite3
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app import cuentas
@@ -18,6 +18,7 @@ from app import labores
 from app import parcelas
 from app import seed
 from app import sesiones
+from app import transcripcion
 
 # Variables de entorno obligatorias del servidor (ADR 0003).
 REQUIRED_ENV_VARS = ("DEVEXPERT_API_KEY", "JWT_SECRET")
@@ -272,6 +273,33 @@ def crear_labor(
         raise HTTPException(status_code=404, detail="No existe esa parcela.")
     except labores.DatosInvalidos as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post("/api/v1/mis-notas-voz/transcripcion")
+async def transcribir_nota(
+    audio: UploadFile = File(...),
+    sesion=Depends(sesion_actual),
+):
+    """Transcribe una nota de voz enviada por la app.
+
+    El audio se transcribe con el alias `transcribe` del gateway (ADR 0004)
+    y se borra del servidor tras la transcripción: no se conserva nada.
+    """
+    contenido = await audio.read()
+    nombre = audio.filename
+    await audio.close()
+    try:
+        texto = transcripcion.transcribir(
+            os.environ["DEVEXPERT_API_KEY"], nombre, contenido
+        )
+    except transcripcion.AudioInvalido as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    except transcripcion.TranscripcionFallida:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo transcribir la nota. Inténtalo de nuevo.",
+        )
+    return {"texto": texto}
 
 
 @app.get("/api/v1/mis-parcelas")
