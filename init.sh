@@ -42,11 +42,23 @@ if [ "$HEALTH_OK" -ne 1 ]; then
 fi
 echo "Healthcheck OK (GET /health -> 200)"
 
-if ! curl -sf http://127.0.0.1:8000/api/v1/socios >/dev/null 2>&1; then
-  echo "ERROR: los datos sembrados no responden (GET /api/v1/socios)"
+# Desde `inicio-de-sesion` los datos exigen token de sesión (cambio de
+# comportamiento declarado en esa feature): se crea o reutiliza una cuenta de
+# verificación y se comprueban los datos sembrados con su token.
+curl -sf -X POST http://127.0.0.1:8000/api/v1/registro \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"verificacion-init@ejemplo.com","contrasena":"segura123"}' >/dev/null 2>&1 || true
+TOKEN=$(curl -sf -X POST http://127.0.0.1:8000/api/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"verificacion-init@ejemplo.com","contrasena":"segura123"}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['token'])" 2>/dev/null)
+SOCIOS=$(curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/socios 2>/dev/null)
+CONTADOS=$(echo "$SOCIOS" | grep -o 'socio-00' | wc -l | tr -d ' ')
+if [ -z "$TOKEN" ] || [ "$CONTADOS" != "2" ]; then
+  echo "ERROR: los datos sembrados no responden (GET /api/v1/socios con token)"
   exit 1
 fi
-echo "Datos sembrados OK (GET /api/v1/socios -> 2 socios)"
+echo "Datos sembrados OK (GET /api/v1/socios -> 2 socios, con token de sesión)"
 
 cleanup
 trap - EXIT
