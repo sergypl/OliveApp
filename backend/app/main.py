@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from app import cuentas
 from app import db as basedatos
+from app import parcelas
 from app import seed
 from app import sesiones
 
@@ -77,6 +78,10 @@ class RegistroEntrada(BaseModel):
 class LoginEntrada(BaseModel):
     email: str
     contrasena: str
+
+
+class ParcelaEntrada(BaseModel):
+    nombre: str
 
 
 @app.post("/api/v1/registro", status_code=201)
@@ -229,6 +234,31 @@ def mi_campana(
         },
         "labores": [],
     }
+
+
+@app.get("/api/v1/mis-parcelas")
+def mis_parcelas(conn: sqlite3.Connection = Depends(conexion), sesion=Depends(sesion_actual)):
+    """Parcelas del socio autenticado (para poder asignarles labores)."""
+    cuenta = _cuenta_del_socio(conn, sesion)
+    return parcelas.parcelas_del_socio(conn, cuenta["socio_id"])
+
+
+@app.post("/api/v1/mis-parcelas", status_code=201)
+def crear_parcela(
+    entrada: ParcelaEntrada,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
+    """El socio crea una parcela con nombre propio.
+
+    La parcela pertenece al socio de la cuenta (no se comparte con otros
+    socios) y en el MVP no se elimina ni archiva.
+    """
+    cuenta = _cuenta_del_socio(conn, sesion)
+    try:
+        return parcelas.crear_parcela(conn, cuenta["socio_id"], entrada.nombre)
+    except parcelas.DatosInvalidos as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @app.get("/health")
