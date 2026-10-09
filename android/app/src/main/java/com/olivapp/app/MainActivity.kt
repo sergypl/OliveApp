@@ -23,6 +23,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -95,12 +99,20 @@ fun OlivApp() {
         "sesion" -> PantallaPanel(
             onSesionCerrada = { pantalla = "inicio" },
             onAbrirParcelas = { pantalla = "parcelas" },
+            onAbrirCuaderno = { pantalla = "nueva_labor" },
             onAbrirCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
             }
         )
         "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
+        "nueva_labor" -> PantallaNuevaLabor(
+            onVolver = { pantalla = "sesion" },
+            onVerCampana = { id ->
+                idCampana = id
+                pantalla = "campana"
+            }
+        )
         else -> PantallaBienvenida(
             onIniciarSesion = { pantalla = "inicio_sesion" },
             onCrearCuenta = { pantalla = "registro" }
@@ -313,6 +325,7 @@ fun PantallaInicioSesion(
 fun PantallaPanel(
     onSesionCerrada: () -> Unit,
     onAbrirParcelas: () -> Unit,
+    onAbrirCuaderno: () -> Unit,
     onAbrirCampana: (String) -> Unit
 ) {
     val contexto = LocalContext.current
@@ -429,10 +442,7 @@ fun PantallaPanel(
         Spacer(modifier = Modifier.height(12.dp))
         BotonSecundario(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
         Spacer(modifier = Modifier.height(12.dp))
-        BotonSecundario(
-            texto = "Cuaderno de campo",
-            alPulsar = { aviso = "El cuaderno de campo estará disponible próximamente." }
-        )
+        BotonSecundario(texto = "Cuaderno de campo", alPulsar = onAbrirCuaderno)
         Spacer(modifier = Modifier.height(12.dp))
         BotonSecundario(
             texto = "Simulador de liquidación",
@@ -457,6 +467,357 @@ fun PantallaPanel(
                 onSesionCerrada()
             }
         )
+    }
+}
+
+/**
+ * Formulario manual de una labor de "Mi cuaderno" (feature alta-manual-labor).
+ *
+ * Campos por categoría según ADR 0005. La labor se guarda en la campaña
+ * que corresponde a su fecha (campaña oleícola del 1 de noviembre al
+ * 31 de octubre).
+ */
+@Composable
+fun PantallaNuevaLabor(onVolver: () -> Unit, onVerCampana: (String) -> Unit) {
+    val contexto = LocalContext.current
+    var fecha by remember { mutableStateOf(fechaDeHoy()) }
+    var parcelas by remember { mutableStateOf<List<DatosParcela>>(emptyList()) }
+    var parcelaId by remember { mutableStateOf("") }
+    var parcelaNombre by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf("") }
+    var producto by remember { mutableStateOf("") }
+    var plaga by remember { mutableStateOf("") }
+    var cantidad by remember { mutableStateOf("") }
+    var unidad by remember { mutableStateOf("") }
+    var modalidad by remember { mutableStateOf("") }
+    var kilos by remember { mutableStateOf("") }
+    var observaciones by remember { mutableStateOf("") }
+    var mensaje by remember { mutableStateOf<String?>(null) }
+    var guardada by remember { mutableStateOf(false) }
+    var campanaGuardada by remember { mutableStateOf<String?>(null) }
+    var trabajando by remember { mutableStateOf(false) }
+
+    remember {
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+        } else {
+            ServicioCuentas.cargarParcelas(token) { lista, texto ->
+                if (lista != null) {
+                    parcelas = lista
+                } else {
+                    mensaje = texto
+                }
+            }
+        }
+        true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Apuntar una labor",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Va a Mi cuaderno, en la campaña de su fecha.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        CampoDeTexto(
+            etiqueta = "Fecha (día/mes/año)",
+            valor = fecha,
+            alCambiar = { fecha = it },
+            tipo = KeyboardType.Text
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Desplegable(
+            etiqueta = "Parcela",
+            valor = parcelaNombre,
+            opciones = parcelas.map { it.nombre },
+            alElegir = { nombre ->
+                parcelaNombre = nombre
+                parcelaId = parcelas.firstOrNull { it.nombre == nombre }?.id ?: ""
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "¿Qué labor es?",
+            fontSize = 18.sp,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OpcionCategoria(
+            texto = "Tratamiento fitosanitario",
+            elegida = categoria == "tratamiento",
+            alPulsar = {
+                categoria = "tratamiento"
+                unidad = ""
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OpcionCategoria(
+            texto = "Riego",
+            elegida = categoria == "riego",
+            alPulsar = {
+                categoria = "riego"
+                unidad = ""
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OpcionCategoria(
+            texto = "Cosecha",
+            elegida = categoria == "cosecha",
+            alPulsar = { categoria = "cosecha" }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        when (categoria) {
+            "tratamiento" -> {
+                CampoDeTexto(
+                    etiqueta = "Producto",
+                    valor = producto,
+                    alCambiar = { producto = it },
+                    tipo = KeyboardType.Text
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Desplegable(
+                    etiqueta = "Plaga a controlar",
+                    valor = plaga,
+                    opciones = listOf(
+                        "mosca del olivo", "repilo", "prays", "tuberculosis",
+                        "cochinilla", "malas hierbas", "otra"
+                    ),
+                    alElegir = { plaga = it }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                CampoDeTexto(
+                    etiqueta = "Cantidad",
+                    valor = cantidad,
+                    alCambiar = { cantidad = it },
+                    tipo = KeyboardType.Decimal
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Desplegable(
+                    etiqueta = "Unidad",
+                    valor = unidad,
+                    opciones = listOf("kg", "L", "g", "ml"),
+                    alElegir = { unidad = it }
+                )
+            }
+            "riego" -> {
+                CampoDeTexto(
+                    etiqueta = "Cantidad",
+                    valor = cantidad,
+                    alCambiar = { cantidad = it },
+                    tipo = KeyboardType.Decimal
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Desplegable(
+                    etiqueta = "Unidad",
+                    valor = unidad,
+                    opciones = listOf("horas", "m³", "L"),
+                    alElegir = { unidad = it }
+                )
+            }
+            "cosecha" -> {
+                Desplegable(
+                    etiqueta = "Modalidad",
+                    valor = modalidad,
+                    opciones = listOf("a vuelo", "a suelo"),
+                    alElegir = { modalidad = it }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                CampoDeTexto(
+                    etiqueta = "Kilos",
+                    valor = kilos,
+                    alCambiar = { kilos = it },
+                    tipo = KeyboardType.Decimal
+                )
+            }
+        }
+        if (categoria.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CampoDeTexto(
+                etiqueta = "Observaciones (opcional)",
+                valor = observaciones,
+                alCambiar = { observaciones = it },
+                tipo = KeyboardType.Text
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            BotonPrincipal(
+                texto = if (trabajando) "Guardando la labor…" else "Guardar labor",
+                habilitado = !trabajando,
+                alPulsar = {
+                    trabajando = true
+                    mensaje = null
+                    guardada = false
+                    campanaGuardada = null
+                    val token = AlmacenSesiones(contexto).token()
+                    val iso = fechaIso(fecha)
+                    if (token == null) {
+                        trabajando = false
+                        mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                    } else if (iso == null) {
+                        trabajando = false
+                        mensaje = "Escribe la fecha como día, mes y año (por ejemplo, 15/12/2025)."
+                    } else {
+                        val campos = JSONObject()
+                        when (categoria) {
+                            "tratamiento" -> campos
+                                .put("producto", producto)
+                                .put("plaga_a_controlar", plaga)
+                                .put("cantidad", cantidad.replace(',', '.'))
+                                .put("unidad", unidad)
+                            "riego" -> campos
+                                .put("cantidad", cantidad.replace(',', '.'))
+                                .put("unidad", unidad)
+                            "cosecha" -> campos
+                                .put("modalidad", modalidad)
+                                .put("kilos", kilos.replace(',', '.'))
+                        }
+                        val cuerpo = JSONObject()
+                            .put("fecha", iso)
+                            .put("parcela_id", parcelaId)
+                            .put("categoria", categoria)
+                            .put("campos", campos)
+                            .put("observaciones", observaciones)
+                        ServicioCuentas.guardarLabor(token, cuerpo) { campana, texto ->
+                            trabajando = false
+                            guardada = campana != null
+                            campanaGuardada = campana
+                            mensaje = texto
+                        }
+                    }
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        mensaje?.let {
+            Text(
+                text = it,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = if (guardada) VerdeOliva else TextoError,
+                textAlign = TextAlign.Center
+            )
+        }
+        campanaGuardada?.let {
+            Spacer(modifier = Modifier.height(24.dp))
+            BotonSecundario(
+                texto = "Ver Mi cuaderno de esa campaña",
+                alPulsar = { onVerCampana(it) }
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+    }
+}
+
+/** Fecha de hoy en formato español (DD/MM/AAAA). */
+private fun fechaDeHoy(): String {
+    val hoy = java.time.LocalDate.now()
+    return "%02d/%02d/%04d".format(hoy.dayOfMonth, hoy.monthValue, hoy.year)
+}
+
+/** Fecha en formato español (DD/MM/AAAA) a ISO (AAAA-MM-DD), o null si no vale. */
+private fun fechaIso(texto: String): String? {
+    val partes = texto.trim().split("/")
+    if (partes.size != 3) return null
+    val dia = partes[0].toIntOrNull() ?: return null
+    val mes = partes[1].toIntOrNull() ?: return null
+    val anio = partes[2].toIntOrNull() ?: return null
+    return try {
+        java.time.LocalDate.of(anio, mes, dia).toString()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/** Botón de categoría: relleno verde cuando está elegida. */
+@Composable
+fun OpcionCategoria(texto: String, elegida: Boolean, alPulsar: () -> Unit) {
+    if (elegida) {
+        Button(
+            onClick = alPulsar,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = VerdeOliva,
+                contentColor = Color.White
+            )
+        ) {
+            Text(text = texto, fontSize = 18.sp)
+        }
+    } else {
+        OutlinedButton(
+            onClick = alPulsar,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(text = texto, fontSize = 18.sp, color = VerdeOliva)
+        }
+    }
+}
+
+/** Lista desplegable grande y clara (parcela, plaga, unidad, modalidad). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Desplegable(
+    etiqueta: String,
+    valor: String,
+    opciones: List<String>,
+    alElegir: (String) -> Unit
+) {
+    var expandido by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expandido,
+        onExpandedChange = { expandido = it }
+    ) {
+        OutlinedTextField(
+            value = valor,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(etiqueta, fontSize = 18.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontSize = 18.sp,
+                color = TextoMarron
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expandido,
+            onDismissRequest = { expandido = false }
+        ) {
+            for (opcion in opciones) {
+                DropdownMenuItem(
+                    text = { Text(opcion, fontSize = 18.sp) },
+                    onClick = {
+                        alElegir(opcion)
+                        expandido = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -686,13 +1047,22 @@ fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Todavía no has apuntado labores en esta campaña.",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron,
-                    textAlign = TextAlign.Center
-                )
+                if (it.labores.isEmpty()) {
+                    Text(
+                        text = "Todavía no has apuntado labores en esta campaña.",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoMarron,
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    for ((indice, labor) in it.labores.withIndex()) {
+                        if (indice > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        FilaLabor(labor)
+                    }
+                }
             }
         } ?: Text(
             text = "Cargando los datos de la campaña…",
@@ -711,6 +1081,35 @@ fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(32.dp))
         BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+    }
+}
+
+/** Una fila de "Mi cuaderno": fecha y categoría, con el detalle de la labor. */
+@Composable
+fun FilaLabor(labor: DatosLabor) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = labor.fecha + " · " + labor.categoria,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = labor.detalle,
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron
+        )
+        if (labor.observaciones.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = labor.observaciones,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron
+            )
+        }
     }
 }
 
@@ -747,13 +1146,22 @@ class DatosPanel(
 /** Resumen de una campaña en el listado del panel. */
 class DatosCampanaResumen(val id: String, val nombre: String, val estado: String)
 
-/** Detalle de una campaña en modo consulta (labores aparte, aún vacías). */
+/** Detalle de una campaña en modo consulta (labores aparte de lo oficial). */
 class DatosCampana(
     val nombre: String,
     val estado: String,
     val kilosEntregados: String,
     val rendimientoGraso: String,
-    val aceiteObtenido: String
+    val aceiteObtenido: String,
+    val labores: List<DatosLabor>
+)
+
+/** Una labor de "Mi cuaderno", ya formateada para enseñar. */
+class DatosLabor(
+    val fecha: String,
+    val categoria: String,
+    val detalle: String,
+    val observaciones: String
 )
 
 /** Una parcela del socio. */
@@ -765,6 +1173,51 @@ private fun formatearNumero(valor: Double, decimales: Int): String {
     formato.minimumFractionDigits = decimales
     formato.maximumFractionDigits = decimales
     return formato.format(valor)
+}
+
+/** Cantidades con los decimales justos: 3, 2,5 y 850. */
+private fun formatearCantidad(valor: Double): String {
+    val formato = java.text.NumberFormat.getNumberInstance(java.util.Locale.forLanguageTag("es-ES"))
+    formato.minimumFractionDigits = 0
+    formato.maximumFractionDigits = 2
+    return formato.format(valor)
+}
+
+/** Fecha ISO (AAAA-MM-DD) a formato español (DD/MM/AAAA). */
+private fun formatearFecha(iso: String): String {
+    val partes = iso.split("-")
+    if (partes.size != 3) return iso
+    return partes[2] + "/" + partes[1] + "/" + partes[0]
+}
+
+private val NOMBRES_DE_CATEGORIA = mapOf(
+    "tratamiento" to "Tratamiento fitosanitario",
+    "riego" to "Riego",
+    "cosecha" to "Cosecha"
+)
+
+/** Una labor del backend a texto para "Mi cuaderno". */
+private fun formatearLabor(labor: org.json.JSONObject): DatosLabor {
+    val campos = labor.optJSONObject("campos") ?: org.json.JSONObject()
+    val parcela = labor.optJSONObject("parcela")?.optString("nombre") ?: ""
+    val detalle = when (labor.optString("categoria")) {
+        "tratamiento" -> "$parcela · " + campos.optString("producto") +
+            " · plaga: " + campos.optString("plaga_a_controlar") +
+            " · " + formatearCantidad(campos.optDouble("cantidad")) +
+            " " + campos.optString("unidad")
+        "riego" -> "$parcela · " + formatearCantidad(campos.optDouble("cantidad")) +
+            " " + campos.optString("unidad")
+        "cosecha" -> "$parcela · " + campos.optString("modalidad") +
+            " · " + formatearNumero(campos.optDouble("kilos"), 0) + " kg"
+        else -> parcela
+    }
+    return DatosLabor(
+        fecha = formatearFecha(labor.optString("fecha")),
+        categoria = NOMBRES_DE_CATEGORIA[labor.optString("categoria")]
+            ?: labor.optString("categoria"),
+        detalle = detalle,
+        observaciones = labor.optString("observaciones")
+    )
 }
 
 @Composable
@@ -967,6 +1420,43 @@ object ServicioCuentas {
         })
     }
 
+    /** Guarda una labor del socio (llamada autenticada). */
+    fun guardarLabor(token: String, cuerpo: JSONObject, alTerminar: (String?, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-labores")
+            .header("Authorization", "Bearer $token")
+            .post(cuerpo.toString().toRequestBody(JSON))
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val respuesta = JSONObject(it.body?.string() ?: "")
+                        val campana = respuesta.optString("campana_id")
+                        principal.post {
+                            alTerminar(
+                                campana,
+                                "Labor guardada en la campaña " +
+                                    campana.replace("-", "/") + "."
+                            )
+                        }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudo guardar la labor." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
     /** Consulta las parcelas del socio (llamada autenticada). */
     fun cargarParcelas(token: String, alTerminar: (List<DatosParcela>?, String) -> Unit) {
         val peticion = Request.Builder()
@@ -1101,6 +1591,12 @@ object ServicioCuentas {
                         val cuerpo = JSONObject(it.body?.string() ?: "")
                         val campana = cuerpo.optJSONObject("campana") ?: JSONObject()
                         val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
+                        val laboresJson = cuerpo.optJSONArray("labores") ?: JSONArray()
+                        val labores = mutableListOf<DatosLabor>()
+                        for (i in 0 until laboresJson.length()) {
+                            val l = laboresJson.optJSONObject(i) ?: continue
+                            labores.add(formatearLabor(l))
+                        }
                         val datos = DatosCampana(
                             nombre = campana.optString("nombre"),
                             estado = campana.optString("estado"),
@@ -1112,7 +1608,8 @@ object ServicioCuentas {
                             ) + " %",
                             aceiteObtenido = formatearNumero(
                                 oficiales.optDouble("aceite_obtenido"), 0
-                            ) + " kg"
+                            ) + " kg",
+                            labores = labores
                         )
                         principal.post { alTerminar(datos, "") }
                     } else {

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from app import cuentas
 from app import db as basedatos
+from app import labores
 from app import parcelas
 from app import seed
 from app import sesiones
@@ -82,6 +83,14 @@ class LoginEntrada(BaseModel):
 
 class ParcelaEntrada(BaseModel):
     nombre: str
+
+
+class LaborEntrada(BaseModel):
+    fecha: str
+    parcela_id: str
+    categoria: str
+    campos: dict = {}
+    observaciones: str = ""
 
 
 @app.post("/api/v1/registro", status_code=201)
@@ -232,8 +241,37 @@ def mi_campana(
             "rendimiento_graso": fila["rendimiento_graso"],
             "aceite_obtenido": fila["aceite_obtenido"],
         },
-        "labores": [],
+        "labores": labores.labores_de_la_campana(conn, cuenta["socio_id"], fila["id"]),
     }
+
+
+@app.post("/api/v1/mis-labores", status_code=201)
+def crear_labor(
+    entrada: LaborEntrada,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
+    """El socio registra una labor con el formulario manual.
+
+    La labor se guarda en la campaña que corresponde a su fecha (campaña
+    oleícola del 1 de noviembre al 31 de octubre) y solo en la campaña
+    actual: las cerradas son de solo consulta.
+    """
+    cuenta = _cuenta_del_socio(conn, sesion)
+    try:
+        return labores.crear_labor(
+            conn,
+            cuenta["socio_id"],
+            entrada.fecha,
+            entrada.parcela_id,
+            entrada.categoria,
+            entrada.campos,
+            entrada.observaciones,
+        )
+    except labores.ParcelaAjena:
+        raise HTTPException(status_code=404, detail="No existe esa parcela.")
+    except labores.DatosInvalidos as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
 @app.get("/api/v1/mis-parcelas")
