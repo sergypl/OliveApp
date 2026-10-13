@@ -484,3 +484,61 @@ def test_editar_exige_token():
             },
         )
         assert sin_token.status_code == 401
+
+
+# --- Eliminación de labores (feature eliminacion-de-labor) ---
+
+
+def test_eliminar_labor_la_quita_del_cuaderno_y_de_la_campana():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert creada.status_code == 201, creada.text
+        labor_id = creada.json()["id"]
+
+        respuesta = client.delete("/api/v1/mis-labores/" + labor_id, headers=cabeceras)
+
+        assert respuesta.status_code == 200
+        assert respuesta.json() == {"id": labor_id, "eliminada": True}
+        # Desaparece del cuaderno…
+        assert client.get("/api/v1/mis-labores", headers=cabeceras).json() == {"campanas": []}
+        # …y de la campaña.
+        detalle = client.get("/api/v1/mi-campanas/2025-2026", headers=cabeceras).json()
+        assert detalle["labores"] == []
+
+
+def test_eliminar_no_toca_las_demas_labores():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        primera = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert primera.status_code == 201
+        segunda = _crear(client, cabeceras, parcela_id, "cosecha", {"modalidad": "a vuelo", "kilos": 850}, fecha="2026-02-15")
+        assert segunda.status_code == 201
+
+        respuesta = client.delete("/api/v1/mis-labores/" + primera.json()["id"], headers=cabeceras)
+
+        assert respuesta.status_code == 200
+        labores = client.get("/api/v1/mis-labores", headers=cabeceras).json()["campanas"][0]["labores"]
+        assert [l["fecha"] for l in labores] == ["2026-02-15"]
+
+
+def test_eliminar_una_labor_inexistente_o_ajena_no_existe():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert creada.status_code == 201
+        labor_id = creada.json()["id"]
+
+        assert client.delete("/api/v1/mis-labores/labor-inventada", headers=cabeceras).status_code == 404
+        # La segunda vez ya no existe: borrado directo, sin papelera.
+        assert client.delete("/api/v1/mis-labores/" + labor_id, headers=cabeceras).status_code == 200
+        assert client.delete("/api/v1/mis-labores/" + labor_id, headers=cabeceras).status_code == 404
+
+
+def test_eliminar_exige_token():
+    with TestClient(app) as client:
+        cabeceras, parcela_id = _entrar(client)
+        creada = _crear(client, cabeceras, parcela_id, "riego", {"cantidad": 3, "unidad": "horas"}, fecha="2025-12-10")
+        assert creada.status_code == 201
+
+        assert client.delete("/api/v1/mis-labores/" + creada.json()["id"]).status_code == 401

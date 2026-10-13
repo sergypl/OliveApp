@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -37,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -545,6 +547,7 @@ fun PantallaCuaderno(
     var campanas by remember { mutableStateOf<List<DatosCampanaDeLabores>>(emptyList()) }
     var cargado by remember { mutableStateOf(false) }
     var mensaje by remember { mutableStateOf<String?>(null) }
+    var laborParaEliminar by remember { mutableStateOf<LaborEditable?>(null) }
 
     fun cargar() {
         val token = AlmacenSesiones(contexto).token() ?: return
@@ -567,6 +570,55 @@ fun PantallaCuaderno(
             cargar()
         }
         true
+    }
+
+    // Confirmación antes del borrado directo (no hay papelera que lo recupere).
+    laborParaEliminar?.let { labor ->
+        AlertDialog(
+            onDismissRequest = { laborParaEliminar = null },
+            title = {
+                Text(
+                    text = "¿Eliminar esta labor?",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoMarron
+                )
+            },
+            text = {
+                Text(
+                    text = labor.fechaVisible + " · " +
+                        (NOMBRES_DE_CATEGORIA[labor.categoria] ?: labor.categoria) +
+                        "\n\nSe borrará de tu cuaderno. No se puede deshacer.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val objetivo = labor
+                    laborParaEliminar = null
+                    val token = AlmacenSesiones(contexto).token()
+                    if (token == null) {
+                        mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                    } else {
+                        ServicioCuentas.eliminarLabor(token, objetivo.id) { exito, texto ->
+                            mensaje = texto
+                            if (exito) {
+                                cargar()
+                            }
+                        }
+                    }
+                }) {
+                    Text(text = "Eliminar", fontSize = 20.sp, color = TextoError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { laborParaEliminar = null }) {
+                    Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+                }
+            }
+        )
     }
 
     Column(
@@ -632,7 +684,11 @@ fun PantallaCuaderno(
                             if (indiceLabor > 0) {
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
-                            FilaLabor(labor, alEditar = { onEditarLabor(labor.editable) })
+                            FilaLabor(
+                                labor,
+                                alEditar = { onEditarLabor(labor.editable) },
+                                alEliminar = { laborParaEliminar = labor.editable }
+                            )
                         }
                     }
                 }
@@ -1688,7 +1744,11 @@ fun PantallaCampana(campanaId: String, onVolver: () -> Unit) {
 
 /** Una fila de "Mi cuaderno": fecha y categoría, con sus campos legibles de un vistazo. */
 @Composable
-fun FilaLabor(labor: DatosLabor, alEditar: (() -> Unit)? = null) {
+fun FilaLabor(
+    labor: DatosLabor,
+    alEditar: (() -> Unit)? = null,
+    alEliminar: (() -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = labor.fecha + " · " + labor.categoria,
@@ -1716,6 +1776,10 @@ fun FilaLabor(labor: DatosLabor, alEditar: (() -> Unit)? = null) {
         if (alEditar != null) {
             Spacer(modifier = Modifier.height(12.dp))
             BotonSecundario(texto = "Editar", alPulsar = alEditar)
+        }
+        if (alEliminar != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonPeligro(texto = "Eliminar", alPulsar = alEliminar)
         }
     }
 }
@@ -1919,6 +1983,21 @@ fun BotonSecundario(texto: String, alPulsar: () -> Unit) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(text = texto, fontSize = 20.sp, color = VerdeOliva)
+    }
+}
+
+/** Botón grande de acción destructiva (borrado directo, sin papelera). */
+@Composable
+fun BotonPeligro(texto: String, alPulsar: () -> Unit) {
+    OutlinedButton(
+        onClick = alPulsar,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(2.dp, TextoError)
+    ) {
+        Text(text = texto, fontSize = 20.sp, color = TextoError)
     }
 }
 
@@ -2229,6 +2308,35 @@ object ServicioCuentas {
                         "Cambios guardados en tu cuaderno."
                     } else {
                         detalleDeError(it).ifEmpty { "No se pudieron guardar los cambios." }
+                    }
+                    principal.post { alTerminar(exitosa, detalle) }
+                }
+            }
+        })
+    }
+
+    /** Elimina una labor existente: borrado directo, sin papelera (llamada autenticada). */
+    fun eliminarLabor(token: String, id: String, alTerminar: (Boolean, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/mis-labores/" + id)
+            .header("Authorization", "Bearer $token")
+            .delete()
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(false, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val exitosa = it.isSuccessful
+                    val detalle = if (exitosa) {
+                        "Labor eliminada de tu cuaderno."
+                    } else {
+                        detalleDeError(it).ifEmpty { "No se pudo eliminar la labor." }
                     }
                     principal.post { alTerminar(exitosa, detalle) }
                 }

@@ -226,6 +226,18 @@ def actualizar_labor(
     }
 
 
+def eliminar_labor(conn, socio_id, labor_id):
+    """Elimina una labor propia: borrado directo, sin papelera (MVP)."""
+    existe = conn.execute(
+        "SELECT id FROM labor WHERE id = ? AND socio_id = ?", (labor_id, socio_id)
+    ).fetchone()
+    if not existe:
+        raise LaborAjena(labor_id)
+    conn.execute("DELETE FROM labor WHERE id = ?", (labor_id,))
+    conn.commit()
+    return {"id": labor_id, "eliminada": True}
+
+
 def _labor_de_fila(f):
     return {
         "id": f["id"],
