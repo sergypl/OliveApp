@@ -431,14 +431,20 @@
     "depends_on": [
       "borrador-ia-desde-transcripcion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Dictar una labor sin producto ni cantidad y comprobar que el asistente pregunta por los campos faltantes y que las respuestas por voz completan el borrador",
       "Comprobar que mientras falte un campo obligatorio el borrador no se puede confirmar"
     ],
-    "evidence": [],
-    "notes": "Flujo conversacional acordado en ADR 0005: extraer lo dictado, preguntar lo que falte y confirmar. El alias `chat` genera las preguntas (ADR 0004). Tono natural, una pregunta por respuesta, pensado para perfil sénior."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 112/112 — 17 nuevos entre test_completar_borrador.py y la pregunta inicial de test_borrador.py —, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos).",
+      "Verificación real en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro) con la frase 14 del set (dictado sin producto ni cantidad): la tarjeta del borrador IA mostró 'Producto: (falta)' y 'Cantidad: (falta)', el aviso 'Faltan datos por responder: Producto, Cantidad, Unidad.', la pregunta del asistente '¿Qué producto has echado?' y el botón 'Confirmar' deshabilitado con el texto 'Faltan datos por responder para poder confirmar.' (pulsarlo no hace nada: comprobado en vivo). Capturas en sesión (no versionadas).",
+      "La respuesta por voz ('Dos litros de cobre.', grabada con el botón 'Responder por voz' del asistente y su límite de 20 segundos) completó la ficha — Producto: cobre, Plaga a controlar: mosca del olivo, Cantidad: 2 L — y el asistente pasó a 'Borrador completo. Ya se puede confirmar.' con el botón 'Confirmar' habilitado, que al pulsarlo marca el borrador como listo (la creación de la labor llega en confirmacion-de-borrador). Tras cerrar la app en seco y reabrirla, el borrador completado seguía ahí (guardado en Room).",
+      "Comprobado en vivo por API con el gateway real (voz sintética en español): el dictado incompleto devuelve el borrador con su primera pregunta; la respuesta 'dos litros de cobre.' rellena producto, cantidad y unidad y deja la pregunta vacía; una respuesta que no aporta el dato ('Hoy he visto pajaritos.') deja los campos intactos y el asistente vuelve a preguntar por el mismo campo.",
+      "Cobertura de casos por tests (backend/tests/test_completar_borrador.py): una respuesta que completa varios campos a la vez, respuesta que no aporta el dato (se vuelve a preguntar), pregunta de respaldo cuando la IA no la redacta, ficha completa sin llamar a la IA y con pregunta vacía, los campos ya dictados no se cambian con lo que responda el socio, y rutas de error (400 audio no usable, 400 borrador que no se puede completar, 502 reintentable de transcripción y de completado, 401 sin token)."
+    ],
+    "notes": "Flujo conversacional acordado en ADR 0005: extraer lo dictado, preguntar lo que falte y confirmar. El alias `chat` genera las preguntas (ADR 0004). Decisiones de esta feature: (1) una respuesta por voz puede completar varios campos de golpe y después se pregunta por el siguiente que falte (una pregunta por respuesta); (2) el borrador lleva su `pregunta` (redactada por el alias `chat`, con pregunta de respaldo por campo y categoría si la IA no la redacta): vacía cuando la ficha está completa, que es el estado listo para confirmar; (3) solo se completan los campos que faltan: los ya dictados no se cambian desde una respuesta (la corrección manual es otra vía); (4) el botón 'Confirmar' está deshabilitado mientras falte un campo obligatorio y, al estar habilitado, solo marca el borrador como listo: la creación de la labor es de `confirmacion-de-borrador`; (5) las respuestas de voz son cortas (máximo 20 segundos) y su audio no se conserva en el servidor; si la respuesta grabada no se ha podido enviar, se conserva en el teléfono para reintentarla. Cambio de contrato declarado: el borrador del endpoint de transcripción (y el de completar) ahora lleva también la clave `pregunta`. Fuera de alcance (features propias): preguntas por la fecha (`fecha-relativa-en-borrador`) y por la parcela (`borrador-sin-parcela`), que el socio elige de su lista."
   },
   {
     "id": "confirmacion-de-borrador",

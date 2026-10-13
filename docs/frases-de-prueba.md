@@ -23,6 +23,20 @@ y los casos borde del dominio (`docs/domain-model.md`).
 | 11 | "Ayer regué El Encinar dos horas." | Fecha relativa pendiente de resolver |
 | 12 | "Tratamiento fitosanitario en La Umbría contra prays, trescientos gramos de producto, el veinte de marzo de dos mil veintiséis." | Tratamiento: plaga prays, cantidad 300 g |
 | 13 | "He hecho tratamiento en El Encinar y luego he regado Los Llanos." | Dos labores en un dictado: solo cabe un borrador por nota (limitación conocida) |
+| 14 | "He hecho un tratamiento en la parcela Cañada Honda contra la mosca del olivo, el diez de octubre de dos mil veintiséis." | Tratamiento sin producto ni cantidad: el asistente pregunta por lo que falta ("¿Qué producto has echado?") y las respuestas por voz completan la ficha |
+| 15 | "He regado La Umbría, el doce de octubre de dos mil veintiséis." | Riego sin cantidad: el asistente pregunta "¿Cuánto has regado?" y la respuesta ("Tres horas.") completa la ficha |
+| 16 | "He cosechado El Encinar, el trece de octubre de dos mil veintiséis." | Cosecha sin modalidad ni kilos: el asistente pregunta por la modalidad y después por los kilos, una pregunta por respuesta |
+
+Respuestas de voz para completar el borrador (features de preguntas):
+"Dos litros de cobre." (frase 14), "Tres horas." (frase 15) y "A vuelo, ochocientos kilos." (frase 16).
 
 Frases verificadas en vivo (sesión 027): la 1 (borrador completo correcto) y la 9
 (rechazo por categoría no reconocida).
+
+Frases 14-16 verificadas en vivo (sesión 028, `completar-borrador-por-preguntas`):
+la 14 dictada en el móvil físico dejó el borrador sin producto ni cantidad y el
+asistente preguntó "¿Qué producto has echado?"; la respuesta por voz "Dos litros
+de cobre." completó la ficha (Producto cobre, Cantidad 2 L) y quedó lista para
+confirmar. También comprobado en vivo por API (gateway real): una respuesta que
+no aporta el dato ("Hoy he visto pajaritos.") deja los campos intactos y el
+asistente vuelve a preguntar por el mismo campo.
