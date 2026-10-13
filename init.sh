@@ -43,22 +43,26 @@ fi
 echo "Healthcheck OK (GET /health -> 200)"
 
 # Desde `inicio-de-sesion` los datos exigen token de sesión (cambio de
-# comportamiento declarado en esa feature): se crea o reutiliza una cuenta de
-# verificación y se comprueban los datos sembrados con su token.
+# comportamiento declarado en esa feature) y desde `aislamiento-de-datos-por-socio`
+# cada cuenta solo ve los datos de su socio (cambio declarado en esa feature):
+# la cuenta de verificación se vincula por su código de socio y se comprueba
+# que le llegan sus datos sembrados.
 curl -sf -X POST http://127.0.0.1:8000/api/v1/registro \
   -H 'Content-Type: application/json' \
-  -d '{"email":"verificacion-init@ejemplo.com","contrasena":"segura123"}' >/dev/null 2>&1 || true
+  -d '{"email":"verificacion-init@ejemplo.com","contrasena":"segura123","codigo_socio":"Socio 1"}' >/dev/null 2>&1 || true
 TOKEN=$(curl -sf -X POST http://127.0.0.1:8000/api/v1/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"verificacion-init@ejemplo.com","contrasena":"segura123"}' \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['token'])" 2>/dev/null)
-SOCIOS=$(curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/socios 2>/dev/null)
-CONTADOS=$(echo "$SOCIOS" | grep -o 'socio-00' | wc -l | tr -d ' ')
-if [ -z "$TOKEN" ] || [ "$CONTADOS" != "2" ]; then
-  echo "ERROR: los datos sembrados no responden (GET /api/v1/socios con token)"
+PANEL=$(curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/mi-panel 2>/dev/null)
+KILOS=$(echo "$PANEL" | python3 -c "import json,sys; print(json.load(sys.stdin)['datos_oficiales']['kilos_entregados'])" 2>/dev/null)
+CAMPANAS=$(curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/mi-campanas 2>/dev/null \
+  | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null)
+if [ -z "$TOKEN" ] || [ -z "$KILOS" ] || [ "$CAMPANAS" != "4" ]; then
+  echo "ERROR: los datos sembrados del socio no responden (mi-panel y mi-campanas con token)"
   exit 1
 fi
-echo "Datos sembrados OK (GET /api/v1/socios -> 2 socios, con token de sesión)"
+echo "Datos sembrados OK (mi-panel con datos oficiales y 4 campañas para el socio de la cuenta, con token de sesión)"
 
 cleanup
 trap - EXIT
@@ -72,13 +76,20 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 APK="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 echo "APK compilado: $APK"
 
-if "$ADB" devices | grep -qE '^[^[:space:]]+[[:space:]]+device$'; then
-  echo "Instalando y abriendo en el dispositivo conectado..."
-  "$ADB" install -r "$APK"
-  "$ADB" shell am start -n com.olivapp.app/.MainActivity
+# La app llama al backend por 127.0.0.1:8000 en cada dispositivo: `adb reverse`
+# redirige ese puerto del dispositivo (emulador o móvil físico) al del Mac.
+DISPOSITIVOS=$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1}')
+if [ -n "$DISPOSITIVOS" ]; then
+  echo "Instalando y abriendo en cada dispositivo conectado..."
+  for SERIAL in $DISPOSITIVOS; do
+    "$ADB" -s "$SERIAL" reverse tcp:8000 tcp:8000 >/dev/null 2>&1 || true
+    "$ADB" -s "$SERIAL" install -r "$APK"
+    "$ADB" -s "$SERIAL" shell am start -n com.olivapp.app/.MainActivity
+  done
 else
   echo "Sin dispositivo por USB: salto la instalación."
   echo "Para instalarlo: conecta el móvil (depuración USB activada) y ejecuta:"
+  echo "  $ADB reverse tcp:8000 tcp:8000"
   echo "  $ADB install -r $APK"
   echo "  $ADB shell am start -n com.olivapp.app/.MainActivity"
 fi
@@ -90,5 +101,6 @@ echo "  - verificación: cd backend && ./.venv/bin/python -m pytest -q"
 echo "  - arranque: cd backend && DEVEXPERT_API_KEY=... JWT_SECRET=... ./.venv/bin/uvicorn app.main:app --reload"
 echo "Comandos reales de la app Android:"
 echo "  - compilación: cd android && ./gradlew assembleDebug (requiere ANDROID_HOME apuntando al SDK)"
+echo "  - túnel al backend (por dispositivo): \$ANDROID_HOME/platform-tools/adb reverse tcp:8000 tcp:8000"
 echo "  - instalación: \$ANDROID_HOME/platform-tools/adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
 echo "  - apertura: \$ANDROID_HOME/platform-tools/adb shell am start -n com.olivapp.app/.MainActivity"

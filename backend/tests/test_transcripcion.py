@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app import transcripcion
 from app.main import app
 
-DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123"}
+DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123", "codigo_socio": "Socio 1"}
 
 
 def _entrar(client):

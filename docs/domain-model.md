@@ -1,7 +1,7 @@
 # Domain Model — OlivApp
 
 ## Core Concepts
-- **Agricultor (socio):** dueño de todos sus datos; identificado por email + contraseña. En el MVP todo usuario es socio de una cooperativa.
+- **Agricultor (socio):** dueño de todos sus datos; identificado por email + contraseña mediante su Cuenta, que se vincula a él por su código de socio. En el MVP todo usuario es socio de una cooperativa.
 - **Cooperativa:** entidad oleícola a la que pertenece el socio y que moltura su aceituna. Fuente de los datos oficiales de campaña. En el MVP es única, no tiene usuarios ni administración en la app.
 - **Campaña:** temporada de cosecha (año agrícola, p. ej. 2024/2025). Agrupa las labores de "Mi cuaderno" y los datos oficiales de la cooperativa para el socio. La campaña de una labor se deriva de su fecha: la campaña oleícola X/Y va del 1 de noviembre de X al 31 de octubre de Y (p. ej. 15/12/2025 → 2025/2026).
 - **Datos de campaña (oficiales):** kilos entregados, rendimiento graso y aceite obtenido que la cooperativa registra para el socio en una campaña. Solo lectura en el MVP.
@@ -20,6 +20,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 ## Relationships
 - Una Cooperativa agrupa N socios (Agricultores) y N Campañas.
 - Un Agricultor pertenece a una Cooperativa (única en el MVP) y tiene N Parcelas, N Labores y N datos de campaña.
+- Una Cuenta identifica a un Agricultor (email + contraseña) y se vincula a exactamente un socio por su código de socio. Cada socio solo accede a sus propios datos (aislamiento por socio): las consultas a los datos de otro socio fallan o devuelven vacío.
 - Una Campaña agrupa las Labores de "Mi cuaderno" y los datos oficiales de cada socio en esa temporada.
 - Una Parcela pertenece a un Agricultor.
 - Una Labor pertenece a exactamente una Parcela (y, a través de ella, a un Agricultor) y se sitúa en una Campaña.
