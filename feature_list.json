@@ -248,13 +248,18 @@
     "depends_on": [
       "alta-manual-labor"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Eliminar una labor y comprobar que ya no aparece en el cuaderno ni en la campaña"
     ],
-    "evidence": [],
-    "notes": "Borrado directo en el MVP (docs/domain-model.md)."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 74/74 con 4 tests nuevos de eliminación, healthcheck, datos sembrados con token, APK instalado y abierto).",
+      "Verificación real desde la app en el emulador OlivApp_API_34: desde 'Mi cuaderno', el botón 'Eliminar' (en rojo) de una labor abre el diálogo '¿Eliminar esta labor?' con la labor identificada (15/12/2025 · Riego) y el aviso 'Se borrará de tu cuaderno. No se puede deshacer.'; al confirmar, la labor desaparece del cuaderno, se muestra 'Labor eliminada de tu cuaderno.' y las demás labores siguen intactas. Capturas en sesión (no versionadas).",
+      "Comprobación por API tras el borrado: la labor ya no está en GET /api/v1/mis-labores ni en el detalle de la campaña (GET /api/v1/mi-campanas/2025-2026 conserva solo sus 3 labores) y un segundo DELETE de la misma labor -> 404 (borrado directo, sin papelera).",
+      "Cobertura de casos por tests: la labor eliminada desaparece del cuaderno y de la campaña, el borrado no toca las demás labores, labor inexistente o ajena -> 404 (y la segunda eliminación de la misma labor también 404) y token obligatorio (401)."
+    ],
+    "notes": "Borrado directo en el MVP (docs/domain-model.md): DELETE /api/v1/mis-labores/{id} (autenticado, solo labores propias). La app pide confirmación con un diálogo antes de borrar (no hay papelera que lo recupere) y usa un botón de acción destructiva en rojo."
   },
   {
     "id": "aislamiento-de-datos-por-socio",
