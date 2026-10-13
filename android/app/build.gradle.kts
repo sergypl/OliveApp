@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -47,5 +48,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Almacenamiento seguro del token de sesión (Keystore del dispositivo).
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Cola local de notas de voz (feature cola-offline-de-notas): Room sobre SQLite.
+    implementation("androidx.room:room-runtime:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -7,6 +7,13 @@ ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
 echo "Repositorio: $ROOT"
 echo "Estado del harness: bootstrap del backend y de la app Android realizado."
 
+# Los artefactos duraderos deben seguir siendo válidos: feature_list.json es la
+# fuente de verdad del estado de features y PROGRESS.md el estado verificado.
+python3 -m json.tool feature_list.json >/dev/null 2>&1 || {
+  echo "ERROR: feature_list.json no es un JSON válido"
+  exit 1
+}
+
 echo ""
 echo "== Backend =="
 echo "Instalando dependencias..."
