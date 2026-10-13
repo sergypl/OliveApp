@@ -5,11 +5,12 @@ entorno (la clave de la API de IA y el secreto JWT nunca viajan en el APK) y
 los datos oficiales de la cooperativa sembrados, **solo lectura** (ADR 0006).
 """
 
+import json
 import os
 import sqlite3
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app import borrador
@@ -385,6 +386,64 @@ async def transcribir_nota(
             detail="No se pudo preparar el borrador. Inténtalo de nuevo.",
         )
     return {"texto": texto, "borrador": propuesta}
+
+
+@app.post("/api/v1/borradores/completar")
+async def completar_borrador(
+    audio: UploadFile = File(...),
+    borrador_recibido: str = Form(..., alias="borrador"),
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
+    """Completa el borrador IA con la respuesta por voz del socio.
+
+    Relleno conversacional (ADR 0005): cuando faltan campos obligatorios, el
+    asistente pregunta por ellos y el socio contesta por voz. La respuesta se
+    transcribe con el alias `transcribe` y de ella se extraen los valores que
+    aporta (alias `chat`), una pregunta por respuesta. El borrador vuelve con
+    la `pregunta` por el campo que siga faltando y, cuando ya no falta nada,
+    con la pregunta vacía: listo para confirmar. El audio de la respuesta no se
+    conserva en el servidor, igual que el de la nota.
+    """
+    try:
+        propuesta = json.loads(borrador_recibido)
+    except ValueError:
+        propuesta = None
+    if (
+        not isinstance(propuesta, dict)
+        or propuesta.get("rechazado")
+        or propuesta.get("categoria") not in labores.CATEGORIAS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Ese borrador no se puede completar. Vuelve a dictar la nota.",
+        )
+    contenido = await audio.read()
+    nombre = audio.filename
+    await audio.close()
+    try:
+        texto = transcripcion.transcribir(
+            os.environ["DEVEXPERT_API_KEY"], nombre, contenido
+        )
+    except transcripcion.AudioInvalido:
+        raise HTTPException(
+            status_code=400, detail="Este audio no se puede usar. Vuelve a responder."
+        )
+    except transcripcion.TranscripcionFallida:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo escuchar tu respuesta. Inténtalo de nuevo.",
+        )
+    try:
+        completado = borrador.completar(
+            os.environ["DEVEXPERT_API_KEY"], propuesta, texto
+        )
+    except borrador.ExtraccionFallida:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo completar el borrador. Inténtalo de nuevo.",
+        )
+    return {"texto": texto, "borrador": completado}
 
 
 @app.get("/api/v1/mis-parcelas")

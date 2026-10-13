@@ -137,6 +137,32 @@ def test_rechaza_cuando_no_hay_categoria(monkeypatch):
         borrador.extraer("clave", "Hoy he visto pajaritos...", PARCELAS)
 
 
+def test_si_faltan_campos_el_borrador_llega_con_su_pregunta(monkeypatch):
+    # Relleno conversacional (ADR 0005): si el dictado no trae todos los
+    # campos obligatorios, el borrador sale con la primera pregunta.
+    monkeypatch.setattr(
+        borrador,
+        "_llamar_al_gateway",
+        _respuesta(
+            {
+                "fecha": "2026-01-20",
+                "parcela": "La Noria",
+                "categoria": "tratamiento",
+                "campos": {"plaga_a_controlar": "mosca del olivo"},
+                "preguntas": {
+                    "producto": "¿Qué producto has echado?",
+                    "cantidad": "¿Cuánta cantidad has echado?",
+                },
+            }
+        ),
+    )
+
+    ficha = borrador.extraer("clave", "He hecho un tratamiento...", ["La Noria"])
+
+    assert borrador.campos_faltantes(ficha) == ("producto", "cantidad", "unidad")
+    assert ficha["pregunta"] == "¿Qué producto has echado?"
+
+
 def test_reintenta_si_el_json_no_es_valido(monkeypatch):
     intentos = []
 
@@ -193,6 +219,8 @@ def test_el_endpoint_devuelve_texto_y_borrador(monkeypatch):
         respuesta = _subir(client, cabeceras)
 
         assert respuesta.status_code == 200, respuesta.text
+        # Cambio declarado de completar-borrador-por-preguntas: el borrador
+        # lleva siempre su `pregunta` (vacía cuando la ficha ya está completa).
         assert respuesta.json() == {
             "texto": "He regado El Encinar.",
             "borrador": {
@@ -201,6 +229,7 @@ def test_el_endpoint_devuelve_texto_y_borrador(monkeypatch):
                 "categoria": "riego",
                 "campos": {"cantidad": 3.0, "unidad": "horas"},
                 "observaciones": "",
+                "pregunta": "",
             },
         }
 

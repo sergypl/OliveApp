@@ -1,12 +1,17 @@
-"""Extracción del borrador IA desde la transcripción (feature borrador-ia-desde-transcripcion).
+"""Extracción y completado del borrador IA (features borrador-ia-desde-transcripcion
+y completar-borrador-por-preguntas).
 
-Reglas (ADR 0004 y docs/domain-model.md):
+Reglas (ADR 0004, ADR 0005 y docs/domain-model.md):
 - El alias `chat` del gateway extrae, con salida JSON forzada, la ficha
   {fecha, parcela, categoría, campos de la categoría} de la transcripción,
   apoyándose en las parcelas del socio para desambiguar los nombres.
 - Solo hay 3 categorías en el MVP (tratamiento, riego y cosecha). Si la IA no
   reconoce la categoría, el borrador se rechaza (CategoriaNoReconocida) y la
   app muestra un mensaje claro de rechazo.
+- Relleno conversacional (ADR 0005): cuando faltan campos obligatorios, el
+  asistente pregunta por ellos (una pregunta por respuesta) y el socio contesta
+  por voz hasta completar la ficha. Cada borrador lleva su `pregunta` (vacía
+  cuando ya está completo y listo para confirmar).
 - Las fechas relativas ("hoy", "ayer") se dejan tal cual: las resuelve la
   feature `fecha-relativa-en-borrador` antes de confirmar.
 """
@@ -66,12 +71,31 @@ CAMPOS_POR_CATEGORIA = {
     "cosecha": ("modalidad", "kilos"),
 }
 
+# Pregunta del asistente por campo faltante, según la categoría. La redacta el
+# alias `chat`; esta es la de respaldo cuando la IA no la devuelve.
+PREGUNTAS_POR_CAMPO = {
+    "tratamiento": {
+        "producto": "¿Qué producto has echado?",
+        "plaga_a_controlar": "¿Contra qué plaga lo has echado?",
+        "cantidad": "¿Cuánta cantidad has echado?",
+        "unidad": "¿En qué unidad la mides: kilos, litros, gramos o mililitros?",
+    },
+    "riego": {
+        "cantidad": "¿Cuánto has regado?",
+        "unidad": "¿En qué unidad lo mides: horas, metros cúbicos o litros?",
+    },
+    "cosecha": {
+        "modalidad": "¿Has recogido a vuelo o a suelo?",
+        "kilos": "¿Cuántos kilos de aceituna has recogido?",
+    },
+}
+
 INSTRUCCIONES = (
     "Eres el asistente de OlivApp y extraes la ficha de una labor del olivar "
     "a partir de la transcripción de una nota de voz dictada por un socio.\n"
     "Devuelve SOLO un objeto JSON con esta forma exacta:\n"
     '{"fecha": "...", "parcela": "...", "categoria": "...", "campos": {...}, '
-    '"observaciones": "..."}\n'
+    '"observaciones": "...", "preguntas": {...}}\n'
     "- fecha: la fecha dictada como AAAA-MM-DD. Si el socio dicta una fecha "
     'relativa ("hoy", "ayer", "la semana pasada"), devuélvela tal cual.\n'
     "- parcela: el nombre exacto de una de las parcelas del socio; si ninguna "
@@ -89,8 +113,34 @@ INSTRUCCIONES = (
     + ".\n"
     "- observaciones: solo si el socio dicta una nota libre o detalles que no "
     'encajan en los campos; si no, devuelve "".\n'
+    "- preguntas: si falta algún campo obligatorio de la categoría, una "
+    "pregunta breve y natural para el socio por cada campo que no hayas podido "
+    'rellenar (una por campo). Ejemplo: {"producto": "¿Qué producto has '
+    'echado?"}. Si no falta nada, devuelve {}.\n'
     "Corrige los errores de transcripción con el sentido del dictado y usa el "
     "vocabulario exacto de las listas."
+)
+
+INSTRUCCIONES_COMPLETAR = (
+    "Eres el asistente de OlivApp y ayudas a un socio a completar la ficha de "
+    "una labor del olivar. El socio te responde por voz y hay campos "
+    "obligatorios que siguen faltando.\n"
+    "Devuelve SOLO un objeto JSON con esta forma exacta:\n"
+    '{"campos": {...}, "preguntas": {...}}\n'
+    "- campos: solo los valores de los campos que faltan (te doy la lista) que "
+    "se puedan sacar de la respuesta del socio. Si la respuesta no aporta un "
+    "campo, no lo incluyas. Formato por campo:\n"
+    "  producto: texto. plaga_a_controlar: una de: "
+    + ", ".join(labores.PLAGAS)
+    + ". cantidad: número. "
+    'unidad: "kg"|"L"|"g"|"ml" en tratamiento u "horas"|"m³"|"L" en riego. '
+    'modalidad: "a vuelo"|"a suelo". kilos: número.\n'
+    "- preguntas: una pregunta breve y natural para el socio por cada campo "
+    "que siga faltando tras su respuesta (una por campo), para seguir "
+    'completando la ficha. Ejemplo: {"cantidad": "¿Cuánta cantidad has '
+    'echado?"}.\n'
+    "Habla de tú, en español sencillo y sin tecnicismos. Si la respuesta no "
+    'tiene nada que ver con la labor, devuelve {"campos": {}, "preguntas": {}}.'
 )
 
 
@@ -107,6 +157,8 @@ def extraer(api_key, texto, parcelas, hoy=None):
 
     `parcelas` son los nombres de las parcelas del socio (para desambiguar)
     y `hoy` la fecha de referencia que se le pasa a la IA (hoy por defecto).
+    El borrador lleva su primera `pregunta` si faltan campos obligatorios
+    (feature completar-borrador-por-preguntas).
     """
     hoy = hoy or datetime.date.today().isoformat()
     mensajes = [
@@ -119,7 +171,55 @@ def extraer(api_key, texto, parcelas, hoy=None):
         },
     ]
     datos = _extraer_json(api_key, mensajes)
-    return _construir_borrador(datos, parcelas)
+    return _con_pregunta(_construir_borrador(datos, parcelas), datos.get("preguntas"))
+
+
+def completar(api_key, borrador, texto_respuesta):
+    """Completa el borrador con la respuesta por voz del socio y pregunta lo siguiente.
+
+    La respuesta puede aportar varios campos de golpe; solo se rellenan los
+    que faltaban (los ya dictados no se tocan). Después el borrador vuelve con
+    la `pregunta` por el campo que siga faltando (una pregunta por respuesta)
+    y, cuando ya no falta ninguno, con la pregunta vacía: listo para confirmar.
+    """
+    categoria = borrador.get("categoria")
+    faltantes = campos_faltantes(borrador)
+    actualizado = dict(borrador)
+    actualizado["campos"] = dict(borrador.get("campos") or {})
+    if not faltantes:
+        actualizado["pregunta"] = ""
+        return actualizado
+    mensajes = [
+        {"role": "system", "content": INSTRUCCIONES_COMPLETAR},
+        {
+            "role": "user",
+            "content": (
+                "Categoría de la labor: {}.\n"
+                "Datos que ya tiene la ficha: {}.\n"
+                "Campos que faltan: {}.\n"
+                "Respuesta del socio: {}"
+            ).format(
+                categoria,
+                json.dumps(
+                    {
+                        "fecha": borrador.get("fecha"),
+                        "parcela": borrador.get("parcela"),
+                        "campos": actualizado["campos"],
+                        "observaciones": borrador.get("observaciones"),
+                    },
+                    ensure_ascii=False,
+                ),
+                ", ".join(faltantes),
+                texto_respuesta,
+            ),
+        },
+    ]
+    datos = _extraer_json(api_key, mensajes)
+    nuevos = _normalizar_campos(categoria, datos.get("campos") or {})
+    for campo in faltantes:
+        if campo in nuevos:
+            actualizado["campos"][campo] = nuevos[campo]
+    return _con_pregunta(actualizado, datos.get("preguntas"))
 
 
 def _extraer_json(api_key, mensajes):
@@ -198,17 +298,12 @@ def _numero(valor):
         return valor
 
 
-def _construir_borrador(datos, parcelas):
-    """Normaliza la salida de la IA al borrador del dominio.
+def _normalizar_campos(categoria, campos):
+    """Normaliza los campos de la IA a las listas cerradas del dominio.
 
-    Si la categoría no es una de las tres del MVP, el borrador se rechaza.
+    Solo sobreviven los campos de la categoría con algún valor (ADR 0005).
     """
-    categoria = SINONIMOS_CATEGORIA.get(_sin_acentos(datos.get("categoria")))
-    if categoria not in labores.CATEGORIAS:
-        raise CategoriaNoReconocida(
-            "La IA no reconoció la categoría de la labor."
-        )
-    campos = dict(datos.get("campos") or {})
+    campos = dict(campos or {})
     if "unidad" in campos:
         campos["unidad"] = SINONIMOS_UNIDAD.get(
             _sin_acentos(campos.get("unidad")), campos.get("unidad")
@@ -220,16 +315,65 @@ def _construir_borrador(datos, parcelas):
     for campo in ("cantidad", "kilos"):
         if campo in campos:
             campos[campo] = _numero(campos[campo])
-    # Solo los campos de la categoría (docs/domain-model.md).
-    campos = {
+    return {
         campo: campos[campo]
-        for campo in CAMPOS_POR_CATEGORIA[categoria]
+        for campo in CAMPOS_POR_CATEGORIA.get(categoria, ())
         if campo in campos and campos[campo] not in (None, "")
     }
+
+
+def campos_faltantes(borrador):
+    """Campos obligatorios de la categoría que aún faltan en el borrador.
+
+    Son los que el asistente pregunta por voz hasta completar la ficha
+    (feature completar-borrador-por-preguntas).
+    """
+    campos = borrador.get("campos") or {}
+    return tuple(
+        campo
+        for campo in CAMPOS_POR_CATEGORIA.get(borrador.get("categoria"), ())
+        if campos.get(campo) in (None, "")
+    )
+
+
+def _pregunta_para(categoria, campo, preguntas):
+    """La pregunta del asistente para un campo, la de la IA o la de respaldo."""
+    redactada = ""
+    if isinstance(preguntas, dict):
+        redactada = str(preguntas.get(campo) or "").strip()
+    return redactada or PREGUNTAS_POR_CAMPO.get(categoria, {}).get(campo, "")
+
+
+def _con_pregunta(borrador, preguntas=None):
+    """Borrador con su `pregunta` por el campo que falta (vacía si está completo).
+
+    Siempre hay pregunta cuando falta un campo obligatorio: la redactada por la
+    IA o, en su defecto, la de respaldo por campo y categoría.
+    """
+    borrador = dict(borrador)
+    faltantes = campos_faltantes(borrador)
+    borrador["pregunta"] = (
+        _pregunta_para(borrador.get("categoria"), faltantes[0], preguntas)
+        if faltantes
+        else ""
+    )
+    return borrador
+
+
+def _construir_borrador(datos, parcelas):
+    """Normaliza la salida de la IA al borrador del dominio.
+
+    Si la categoría no es una de las tres del MVP, el borrador se rechaza.
+    """
+    categoria = SINONIMOS_CATEGORIA.get(_sin_acentos(datos.get("categoria")))
+    if categoria not in labores.CATEGORIAS:
+        raise CategoriaNoReconocida(
+            "La IA no reconoció la categoría de la labor."
+        )
     return {
         "fecha": str(datos.get("fecha") or "").strip(),
         "parcela": _buscar_parcela(datos.get("parcela"), parcelas),
         "categoria": categoria,
-        "campos": campos,
+        "campos": _normalizar_campos(categoria, datos.get("campos")),
         "observaciones": str(datos.get("observaciones") or "").strip(),
     }
