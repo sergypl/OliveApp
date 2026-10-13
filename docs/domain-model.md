@@ -30,11 +30,11 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 ## States and Lifecycles
 
 **Nota de voz:** `pendiente → transcrita → confirmada | descartada`
-- *pendiente:* grabada sin conexión. Transición: llega cobertura → transcribir automáticamente.
+- *pendiente:* grabada sin conexión. La nota y su audio se guardan en la cola local del teléfono (Room) con aviso visible y no se pierden al cerrar la app. Transiciones: el socio reintentar el envío desde la cola (o se reenvía al abrir la cola) → transcrita; el reenvío automático al volver la cobertura está en `sincronizacion-pendientes-al-reconectar`.
 - *transcrita:* borrador IA visible esperando confirmación. Transiciones: confirmar → labor creada; rechazar → descartada.
 - *confirmada:* labor en el cuaderno.
 - *descartada:* el socio rechaza el borrador.
-- Si la transcripción falla, la nota permanece pendiente con error visible y se reintenta.
+- Si el envío falla por falta de conexión, la nota vuelve a la cola en estado pendiente; si falla la transcripción (servicio o audio ilegible), la nota queda con error visible y se puede reintentar.
 
 **Labor:** `creada → editada → eliminada`. El cuaderno muestra solo labores vigentes; eliminar es borrado directo (sin papelera en el MVP).
 

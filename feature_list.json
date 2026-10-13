@@ -283,7 +283,6 @@
       "Cobertura de casos por tests (test_aislamiento.py): parcelas, labores y datos oficiales por separado para los dos socios; un socio no edita ni elimina labres ajenas (404) ni apunta labores en parcelas ajenas; detalle de campaña con los datos del propio socio; sin token no se ve nada (401)."
     ],
     "notes": "Decisión de esta feature: el registro pide el 'Código de socio' que da la cooperativa (en el seed: 'Socio 1', 'Socio 2', comparación sin distinguir mayúsculas ni espacios) y vincula la cuenta a ese socio (error claro con 400 si no existe; 422 si falta). Cambios de comportamiento declarados en las rutas /api/v1/socios*: cada cuenta solo lista su propio socio y las rutas del socio ajeno son 404 (antes cualquier cuenta autenticada veía a todos los socios); init.sh y test_datos_sembrados.py adaptados a este cambio (una cuenta de verificación por socio). Las cuentas creadas antes de esta feature conservan su vínculo a socio-001 por la migración de la base."
-  ],
   },
   {
     "id": "grabacion-de-nota-voz",
@@ -314,13 +313,19 @@
     "depends_on": [
       "grabacion-de-nota-voz"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Grabar en modo avión y comprobar que la nota aparece como pendiente con aviso y que sobrevive a cerrar la app"
     ],
-    "evidence": [],
-    "notes": "La ausencia de cobertura es un caso de primera clase (docs/build-brief.md). Estados de la cola visibles en la UI (docs/technical-discovery.md)."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 85/85, healthcheck 200, datos sembrados con token OK, APK con Room compilado e instalado/abierto en los dos dispositivos conectados).",
+      "Escenario declarado verificado en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro) en modo avión: al parar la grabación, aviso 'Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar.' y cola visible 'Cola: 1 nota pendiente de enviar' con la fila 'Pendiente de enviar. Está en la cola del teléfono.' y su botón 'Reintentar'. Tras cerrar la app a la fuerza y reabrirla (sigue sin conexión), la nota seguía en la cola igual. Como el desarrollo usa adb reverse por USB (el modo avión no lo corta), además se retiró el túnel para reproducir el fallo de conexión.",
+      "Audio y registro confirmados en el almacenamiento del dispositivo tras el cierre: files/notas-voz/*.m4a y databases/notas-voz.db (Room).",
+      "Reintento con la conexión restaurada: la nota salió de la cola y llegó al backend y al gateway reales (respuesta de contenido 'No se ha entendido el audio…' por ser audio de ambiente, caso propio de reintento-de-transcripcion-fallida). Ciclo feliz completo con una nota de voz en español (voz sintética generada con 'say') registrada por la ruta de la migración JSON→Room: migrada a la cola, enviada al abrir la pantalla y 'Transcrita' con el texto real del gateway ('He regado la parcela el encinar durante dos horas y media.').",
+      "Arreglos auxiliares de esta sesión: botón 'Volver al inicio' siempre visible en 'Crear cuenta' e 'Iniciar sesión' (la pantalla de alta no tenía salida tras un error; verificado en el móvil), validación del JSON de feature_list.json en init.sh y arreglo del 500 intermitente por sqlite3.ProgrammingError (conexión SQLite cruzando hilos del pool de FastAPI) en backend/app/db.py (pytest 85/85 con el arreglo)."
+    ],
+    "notes": "La ausencia de cobertura es un caso de primera clase (docs/build-brief.md). Estados de la cola visibles en la UI (docs/technical-discovery.md). Decisión de esta feature: la cola local usa Room (tabla 'notas_voz', KSP) en lugar del índice JSON de notas, con migración única del índice antiguo para no perder notas; el almacén mantiene la interfaz síncrona con allowMainThreadQueries (cola pequeña, consultas de pocos milisegundos). Sin conexión la nota vuelve a estado 'pendiente' en la cola; los fallos del servidor quedan en 'error' (terreno de reintento-de-transcripcion-fallida). El reenvío automático al volver la cobertura queda para sincronizacion-pendientes-al-reconectar."
   },
   {
     "id": "transcripcion-de-nota-voz",
