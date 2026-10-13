@@ -7,6 +7,10 @@
     <!-- Grabación de notas de voz (feature grabacion-de-nota-voz). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Sincronización de la cola de notas al recuperar la conexión
+         (feature sincronizacion-pendientes-al-reconectar). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:label="OlivApp"
         android:usesCleartextTraffic="true"

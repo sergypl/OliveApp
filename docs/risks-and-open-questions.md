@@ -42,7 +42,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 - Precisión de transcripción/extracción con acentos y vocabulario local: mitigada por el ciclo "IA propone, socio confirma" y el set de frases de prueba.
 - Dependencia del micrófono y permisos en Android (versiones de SO, fabricantes): probar en el móvil real de la demo cuanto antes.
 - Datos de cooperativa sembrados que no cuadren con la realidad: mitigado declarándolos como datos de demo y de solo lectura.
-- Sincronización offline: conflictos o doble confirmación al reconectar podrían duplicar labores; idempotencia básica al confirmar.
+- Sincronización offline: conflictos o doble confirmación al reconectar podrían duplicar labores; idempotencia básica al confirmar. En la cola de notas la protección básica ya existe y está verificada (`sincronizacion-pendientes-al-reconectar`): cada nota solo se envía si sigue en estado pendiente y pasa a transcribiendo antes de salir, así el reenvío al reconectar no duplica transcripciones. Queda por llevar esa idempotencia a la confirmación de borradores en labores.
 - Seguridad: la clave API solo en el servidor; token JWT con caducidad y transporte HTTPS.
 - RGPD: datos personales mínimos (email) y datos de campaña del socio. Sin baja de cuenta en el MVP: limitación conocida que habrá que declarar.
 - Alcance académico: la app no estará validada con usuarios reales en el MVP (aceptado y declarado); el replanteo a nativa + campañas amplía el alcance frente al plan inicial.
