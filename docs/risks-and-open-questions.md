@@ -39,7 +39,7 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 
 ## Risks
 - **Salto a app nativa:** build, firma, Gradle y dispositivo real añaden fricción frente a la web del plan anterior; mitigar fijando un único dispositivo objetivo y un APK de desarrollo cuanto antes. **Mitigado (2026-10-13):** el APK de desarrollo compila, se instala y se abre también en el móvil físico de la demo, fijado como **Xiaomi Redmi Note 10 Pro (M2101K6G)** y usado ya como dispositivo de verificación; queda verificar la firma del APK release. Nota operativa: la app llama al backend por `127.0.0.1:8000` y `init.sh` configura `adb reverse tcp:8000 tcp:8000` en cada dispositivo conectado (si se conecta un dispositivo después, hay que lanzar ese comando a mano).
-- Precisión de transcripción/extracción con acentos y vocabulario local: mitigada por el ciclo "IA propone, socio confirma" y el set de frases de prueba.
+- Precisión de transcripción/extracción con acentos y vocabulario local: mitigada por el ciclo "IA propone, socio confirma" y el set de frases de prueba (ya creado: `docs/frases-de-prueba.md`; queda cubrir el resto de frases del set en la demo).
 - Dependencia del micrófono y permisos en Android (versiones de SO, fabricantes): probar en el móvil real de la demo cuanto antes.
 - Datos de cooperativa sembrados que no cuadren con la realidad: mitigado declarándolos como datos de demo y de solo lectura.
 - Sincronización offline: conflictos o doble confirmación al reconectar podrían duplicar labores; idempotencia básica al confirmar. En la cola de notas la protección básica ya existe y está verificada (`sincronizacion-pendientes-al-reconectar`): cada nota solo se envía si sigue en estado pendiente y pasa a transcribiendo antes de salir, así el reenvío al reconectar no duplica transcripciones. Queda por llevar esa idempotencia a la confirmación de borradores en labores.
@@ -49,5 +49,5 @@ Ninguna: las cuatro decisiones bloqueantes quedaron resueltas en [ADR 0003](adr/
 
 ## Research Tasks
 - ~~Validar el pipeline de voz según ADR 0004~~: **hecho (2026-10-09)**, ver *Validación empírica* en el ADR (formato, latencia, coste y JSON forzado comprobados).
-- Preparar el set de 10-20 frases de prueba para la demo (productos, unidades, "a vuelo", "a suelo", plaga a controlar).
+- ~~Preparar el set de 10-20 frases de prueba para la demo~~: **hecho (2026-10-13)**, ver `docs/frases-de-prueba.md` (13 frases: las 3 categorías, unidades, "a vuelo"/"a suelo", plaga a controlar, fechas relativas, typo de parcela, categoría no reconocida y doble labor). Frases 1 y 9 verificadas en vivo con extracción real (alias `chat`, sin necesidad de subir a `chat-pro`).
 - (Opcional) Ampliar los datos reales anonimizados del seed con más campañas del socio real (ADR 0007 ya incorporó la 2025/2026).
