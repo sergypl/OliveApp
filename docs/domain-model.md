@@ -34,7 +34,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 - *transcrita:* borrador IA visible esperando confirmación. Transiciones: confirmar → labor creada; rechazar → descartada.
 - *confirmada:* labor en el cuaderno.
 - *descartada:* el socio rechaza el borrador.
-- Si el envío falla por falta de conexión, la nota vuelve a la cola en estado pendiente; si falla la transcripción (servicio o audio ilegible), la nota queda con error visible y se puede reintentar.
+- Si el envío falla por falta de conexión, la nota vuelve a la cola en estado pendiente; si la transcripción falla por un fallo del servicio, la nota queda con error visible y se reintenta a mano; si el audio no se puede usar (ilegible, demasiado corto o con formato/tamaño inválido), la nota queda con error visible que pide repetir el dictado.
 
 **Labor:** `creada → editada → eliminada`. El cuaderno muestra solo labores vigentes; eliminar es borrado directo (sin papelera en el MVP).
 

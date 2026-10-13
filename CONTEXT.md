@@ -74,7 +74,7 @@ Aceituna recolectada directamente del árbol.
 Aceituna caída al suelo y recogida de este.
 
 ### Nota de voz
-Grabación corta dictada por el socio para registrar una labor (máximo 60 segundos). Estados: pendiente (grabada sin conexión; queda en la cola de notas del teléfono hasta que se pueda enviar), transcrita (borrador IA generado), confirmada (labor creada en el cuaderno), descartada.
+Grabación corta dictada por el socio para registrar una labor (máximo 60 segundos). Estados: pendiente (grabada sin conexión; queda en la cola de notas del teléfono hasta que se pueda enviar), transcrita (borrador IA generado), confirmada (labor creada en el cuaderno), descartada. Si la transcripción falla, la nota queda con error visible: se reintenta el envío o, si el audio no se puede usar, se repite el dictado.
 
 ### Cola de notas
 Notas de voz pendientes de enviar, guardadas en el propio teléfono (Room) con su audio, con aviso visible en la app y reintentables; no se pierden al cerrar la app.
