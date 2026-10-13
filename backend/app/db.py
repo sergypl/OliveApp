@@ -72,7 +72,10 @@ def ruta_base_datos():
 
 
 def conectar():
-    conn = sqlite3.connect(str(ruta_base_datos()))
+    # FastAPI ejecuta los handlers síncronos en un pool de hilos y la conexión
+    # puede crearse en un hilo y usarse en otro: sin check_same_thread=False,
+    # SQLite lanza ProgrammingError y la petición falla con 500.
+    conn = sqlite3.connect(str(ruta_base_datos()), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -85,10 +88,12 @@ def crear_esquema(conn):
 
 
 def _migrar_socio_en_cuenta(conn):
-    """Bases creadas antes de `panel-campana-actual`.
+    """Bases creadas antes de `aislamiento-de-datos-por-socio`.
 
-    La cuenta queda vinculada al socio de demostración (decisión registrada
-    en esa feature): todas las cuentas del MVP se asocian a `socio-001`.
+    El registro ya pide el código de socio y vincula la cuenta a su socio;
+    las cuentas creadas antes quedan vinculadas al socio de demostración
+    `socio-001` (decisiones de `panel-campana-actual` y
+    `aislamiento-de-datos-por-socio`).
     """
     columnas = [fila[1] for fila in conn.execute("PRAGMA table_info(cuenta)")]
     if "socio_id" not in columnas:
