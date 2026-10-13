@@ -314,6 +314,20 @@ def editar_labor(
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@app.delete("/api/v1/mis-labores/{labor_id}")
+def eliminar_labor(
+    labor_id: str,
+    conn: sqlite3.Connection = Depends(conexion),
+    sesion=Depends(sesion_actual),
+):
+    """Elimina una labor del socio: borrado directo, sin papelera (MVP)."""
+    cuenta = _cuenta_del_socio(conn, sesion)
+    try:
+        return labores.eliminar_labor(conn, cuenta["socio_id"], labor_id)
+    except labores.LaborAjena:
+        raise HTTPException(status_code=404, detail="No existe esa labor.")
+
+
 @app.post("/api/v1/mis-notas-voz/transcripcion")
 async def transcribir_nota(
     audio: UploadFile = File(...),
