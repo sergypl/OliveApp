@@ -1378,7 +1378,11 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                         FilaNotaVoz(
                             nota,
                             alReintentar = { transcribirNota(nota) },
-                            alRepetir = { empezarGrabacion() }
+                            alRepetir = { empezarGrabacion() },
+                            alGuardarBorrador = { borradorNuevo ->
+                                almacen.actualizarBorrador(nota.id, borradorNuevo)
+                                notas = almacen.notas()
+                            }
                         )
                     }
                 }
@@ -1401,7 +1405,11 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                         FilaNotaVoz(
                             nota,
                             alReintentar = { transcribirNota(nota) },
-                            alRepetir = { empezarGrabacion() }
+                            alRepetir = { empezarGrabacion() },
+                            alGuardarBorrador = { borradorNuevo ->
+                                almacen.actualizarBorrador(nota.id, borradorNuevo)
+                                notas = almacen.notas()
+                            }
                         )
                     }
                 }
@@ -1430,7 +1438,8 @@ private const val LIMITE_SEGUNDOS_NOTA = 60
 fun FilaNotaVoz(
     nota: AlmacenNotasVoz.NotaDeVoz,
     alReintentar: () -> Unit,
-    alRepetir: () -> Unit
+    alRepetir: () -> Unit,
+    alGuardarBorrador: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -1461,7 +1470,7 @@ fun FilaNotaVoz(
         }
         if (nota.estado == "transcrita" && nota.borrador.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
-            BorradorIA(nota.borrador)
+            BorradorIA(nota.borrador, alGuardarBorrador)
         }
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1475,14 +1484,21 @@ fun FilaNotaVoz(
 }
 
 /**
- * Borrador IA de una nota transcrita (feature borrador-ia-desde-transcripcion).
+ * Borrador IA de una nota transcrita (features borrador-ia-desde-transcripcion
+ * y completar-borrador-por-preguntas).
  *
  * Muestra la ficha que propone la IA (fecha, parcela, categoría y campos de
  * la categoría) esperando la confirmación del socio. Si la IA no reconoció la
  * categoría, el borrador se rechaza con un mensaje claro.
+ *
+ * Cuando faltan campos obligatorios, el asistente pregunta por ellos y el
+ * socio responde por voz: cada respuesta completa la ficha y trae la
+ * siguiente pregunta. Mientras falte algún campo, el borrador no se puede
+ * confirmar (el botón "Confirmar" está deshabilitado).
  */
 @Composable
-fun BorradorIA(json: String) {
+fun BorradorIA(json: String, alGuardar: (String) -> Unit) {
+    val contexto = LocalContext.current
     val borrador = try {
         JSONObject(json)
     } catch (e: Exception) {
@@ -1499,6 +1515,108 @@ fun BorradorIA(json: String) {
         )
         return
     }
+    val faltantes = camposFaltantesDeBorrador(borrador)
+    val grabador = remember { GrabadorNotas() }
+    var grabando by remember { mutableStateOf(false) }
+    var segundos by remember { mutableStateOf(0) }
+    var ficheroRespuesta by remember { mutableStateOf<File?>(null) }
+    var enviando by remember { mutableStateOf(false) }
+    var aviso by remember { mutableStateOf<String?>(null) }
+    var ultimaRespuesta by remember { mutableStateOf<String?>(null) }
+    var marcadoListo by remember { mutableStateOf(false) }
+
+    fun enviarRespuesta() {
+        val fichero = ficheroRespuesta ?: return
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            aviso = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+            return
+        }
+        enviando = true
+        aviso = null
+        ServicioCuentas.completarBorrador(token, fichero, json) {
+                texto, borradorNuevo, error, sinConexion, audioInvalido ->
+            enviando = false
+            if (texto != null) {
+                // La respuesta completa la ficha y trae la siguiente pregunta.
+                ficheroRespuesta?.delete()
+                ficheroRespuesta = null
+                ultimaRespuesta = texto
+                alGuardar(borradorNuevo)
+            } else if (audioInvalido) {
+                // El audio no se puede usar: hay que volver a responder.
+                ficheroRespuesta?.delete()
+                ficheroRespuesta = null
+                aviso = error
+            } else {
+                // Sin conexión o fallo del servicio: la respuesta grabada se
+                // conserva y se reintenta sin tener que dictarla otra vez.
+                aviso = error
+            }
+        }
+    }
+
+    val empezarRespuesta = {
+        try {
+            val carpeta = File(contexto.filesDir, "respuestas-borrador")
+            carpeta.mkdirs()
+            val fichero = File(carpeta, "respuesta-" + System.currentTimeMillis() + ".m4a")
+            grabador.empezar(fichero)
+            ficheroRespuesta = fichero
+            segundos = 0
+            grabando = true
+            aviso = null
+            ultimaRespuesta = null
+        } catch (e: Exception) {
+            aviso = "No se pudo empezar a grabar. Comprueba el permiso de micrófono."
+        }
+    }
+    val pararRespuesta = {
+        val duracion = grabador.parar()
+        grabando = false
+        val fichero = ficheroRespuesta
+        if (duracion >= 1 && fichero != null) {
+            enviarRespuesta()
+        } else {
+            fichero?.delete()
+            ficheroRespuesta = null
+            aviso = "La grabación ha sido demasiado corta. Vuelve a intentarlo."
+        }
+    }
+
+    // Reloj de la respuesta: se detiene sola al llegar al límite.
+    LaunchedEffect(grabando) {
+        while (grabando) {
+            delay(1000)
+            segundos += 1
+            if (segundos >= LIMITE_SEGUNDOS_RESPUESTA) {
+                pararRespuesta()
+            }
+        }
+    }
+
+    // Si se abandona la conversación con una respuesta grabada sin enviar, el
+    // audio no se queda en el teléfono: la pregunta sigue ahí y se vuelve a
+    // responder.
+    DisposableEffect(Unit) {
+        onDispose {
+            if (!enviando) {
+                ficheroRespuesta?.delete()
+                ficheroRespuesta = null
+            }
+        }
+    }
+
+    val lanzadorPermiso = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) {
+            empezarRespuesta()
+        } else {
+            aviso = "Sin permiso de micrófono no se puede responder por voz."
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1520,7 +1638,161 @@ fun BorradorIA(json: String) {
                 color = TextoMarron
             )
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        if (faltantes.isEmpty()) {
+            Text(
+                text = "Borrador completo. Ya se puede confirmar.",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonPrincipal(
+                texto = "Confirmar",
+                habilitado = !grabando && !enviando,
+                alPulsar = { marcadoListo = true }
+            )
+            if (marcadoListo) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Borrador listo para confirmar. La creación de la labor " +
+                        "con este botón llegará en la próxima función.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            }
+        } else {
+            Text(
+                text = "Faltan datos por responder: " +
+                    faltantes.joinToString(", ") { etiquetaDeCampo(it) } + ".",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoError
+            )
+            val pregunta = borrador.optString("pregunta")
+            if (pregunta.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "El asistente te pregunta:",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = VerdeOliva
+                )
+                Text(
+                    text = pregunta,
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            }
+            ultimaRespuesta?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Tu respuesta: $it",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            if (grabando) {
+                Text(
+                    text = "Grabando tu respuesta… $segundos de " +
+                        "$LIMITE_SEGUNDOS_RESPUESTA segundos",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoError
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                BotonPeligro(texto = "Parar", alPulsar = pararRespuesta)
+            } else if (enviando) {
+                Text(
+                    text = "Enviando tu respuesta…",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = VerdeOliva
+                )
+            } else if (ficheroRespuesta != null) {
+                // Respuesta ya grabada que aún no se ha podido enviar.
+                BotonPrincipal(texto = "Reintentar", alPulsar = { enviarRespuesta() })
+                Spacer(modifier = Modifier.height(8.dp))
+                BotonSecundario(
+                    texto = "Responder otra vez",
+                    alPulsar = {
+                        ficheroRespuesta?.delete()
+                        ficheroRespuesta = null
+                        empezarRespuesta()
+                    }
+                )
+            } else {
+                BotonPrincipal(
+                    texto = "Responder por voz",
+                    alPulsar = {
+                        if (
+                            ContextCompat.checkSelfPermission(
+                                contexto, Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            empezarRespuesta()
+                        } else {
+                            lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                )
+            }
+            aviso?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = it,
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoError
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            BotonPrincipal(texto = "Confirmar", habilitado = false, alPulsar = {})
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Faltan datos por responder para poder confirmar.",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron
+            )
+        }
     }
+}
+
+/** Límite de duración de la respuesta por voz a una pregunta del asistente. */
+private const val LIMITE_SEGUNDOS_RESPUESTA = 20
+
+/** Campos obligatorios de la categoría que aún faltan en el borrador IA. */
+fun camposFaltantesDeBorrador(borrador: JSONObject): List<String> {
+    val categoria = borrador.optString("categoria")
+    val campos = borrador.optJSONObject("campos") ?: JSONObject()
+    val obligatorios = when (categoria) {
+        "tratamiento" -> listOf("producto", "plaga_a_controlar", "cantidad", "unidad")
+        "riego" -> listOf("cantidad", "unidad")
+        "cosecha" -> listOf("modalidad", "kilos")
+        else -> emptyList()
+    }
+    return obligatorios.filter { campo ->
+        val valor = campos.opt(campo)
+        valor == null || valor.toString().isBlank()
+    }
+}
+
+/** Etiqueta para el socio de un campo del borrador IA. */
+fun etiquetaDeCampo(campo: String): String = when (campo) {
+    "producto" -> "Producto"
+    "plaga_a_controlar" -> "Plaga a controlar"
+    "cantidad" -> "Cantidad"
+    "unidad" -> "Unidad"
+    "modalidad" -> "Modalidad"
+    "kilos" -> "Kilos"
+    else -> campo
 }
 
 /** Etiquetas y valores del borrador IA, en el orden de la ficha del dominio. */
@@ -1539,14 +1811,17 @@ fun lineasDeBorrador(borrador: JSONObject): List<Pair<String, String>> {
     )
     when (categoria) {
         "tratamiento" -> {
-            lineas += "Producto" to campos.optString("producto")
-            lineas += "Plaga a controlar" to campos.optString("plaga_a_controlar")
-            lineas += "Cantidad" to cantidadVisible(campos, "cantidad", "unidad")
+            lineas += "Producto" to campos.optString("producto").ifEmpty { "(falta)" }
+            lineas += "Plaga a controlar" to
+                campos.optString("plaga_a_controlar").ifEmpty { "(falta)" }
+            lineas += "Cantidad" to
+                cantidadVisible(campos, "cantidad", "unidad").ifEmpty { "(falta)" }
         }
-        "riego" -> lineas += "Cantidad" to cantidadVisible(campos, "cantidad", "unidad")
+        "riego" -> lineas += "Cantidad" to
+            cantidadVisible(campos, "cantidad", "unidad").ifEmpty { "(falta)" }
         "cosecha" -> {
-            lineas += "Modalidad" to campos.optString("modalidad")
-            lineas += "Kilos" to numeroVisible(campos.opt("kilos"))
+            lineas += "Modalidad" to campos.optString("modalidad").ifEmpty { "(falta)" }
+            lineas += "Kilos" to numeroVisible(campos.opt("kilos")).ifEmpty { "(falta)" }
         }
     }
     val observaciones = borrador.optString("observaciones")
@@ -1612,6 +1887,9 @@ interface NotasVozDao {
             "borrador = :borrador WHERE id = :id"
     )
     fun marcar(id: String, estado: String, texto: String, borrador: String)
+
+    @Query("UPDATE notas_voz SET borrador = :borrador WHERE id = :id")
+    fun actualizarBorrador(id: String, borrador: String)
 }
 
 /** Base Room de la cola de notas de voz. */
@@ -1716,6 +1994,11 @@ class AlmacenNotasVoz(private val contexto: Context) {
     /** Cambia el estado de una nota (y guarda texto y borrador cuando llegan). */
     fun marcar(id: String, estado: String, texto: String, borrador: String = "") {
         dao.marcar(id, estado, texto, borrador)
+    }
+
+    /** Guarda el borrador IA de una nota sin tocar su estado ni su texto. */
+    fun actualizarBorrador(id: String, borrador: String) {
+        dao.actualizarBorrador(id, borrador)
     }
 
     fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
@@ -2710,6 +2993,71 @@ object ServicioCuentas {
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo transcribir la nota." }
+                        principal.post {
+                            alTerminar(null, "", detalle, false, it.code == 400)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    /**
+     * Completa un borrador IA con la respuesta por voz del socio (feature
+     * completar-borrador-por-preguntas).
+     *
+     * El resultado lleva el texto de la respuesta y el borrador actualizado,
+     * con la siguiente pregunta del asistente (vacía cuando la ficha ya está
+     * completa). Los fallos distinguen los mismos casos que en la
+     * transcripción: sin conexión (la respuesta grabada se conserva y se
+     * reintenta), audio no usable (hay que volver a responder) y fallo del
+     * servicio (reintentable).
+     */
+    fun completarBorrador(
+        token: String,
+        fichero: java.io.File,
+        borrador: String,
+        alTerminar: (String?, String, String, Boolean, Boolean) -> Unit
+    ) {
+        val cuerpo = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "audio",
+                fichero.name,
+                fichero.asRequestBody("audio/mp4".toMediaType())
+            )
+            .addFormDataPart("borrador", borrador)
+            .build()
+        val peticion = Request.Builder()
+            .url("$URL_BASE/api/v1/borradores/completar")
+            .header("Authorization", "Bearer $token")
+            .post(cuerpo)
+            .build()
+
+        cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(
+                        null,
+                        "",
+                        "No hay conexión con el servidor. Inténtalo de nuevo.",
+                        true,
+                        false
+                    )
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val respuesta = JSONObject(it.body?.string() ?: "")
+                        val texto = respuesta.optString("texto")
+                        val borradorNuevo = respuesta.optJSONObject("borrador")?.toString()
+                            ?: ""
+                        principal.post { alTerminar(texto, borradorNuevo, "", false, false) }
+                    } else {
+                        val detalle = detalleDeError(it)
+                            .ifEmpty { "No se pudo completar el borrador." }
                         principal.post {
                             alTerminar(null, "", detalle, false, it.code == 400)
                         }
