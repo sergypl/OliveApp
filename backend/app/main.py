@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app import borrador
 from app import cuentas
 from app import db as basedatos
 from app import labores
@@ -343,12 +344,16 @@ def eliminar_labor(
 @app.post("/api/v1/mis-notas-voz/transcripcion")
 async def transcribir_nota(
     audio: UploadFile = File(...),
+    conn: sqlite3.Connection = Depends(conexion),
     sesion=Depends(sesion_actual),
 ):
-    """Transcribe una nota de voz enviada por la app.
+    """Transcribe una nota de voz y propone su borrador IA.
 
-    El audio se transcribe con el alias `transcribe` del gateway (ADR 0004)
-    y se borra del servidor tras la transcripción: no se conserva nada.
+    El audio se transcribe con el alias `transcribe` y el borrador IA se
+    extrae con el alias `chat` (ADR 0004), apoyándose en las parcelas del
+    socio. El audio se borra del servidor tras la transcripción: no se
+    conserva nada. Si la IA no reconoce la categoría de la labor, el
+    borrador se rechaza (devuelve null) y la app lo dice claro.
     """
     contenido = await audio.read()
     nombre = audio.filename
@@ -364,7 +369,22 @@ async def transcribir_nota(
             status_code=502,
             detail="No se pudo transcribir la nota. Inténtalo de nuevo.",
         )
-    return {"texto": texto}
+    cuenta = _cuenta_del_socio(conn, sesion)
+    nombres = [
+        fila["nombre"] for fila in parcelas.parcelas_del_socio(conn, cuenta["socio_id"])
+    ]
+    try:
+        propuesta = borrador.extraer(
+            os.environ["DEVEXPERT_API_KEY"], texto, nombres
+        )
+    except borrador.CategoriaNoReconocida:
+        propuesta = None
+    except borrador.ExtraccionFallida:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo preparar el borrador. Inténtalo de nuevo.",
+        )
+    return {"texto": texto, "borrador": propuesta}
 
 
 @app.get("/api/v1/mis-parcelas")
