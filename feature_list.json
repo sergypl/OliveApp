@@ -358,13 +358,19 @@
     "depends_on": [
       "transcripcion-de-nota-voz"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Simular un fallo del endpoint de transcripción y comprobar el error visible y que el reintento completa la nota"
     ],
-    "evidence": [],
-    "notes": "Ciclo de vida de Nota de voz en docs/domain-model.md y caso borde 'audio demasiado corto o ilegible'. Parte de su comportamiento ya existe desde transcripcion-de-nota-voz (error visible + botón 'Reintentar', verificado en vivo con el gateway real); falta su verificación propia: simular un fallo del endpoint y comprobar que el reintento completa la nota."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 85/85 — incluidos los tests de fallo del gateway (502 reintentable) y audio sin texto (400 'vuelve a grabar') de test_transcripcion.py —, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos conectados).",
+      "Fallo del endpoint de transcripción simulado en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro): backend con clave de gateway inválida → 502 en /mis-notas-voz/transcripcion y la nota quedó con error visible 'No se ha podido transcribir. Toca para reintentar.' y su 'Reintentar', con el aviso 'No se pudo transcribir la nota. Inténtalo de nuevo.'.",
+      "El reintento completa la nota: con el backend restaurado (clave real del gateway), 'Reintentar' pasó la nota de error a 'Transcrita' con el texto real ('He hecho un tratamiento fitosanitario en la parcela La Noría.'). Audio de voz sintética en español (say de macOS) registrado en la app por la ruta de migración; verificación en el dispositivo, capturas en sesión (no versionadas).",
+      "Audio ilegible: nota grabada con audio de ambiente → el gateway devuelve sin texto y la app muestra 'Este audio no se puede transcribir. Vuelve a grabar la nota.' con el botón 'Grabar otra vez' (repite el dictado, en lugar de 'Reintentar') y el aviso 'No se ha entendido el audio. Vuelve a grabar la nota.'.",
+      "Audio demasiado corto: grabar y parar al instante → 'La grabación ha sido demasiado corta. Vuelve a intentarlo.' sin crear la nota (camino ya existente en la app); el botón 'Grabar otra vez' inicia una nueva grabación, comprobado en vivo."
+    ],
+    "notes": "Ciclo de vida de Nota de voz en docs/domain-model.md y caso borde 'audio demasiado corto o ilegible'. Parte de su comportamiento ya existía desde transcripcion-de-nota-voz (error visible + botón 'Reintentar'). Lo nuevo de esta feature está en la app: distinción de fallos en la UI (fallo del servicio → error reintentable; backend 400 de audio → estado 'audio_invalido' que pide repetir el dictado con 'Grabar otra vez'; sin conexión → cola 'pendiente' de cola-offline-de-notas). Contrato backend aprovechado (ya cubierto por tests): 400 = audio inválido (formato, tamaño o sin texto: ilegible/corto comparten camino porque el gateway no devuelve texto), 502 = fallo del servicio. El caso 'demasiado corto' de la grabación (< 1 s) lo rechaza la propia app sin crear la nota."
   },
   {
     "id": "sincronizacion-pendientes-al-reconectar",
