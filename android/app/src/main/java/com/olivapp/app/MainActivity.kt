@@ -1116,13 +1116,16 @@ fun Desplegable(
 
 /**
  * Pantalla de notas de voz (features grabacion-de-nota-voz,
- * transcripcion-de-nota-voz y cola-offline-de-notas).
+ * transcripcion-de-nota-voz, cola-offline-de-notas y
+ * reintento-de-transcripcion-fallida).
  *
  * El socio graba una nota corta con el botón grande; la grabación queda
  * registrada como nota de voz con estado visible y se envía al backend para
  * transcribirla (el servidor no conserva el audio). Sin conexión, la nota
  * queda en la cola local (Room) en estado 'pendiente' con aviso visible y
- * puede reintentarse desde la cola.
+ * puede reintentarse desde la cola. Si la transcripción falla, la nota queda
+ * con error visible: se reintenta a mano o, si el audio no se puede usar, se
+ * pide repetir el dictado.
  */
 @Composable
 fun PantallaNotasVoz(onVolver: () -> Unit) {
@@ -1156,7 +1159,10 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
         } else {
             almacen.marcar(nota.id, "transcribiendo", "")
             notas = almacen.notas()
-            ServicioCuentas.transcribirNota(token, File(nota.fichero)) { texto, error, sinConexion ->
+            ServicioCuentas.transcribirNota(
+                token,
+                File(nota.fichero)
+            ) { texto, error, sinConexion, audioInvalido ->
                 if (texto != null) {
                     almacen.marcar(nota.id, "transcrita", texto)
                     mensaje = "Nota transcrita. Ya puedes leer el texto."
@@ -1166,7 +1172,16 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                     almacen.marcar(nota.id, "pendiente", "")
                     mensaje =
                         "Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar."
+                } else if (audioInvalido) {
+                    // El audio no se puede transcribir (ilegible o demasiado
+                    // corto): se pide repetir el dictado (feature
+                    // reintento-de-transcripcion-fallida).
+                    almacen.marcar(nota.id, "audio_invalido", "")
+                    mensaje = error
                 } else {
+                    // Fallo del servicio de transcripción: la nota queda con
+                    // error visible y se reintenta a mano (feature
+                    // reintento-de-transcripcion-fallida).
                     almacen.marcar(nota.id, "error", "")
                     mensaje = error
                 }
@@ -1350,7 +1365,11 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                     )
                     for (nota in pendientes) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
+                        FilaNotaVoz(
+                            nota,
+                            alReintentar = { transcribirNota(nota) },
+                            alRepetir = { empezarGrabacion() }
+                        )
                     }
                 }
             }
@@ -1369,7 +1388,11 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                         if (indice > 0) {
                             Spacer(modifier = Modifier.height(16.dp))
                         }
-                        FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
+                        FilaNotaVoz(
+                            nota,
+                            alReintentar = { transcribirNota(nota) },
+                            alRepetir = { empezarGrabacion() }
+                        )
                     }
                 }
             }
@@ -1394,7 +1417,11 @@ private const val LIMITE_SEGUNDOS_NOTA = 60
 
 /** Una nota de voz de la cola local: cuándo se grabó, cuánto dura, su estado y su texto. */
 @Composable
-fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
+fun FilaNotaVoz(
+    nota: AlmacenNotasVoz.NotaDeVoz,
+    alReintentar: () -> Unit,
+    alRepetir: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = nota.cuando + " · " + nota.segundos + " s",
@@ -1407,7 +1434,11 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
             text = nota.estadoVisible,
             fontSize = 18.sp,
             lineHeight = 26.sp,
-            color = if (nota.estado == "error") TextoError else VerdeOliva
+            color = if (nota.estado == "error" || nota.estado == "audio_invalido") {
+                TextoError
+            } else {
+                VerdeOliva
+            }
         )
         if (nota.texto.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
@@ -1421,6 +1452,10 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
             BotonSecundario(texto = "Reintentar", alPulsar = alReintentar)
+        }
+        if (nota.estado == "audio_invalido") {
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonSecundario(texto = "Grabar otra vez", alPulsar = alRepetir)
         }
     }
 }
@@ -1498,6 +1533,7 @@ class AlmacenNotasVoz(private val contexto: Context) {
                 "transcribiendo" -> "Transcribiendo…"
                 "transcrita" -> "Transcrita"
                 "error" -> "No se ha podido transcribir. Toca para reintentar."
+                "audio_invalido" -> "Este audio no se puede transcribir. Vuelve a grabar la nota."
                 else -> "Pendiente de transcripción"
             }
     }
@@ -2361,14 +2397,16 @@ object ServicioCuentas {
     /**
      * Envía una nota de voz al backend para transcribirla (llamada autenticada).
      *
-     * El tercer parámetro del aviso indica si el fallo fue de conexión (la nota
-     * debe quedarse en la cola local, feature cola-offline-de-notas) o del
-     * servidor.
+     * El aviso distingue tres fallos (features cola-offline-de-notas y
+     * reintento-de-transcripcion-fallida): sin conexión (la nota vuelve a la
+     * cola local), audio inválido (el backend responde 400: ilegible o
+     * demasiado corto, hay que repetir el dictado) y fallo del servicio de
+     * transcripción (el resto: error visible reintentable).
      */
     fun transcribirNota(
         token: String,
         fichero: java.io.File,
-        alTerminar: (String?, String, Boolean) -> Unit
+        alTerminar: (String?, String, Boolean, Boolean) -> Unit
     ) {
         val cuerpo = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -2387,7 +2425,12 @@ object ServicioCuentas {
         cliente.newCall(peticion).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 principal.post {
-                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.", true)
+                    alTerminar(
+                        null,
+                        "No hay conexión con el servidor. Inténtalo de nuevo.",
+                        true,
+                        false
+                    )
                 }
             }
 
@@ -2396,11 +2439,11 @@ object ServicioCuentas {
                     if (it.isSuccessful) {
                         val respuesta = JSONObject(it.body?.string() ?: "")
                         val texto = respuesta.optString("texto")
-                        principal.post { alTerminar(texto, "", false) }
+                        principal.post { alTerminar(texto, "", false, false) }
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo transcribir la nota." }
-                        principal.post { alTerminar(null, detalle, false) }
+                        principal.post { alTerminar(null, detalle, false, it.code == 400) }
                     }
                 }
             }
