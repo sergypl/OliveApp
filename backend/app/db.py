@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS labor (
     fecha TEXT NOT NULL,
     campos TEXT NOT NULL,
     observaciones TEXT NOT NULL DEFAULT '',
+    nota_id TEXT,
     creada_en TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
@@ -84,6 +85,7 @@ def conectar():
 def crear_esquema(conn):
     conn.executescript(ESQUEMA)
     _migrar_socio_en_cuenta(conn)
+    _migrar_nota_en_labor(conn)
     conn.commit()
 
 
@@ -100,3 +102,22 @@ def _migrar_socio_en_cuenta(conn):
         conn.execute(
             "ALTER TABLE cuenta ADD COLUMN socio_id TEXT NOT NULL DEFAULT 'socio-001'"
         )
+
+
+def _migrar_nota_en_labor(conn):
+    """Bases creadas antes de `confirmacion-de-borrador`.
+
+    La labor guarda la nota de voz que la originó (`nota_id`) para que
+    confirmar un borrador dos veces no cree dos labores: una Nota de voz
+    produce como mucho una Labor (docs/domain-model.md). El alta manual no
+    lleva nota y sigue creando labores sueltas.
+    """
+    columnas = [fila[1] for fila in conn.execute("PRAGMA table_info(labor)")]
+    if "nota_id" not in columnas:
+        conn.execute("ALTER TABLE labor ADD COLUMN nota_id TEXT")
+    # El índice va aquí y no en el esquema base porque solo es posible cuando
+    # la columna ya existe (también en las bases creadas antes de esta feature).
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS labor_nota_unica "
+        "ON labor (socio_id, nota_id)"
+    )
