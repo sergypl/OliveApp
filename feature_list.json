@@ -270,13 +270,20 @@
       "registro-cuenta-socio",
       "alta-manual-labor"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Con dos socios con datos, comprobar en app y en API que cada uno solo accede a los suyos (incluidos los datos oficiales de campaña)"
     ],
-    "evidence": [],
-    "notes": "Requisito del build brief: cada socio ve y edita solo sus propios datos. Todas las consultas filtradas por el socio autenticado (docs/technical-discovery.md)."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 85/85 — 12 nuevos entre test_aislamiento.py y los casos de código de socio —, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos conectados).",
+      "Verificación real desde la app en el MÓVIL FÍSICO de la demo (Xiaomi Redmi Note 10 Pro): alta con código de socio 'Socio 2' ('Cuenta creada. Ya puedes iniciar sesión.') y, al entrar, panel con los datos oficiales de ese socio (2.100 kg / 19,20 % / 364 kg) y 'Tus parcelas' con solo sus 3 parcelas (Los Olivares, Fuente Vieja, El Romeral); tras 'Cerrar sesión', la cuenta del socio 1 muestra sus datos (10.958 kg / 17,93 % / 1.774 kg) y sus parcelas, sin mezclarse. Capturas en sesión (no versionadas).",
+      "Código de socio inexistente verificado en la app: 'Socio 99' → 'No encontramos ese código de socio en tu cooperativa. Revísalo con la cooperativa.' y la cuenta no se crea.",
+      "Comprobaciones cruzadas en vivo por API con los dos tokens: GET /api/v1/socios devuelve solo el socio propio; las rutas del otro socio (/api/v1/socios/{otro}/campanas y /parcelas) → 404 y las propias → 200; mi-panel y mis-parcelas devuelven solo los datos del socio de la cuenta (verificado con los dos socios).",
+      "Cobertura de casos por tests (test_aislamiento.py): parcelas, labores y datos oficiales por separado para los dos socios; un socio no edita ni elimina labres ajenas (404) ni apunta labores en parcelas ajenas; detalle de campaña con los datos del propio socio; sin token no se ve nada (401)."
+    ],
+    "notes": "Decisión de esta feature: el registro pide el 'Código de socio' que da la cooperativa (en el seed: 'Socio 1', 'Socio 2', comparación sin distinguir mayúsculas ni espacios) y vincula la cuenta a ese socio (error claro con 400 si no existe; 422 si falta). Cambios de comportamiento declarados en las rutas /api/v1/socios*: cada cuenta solo lista su propio socio y las rutas del socio ajeno son 404 (antes cualquier cuenta autenticada veía a todos los socios); init.sh y test_datos_sembrados.py adaptados a este cambio (una cuenta de verificación por socio). Las cuentas creadas antes de esta feature conservan su vínculo a socio-001 por la migración de la base."
+  ],
   },
   {
     "id": "grabacion-de-nota-voz",
