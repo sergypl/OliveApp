@@ -75,6 +75,7 @@ app = FastAPI(title="OlivApp API", lifespan=lifespan)
 class RegistroEntrada(BaseModel):
     email: str
     contrasena: str
+    codigo_socio: str
 
 
 class LoginEntrada(BaseModel):
@@ -96,18 +97,29 @@ class LaborEntrada(BaseModel):
 
 @app.post("/api/v1/registro", status_code=201)
 def registro(entrada: RegistroEntrada, conn: sqlite3.Connection = Depends(conexion)):
-    """El socio crea su cuenta con email y contraseña (asociada a la cooperativa).
+    """El socio crea su cuenta con email, contraseña y código de socio.
 
-    La contraseña se guarda hasheada y nunca se devuelve. Sin verificación de
-    email ni reset de contraseña en el MVP (limitación declarada).
+    La cuenta queda vinculada al socio de la cooperativa cuyo código se
+    indique (feature `aislamiento-de-datos-por-socio`): a partir de ahí solo
+    ve sus propios datos. La contraseña se guarda hasheada y nunca se
+    devuelve. Sin verificación de email ni reset de contraseña en el MVP.
     """
     cooperativa = conn.execute("SELECT id FROM cooperativa").fetchone()
     try:
         return cuentas.crear_cuenta(
-            conn, cooperativa["id"], entrada.email, entrada.contrasena
+            conn,
+            cooperativa["id"],
+            entrada.email,
+            entrada.contrasena,
+            entrada.codigo_socio,
         )
     except cuentas.DatosInvalidos as error:
         raise HTTPException(status_code=400, detail=str(error))
+    except cuentas.SocioDesconocido:
+        raise HTTPException(
+            status_code=400,
+            detail="No encontramos ese código de socio en tu cooperativa. Revísalo con la cooperativa.",
+        )
     except cuentas.EmailDuplicado:
         raise HTTPException(
             status_code=409, detail="Ese email ya está registrado. Usa el inicio de sesión."
@@ -401,9 +413,22 @@ def socios(
     conn: sqlite3.Connection = Depends(conexion),
     sesion=Depends(sesion_actual),
 ):
-    """Los socios de la cooperativa (identificadores de demostración)."""
-    filas = conn.execute("SELECT id, codigo FROM socio ORDER BY id").fetchall()
+    """El socio del propio socio autenticado (aislamiento por socio).
+
+    Antes listaba todos los socios de la cooperativa; desde la feature
+    `aislamiento-de-datos-por-socio` cada cuenta solo accede al suyo.
+    """
+    cuenta = _cuenta_del_socio(conn, sesion)
+    filas = conn.execute(
+        "SELECT id, codigo FROM socio WHERE id = ?", (cuenta["socio_id"],)
+    ).fetchall()
     return [dict(f) for f in filas]
+
+
+def _exigir_socio_propio(cuenta, socio_id):
+    """Rechaza con 404 las consultas a datos de otro socio (aislamiento)."""
+    if socio_id != cuenta["socio_id"]:
+        raise HTTPException(status_code=404, detail="Ese socio no existe.")
 
 
 @app.get("/api/v1/socios/{socio_id}/campanas")
@@ -414,9 +439,12 @@ def campanas_del_socio(
 ):
     """Campañas de un socio con sus datos oficiales (solo lectura).
 
-    La campaña actual va primero y después las anteriores, de más reciente a
-    más antigua.
+    Solo las del propio socio autenticado: las de otro socio son 404 (no se
+    revela si existe). La campaña actual va primero y después las
+    anteriores, de más reciente a más antigua.
     """
+    cuenta = _cuenta_del_socio(conn, sesion)
+    _exigir_socio_propio(cuenta, socio_id)
     filas = conn.execute(
         "SELECT c.id, c.nombre, c.es_actual, "
         "d.kilos_entregados, d.rendimiento_graso, d.aceite_obtenido "
@@ -451,10 +479,9 @@ def parcelas_del_socio(
     conn: sqlite3.Connection = Depends(conexion),
     sesion=Depends(sesion_actual),
 ):
-    """Parcelas del socio (3-4 sembradas en el seed)."""
-    existe = conn.execute("SELECT 1 FROM socio WHERE id = ?", (socio_id,)).fetchone()
-    if not existe:
-        raise HTTPException(status_code=404, detail="Ese socio no existe.")
+    """Parcelas del propio socio autenticado (las de otro socio son 404)."""
+    cuenta = _cuenta_del_socio(conn, sesion)
+    _exigir_socio_propio(cuenta, socio_id)
     filas = conn.execute(
         "SELECT id, nombre FROM parcela WHERE socio_id = ? ORDER BY id", (socio_id,)
     ).fetchall()

@@ -81,8 +81,10 @@ private val TextoMarron = Color(0xFF2E2A20)
 private val VerdeOliva = Color(0xFF5A6E3A)
 private val TextoError = Color(0xFF8B1E1E)
 
-// Backend en desarrollo: el emulador alcanza el Mac del host por 10.0.2.2.
-private const val URL_BASE = "http://10.0.2.2:8000"
+// Backend en desarrollo: cada dispositivo (emulador o móvil físico) alcanza el
+// Mac del host por su propio localhost gracias a `adb reverse tcp:8000 tcp:8000`
+// (init.sh lo configura en cada dispositivo conectado).
+private const val URL_BASE = "http://127.0.0.1:8000"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -187,6 +189,7 @@ fun PantallaBienvenida(onIniciarSesion: () -> Unit, onCrearCuenta: () -> Unit) {
 fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
+    var codigoSocio by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf<String?>(null) }
     var registrada by remember { mutableStateOf(false) }
     var trabajando by remember { mutableStateOf(false) }
@@ -207,7 +210,7 @@ fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Con tu email y una contraseña.",
+            text = "Con tu email, una contraseña y tu código de socio.",
             fontSize = 18.sp,
             color = TextoMarron,
             textAlign = TextAlign.Center
@@ -233,6 +236,19 @@ fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
             fontSize = 16.sp,
             color = TextoMarron
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        CampoDeTexto(
+            etiqueta = "Código de socio",
+            valor = codigoSocio,
+            alCambiar = { codigoSocio = it },
+            tipo = KeyboardType.Text
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "El que te ha dado tu cooperativa (p. ej. Socio 1).",
+            fontSize = 16.sp,
+            color = TextoMarron
+        )
         Spacer(modifier = Modifier.height(24.dp))
         BotonPrincipal(
             texto = if (trabajando) "Creando la cuenta…" else "Crear cuenta",
@@ -241,7 +257,7 @@ fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
                 trabajando = true
                 mensaje = null
                 registrada = false
-                ServicioCuentas.crearCuenta(email, contrasena) { exitosa, texto ->
+                ServicioCuentas.crearCuenta(email, contrasena, codigoSocio) { exitosa, texto ->
                     trabajando = false
                     registrada = exitosa
                     mensaje = texto
@@ -2062,10 +2078,16 @@ object ServicioCuentas {
     private val JSON = "application/json; charset=utf-8".toMediaType()
     private val principal = Handler(Looper.getMainLooper())
 
-    fun crearCuenta(email: String, contrasena: String, alTerminar: (Boolean, String) -> Unit) {
+    fun crearCuenta(
+        email: String,
+        contrasena: String,
+        codigoSocio: String,
+        alTerminar: (Boolean, String) -> Unit
+    ) {
         val cuerpo = JSONObject()
             .put("email", email)
             .put("contrasena", contrasena)
+            .put("codigo_socio", codigoSocio)
             .toString()
         val peticion = Request.Builder()
             .url("$URL_BASE/api/v1/registro")
