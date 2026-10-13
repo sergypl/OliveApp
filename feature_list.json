@@ -406,13 +406,21 @@
       "transcripcion-de-nota-voz",
       "alta-de-parcela"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Con un dictado del set de frases de prueba, comprobar que el borrador IA muestra fecha, parcela, categoría y campos de la categoría correctos",
       "Cuando la IA no reconoce la categoría, comprobar que aparece un mensaje claro de rechazo"
     ],
-    "evidence": [],
+    "evidence": [
+      "./init.sh: 95/95 pytest, healthcheck 200, seed OK, APK instalado en los dos dispositivos (2026-10-13)",
+      "Extracción con salida JSON forzada implementada en backend/app/borrador.py (alias `chat`, ADR 0004): {fecha, parcela, categoría, campos de la categoría} apoyándose en las parcelas del socio (desambiguación de typos verificada en tests)",
+      "Backend: 95 tests en verde (10 nuevos en backend/tests/test_borrador.py): ficha normalizada a listas cerradas, parcela ajustada a las del socio, rechazo por categoría no reconocida, reintento de JSON inválido, fallo de gateway → 502 reintentable, endpoint devuelve texto+borrador",
+      "Verificación en vivo (Xiaomi, frase 1 del set docs/frases-de-prueba.md): el borrador IA mostró Fecha 10/10/2026, Parcela Cañada Honda, Categoría Tratamiento fitosanitario, Producto cobre, Plaga a controlar mosca del olivo y Cantidad 2 L — todo correcto",
+      "Verificación en vivo (frase 9 del set): dictado sin labor reconocible → mensaje claro de rechazo 'No se ha reconocido la categoría de la labor. Solo hay tres: tratamiento fitosanitario, riego y cosecha. Vuelve a dictar la nota.'",
+      "Migración Room v1→v2 verificada en el dispositivo: las notas antiguas se conservan y no muestran tarjeta de borrador (legado sin extracción)",
+      "Set de frases de prueba creado: docs/frases-de-prueba.md (13 frases con lo esperado por frase)"
+    ],
     "notes": "Extracción con salida JSON forzada apoyándose en las parcelas del socio (docs/technical-discovery.md). Preparar el set de 10-20 frases de prueba (docs/risks-and-open-questions.md)."
   },
   {
