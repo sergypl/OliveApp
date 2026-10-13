@@ -69,8 +69,10 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.delay
 import okhttp3.Call
 import okhttp3.Callback
@@ -1181,11 +1183,12 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
             ServicioCuentas.transcribirNota(
                 token,
                 File(nota.fichero)
-            ) { texto, error, sinConexion, audioInvalido ->
+            ) { texto, borrador, error, sinConexion, audioInvalido ->
                 mensaje = aplicarTranscripcion(
                     almacen,
                     nota.id,
                     texto,
+                    borrador,
                     error,
                     sinConexion,
                     audioInvalido
@@ -1456,6 +1459,10 @@ fun FilaNotaVoz(
                 color = TextoMarron
             )
         }
+        if (nota.estado == "transcrita" && nota.borrador.isNotBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            BorradorIA(nota.borrador)
+        }
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
             BotonSecundario(texto = "Reintentar", alPulsar = alReintentar)
@@ -1465,6 +1472,106 @@ fun FilaNotaVoz(
             BotonSecundario(texto = "Grabar otra vez", alPulsar = alRepetir)
         }
     }
+}
+
+/**
+ * Borrador IA de una nota transcrita (feature borrador-ia-desde-transcripcion).
+ *
+ * Muestra la ficha que propone la IA (fecha, parcela, categoría y campos de
+ * la categoría) esperando la confirmación del socio. Si la IA no reconoció la
+ * categoría, el borrador se rechaza con un mensaje claro.
+ */
+@Composable
+fun BorradorIA(json: String) {
+    val borrador = try {
+        JSONObject(json)
+    } catch (e: Exception) {
+        null
+    }
+    if (borrador == null) return
+    if (borrador.optBoolean("rechazado")) {
+        Text(
+            text = "No se ha reconocido la categoría de la labor. Solo hay tres: " +
+                "tratamiento fitosanitario, riego y cosecha. Vuelve a dictar la nota.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoError
+        )
+        return
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Borrador IA",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = VerdeOliva
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        for ((etiqueta, valor) in lineasDeBorrador(borrador)) {
+            Text(
+                text = "$etiqueta: $valor",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron
+            )
+        }
+    }
+}
+
+/** Etiquetas y valores del borrador IA, en el orden de la ficha del dominio. */
+fun lineasDeBorrador(borrador: JSONObject): List<Pair<String, String>> {
+    val categoria = borrador.optString("categoria")
+    val campos = borrador.optJSONObject("campos") ?: JSONObject()
+    val lineas = mutableListOf(
+        "Fecha" to fechaVisible(borrador.optString("fecha")),
+        "Parcela" to borrador.optString("parcela").ifEmpty { "Sin identificar" },
+        "Categoría" to when (categoria) {
+            "tratamiento" -> "Tratamiento fitosanitario"
+            "riego" -> "Riego"
+            "cosecha" -> "Cosecha"
+            else -> categoria
+        }
+    )
+    when (categoria) {
+        "tratamiento" -> {
+            lineas += "Producto" to campos.optString("producto")
+            lineas += "Plaga a controlar" to campos.optString("plaga_a_controlar")
+            lineas += "Cantidad" to cantidadVisible(campos, "cantidad", "unidad")
+        }
+        "riego" -> lineas += "Cantidad" to cantidadVisible(campos, "cantidad", "unidad")
+        "cosecha" -> {
+            lineas += "Modalidad" to campos.optString("modalidad")
+            lineas += "Kilos" to numeroVisible(campos.opt("kilos"))
+        }
+    }
+    val observaciones = borrador.optString("observaciones")
+    if (observaciones.isNotBlank()) lineas += "Observaciones" to observaciones
+    return lineas
+}
+
+/** Fecha del borrador para el socio: 2026-01-20 se lee como 20/01/2026. */
+fun fechaVisible(fecha: String): String {
+    val partes = Regex("(\\d{4})-(\\d{2})-(\\d{2})").find(fecha) ?: return fecha
+    val (anio, mes, dia) = partes.destructured
+    return "$dia/$mes/$anio"
+}
+
+/** Números del borrador sin decimales de más (2.0 se lee como 2). */
+fun numeroVisible(valor: Any?): String {
+    val texto = valor?.toString() ?: ""
+    return if (texto.endsWith(".0")) texto.dropLast(2) else texto
+}
+
+/** Cantidad con su unidad, según las listas cerradas del dominio. */
+fun cantidadVisible(campos: JSONObject, cantidad: String, unidad: String): String {
+    val numero = numeroVisible(campos.opt(cantidad))
+    val etiqueta = campos.optString(unidad)
+    return if (etiqueta.isBlank()) numero else "$numero $etiqueta"
 }
 
 /**
@@ -1483,7 +1590,9 @@ data class NotaVozFila(
     @ColumnInfo(name = "creada_en") val creadaEn: String,
     val segundos: Int,
     val estado: String,
-    val texto: String
+    val texto: String,
+    /** Borrador IA en JSON (borrador-ia-desde-transcripcion); vacío si no hay. */
+    @ColumnInfo(defaultValue = "") val borrador: String = ""
 )
 
 /** Acceso a la cola de notas de voz en Room. */
@@ -1498,18 +1607,30 @@ interface NotasVozDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertar(nota: NotaVozFila)
 
-    @Query("UPDATE notas_voz SET estado = :estado, texto = :texto WHERE id = :id")
-    fun marcar(id: String, estado: String, texto: String)
+    @Query(
+        "UPDATE notas_voz SET estado = :estado, texto = :texto, " +
+            "borrador = :borrador WHERE id = :id"
+    )
+    fun marcar(id: String, estado: String, texto: String, borrador: String)
 }
 
 /** Base Room de la cola de notas de voz. */
-@Database(entities = [NotaVozFila::class], version = 1, exportSchema = false)
+@Database(entities = [NotaVozFila::class], version = 2, exportSchema = false)
 abstract class BaseNotasVoz : RoomDatabase() {
     abstract fun dao(): NotasVozDao
 
     companion object {
         @Volatile
         private var instancia: BaseNotasVoz? = null
+
+        /** v2 (borrador-ia-desde-transcripcion): cada nota guarda su borrador IA. */
+        private val MIGRACION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE notas_voz ADD COLUMN borrador TEXT NOT NULL DEFAULT ''"
+                )
+            }
+        }
 
         fun de(contexto: Context): BaseNotasVoz =
             instancia ?: synchronized(this) {
@@ -1518,6 +1639,7 @@ abstract class BaseNotasVoz : RoomDatabase() {
                     BaseNotasVoz::class.java,
                     "notas-voz.db"
                 )
+                    .addMigrations(MIGRACION_1_2)
                     // La cola es pequeña y las consultas son de pocos milisegundos:
                     // el almacén mantiene la interfaz síncrona del resto de la app.
                     .allowMainThreadQueries()
@@ -1535,7 +1657,8 @@ class AlmacenNotasVoz(private val contexto: Context) {
         val cuando: String,
         val segundos: Int,
         val estado: String,
-        val texto: String
+        val texto: String,
+        val borrador: String
     ) {
         val estadoVisible: String
             get() = when (estado) {
@@ -1546,6 +1669,11 @@ class AlmacenNotasVoz(private val contexto: Context) {
                 "audio_invalido" -> "Este audio no se puede transcribir. Vuelve a grabar la nota."
                 else -> "Pendiente de transcripción"
             }
+    }
+
+    companion object {
+        /** Marcador guardado cuando la IA no reconoce la categoría de la labor. */
+        const val BORRADOR_RECHAZADO = """{"rechazado": true}"""
     }
 
     private val carpeta = File(contexto.filesDir, "notas-voz")
@@ -1580,13 +1708,14 @@ class AlmacenNotasVoz(private val contexto: Context) {
             cuando = ahora.format(formato),
             segundos = segundos,
             estado = "pendiente",
-            texto = ""
+            texto = "",
+            borrador = ""
         )
     }
 
-    /** Cambia el estado de una nota (y guarda su transcripción cuando llega). */
-    fun marcar(id: String, estado: String, texto: String) {
-        dao.marcar(id, estado, texto)
+    /** Cambia el estado de una nota (y guarda texto y borrador cuando llegan). */
+    fun marcar(id: String, estado: String, texto: String, borrador: String = "") {
+        dao.marcar(id, estado, texto, borrador)
     }
 
     fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
@@ -1607,7 +1736,8 @@ class AlmacenNotasVoz(private val contexto: Context) {
             cuando = creada,
             segundos = fila.segundos,
             estado = fila.estado,
-            texto = fila.texto
+            texto = fila.texto,
+            borrador = fila.borrador
         )
     }
 
@@ -1643,19 +1773,22 @@ class AlmacenNotasVoz(private val contexto: Context) {
 
 /**
  * Aplica el resultado de una transcripción a la nota de la cola y devuelve el
- * aviso para el socio (features cola-offline-de-notas y
- * reintento-de-transcripcion-fallida).
+ * aviso para el socio (features cola-offline-de-notas,
+ * reintento-de-transcripcion-fallida y borrador-ia-desde-transcripcion).
  */
 fun aplicarTranscripcion(
     almacen: AlmacenNotasVoz,
     id: String,
     texto: String?,
+    borrador: String,
     error: String,
     sinConexion: Boolean,
     audioInvalido: Boolean
 ): String {
     return if (texto != null) {
-        almacen.marcar(id, "transcrita", texto)
+        // La nota queda transcrita con su borrador IA (o el marcador de
+        // rechazo cuando la IA no reconoce la categoría de la labor).
+        almacen.marcar(id, "transcrita", texto, borrador)
         "Nota transcrita. Ya puedes leer el texto."
     } else if (sinConexion) {
         // Sin conexión la nota no se pierde: vuelve a la cola local
@@ -1726,8 +1859,16 @@ object SincronizadorNotas {
         ServicioCuentas.transcribirNota(
             token,
             File(nota.fichero)
-        ) { texto, error, sinConexion, audioInvalido ->
-            aplicarTranscripcion(almacen, nota.id, texto, error, sinConexion, audioInvalido)
+        ) { texto, borrador, error, sinConexion, audioInvalido ->
+            aplicarTranscripcion(
+                almacen,
+                nota.id,
+                texto,
+                borrador,
+                error,
+                sinConexion,
+                audioInvalido
+            )
             alCambiar?.invoke()
             if (sinConexion) {
                 // Sin conexión se detiene la cola: las notas siguen pendientes
@@ -2511,6 +2652,9 @@ object ServicioCuentas {
     /**
      * Envía una nota de voz al backend para transcribirla (llamada autenticada).
      *
+     * El resultado lleva la transcripción y su borrador IA (feature
+     * borrador-ia-desde-transcripcion; el borrador va vacío si la respuesta no
+     * lo trae y con el marcador de rechazo si la IA no reconoció la categoría).
      * El aviso distingue tres fallos (features cola-offline-de-notas y
      * reintento-de-transcripcion-fallida): sin conexión (la nota vuelve a la
      * cola local), audio inválido (el backend responde 400: ilegible o
@@ -2520,7 +2664,7 @@ object ServicioCuentas {
     fun transcribirNota(
         token: String,
         fichero: java.io.File,
-        alTerminar: (String?, String, Boolean, Boolean) -> Unit
+        alTerminar: (String?, String, String, Boolean, Boolean) -> Unit
     ) {
         val cuerpo = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -2541,6 +2685,7 @@ object ServicioCuentas {
                 principal.post {
                     alTerminar(
                         null,
+                        "",
                         "No hay conexión con el servidor. Inténtalo de nuevo.",
                         true,
                         false
@@ -2553,11 +2698,21 @@ object ServicioCuentas {
                     if (it.isSuccessful) {
                         val respuesta = JSONObject(it.body?.string() ?: "")
                         val texto = respuesta.optString("texto")
-                        principal.post { alTerminar(texto, "", false, false) }
+                        // null en la respuesta = borrador rechazado por la IA.
+                        val borrador = when {
+                            !respuesta.has("borrador") -> ""
+                            respuesta.isNull("borrador") ->
+                                AlmacenNotasVoz.BORRADOR_RECHAZADO
+                            else -> respuesta.optJSONObject("borrador")?.toString()
+                                ?: AlmacenNotasVoz.BORRADOR_RECHAZADO
+                        }
+                        principal.post { alTerminar(texto, borrador, "", false, false) }
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo transcribir la nota." }
-                        principal.post { alTerminar(null, detalle, false, it.code == 400) }
+                        principal.post {
+                            alTerminar(null, "", detalle, false, it.code == 400)
+                        }
                     }
                 }
             }

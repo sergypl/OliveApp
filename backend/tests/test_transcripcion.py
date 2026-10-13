@@ -48,7 +48,9 @@ def test_transcribe_un_audio_y_lo_borra_del_servidor(monkeypatch):
         respuesta = _subir(client, cabeceras)
 
         assert respuesta.status_code == 200, respuesta.text
-        assert respuesta.json() == {"texto": "He hecho un tratamiento en La Noria."}
+        assert respuesta.json()["texto"] == "He hecho un tratamiento en La Noria."
+        # El borrador IA llega junto a la transcripción (borrador-ia-desde-transcripcion).
+        assert respuesta.json()["borrador"]["categoria"] == "tratamiento"
         # El audio no se conserva en el servidor tras transcribir.
         assert not os.path.exists(falso.ultima_ruta)
 
@@ -74,7 +76,7 @@ def test_usa_el_alias_transcribe_y_devuelve_el_texto(monkeypatch):
         respuesta = _subir(client, cabeceras)
 
         assert respuesta.status_code == 200
-        assert respuesta.json() == {"texto": "hola"}
+        assert respuesta.json()["texto"] == "hola"
         assert llamada["url"] == transcripcion.GATEWAY_TRANSCRIPCIONES
         assert llamada["modelo"] == transcripcion.MODELO == "transcribe"
 
