@@ -13,7 +13,7 @@ import json
 import os
 import sqlite3
 
-DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123"}
+DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123", "codigo_socio": "Socio 1"}
 
 
 def _entrar(client):

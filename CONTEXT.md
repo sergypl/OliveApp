@@ -14,7 +14,10 @@ Persona que cultiva olivar. Perfil del usuario de OlivApp, mayoritariamente sén
 Agricultor miembro de una cooperativa. En el MVP todo usuario de OlivApp es un socio y solo ve sus propios datos.
 
 ### Cuenta
-Acceso del socio a OlivApp con email y contraseña. La contraseña se guarda hasheada, nunca en texto claro. En el MVP no hay verificación de email ni recuperación de contraseña olvidada.
+Acceso del socio a OlivApp con email y contraseña. La contraseña se guarda hasheada, nunca en texto claro. Al crearla, el socio indica su código de socio y la cuenta queda vinculada a ese socio: solo ve sus propios datos. En el MVP no hay verificación de email ni recuperación de contraseña olvidada.
+
+### Código de socio
+Identificador que la cooperativa da a cada socio (p. ej. Socio 1). Se pide al crear la cuenta y vincula la cuenta con sus datos de la cooperativa.
 
 ### Cooperativa
 Entidad oleícola a la que pertenece el socio y que moltura su aceituna. Es la fuente fiel de los datos de campaña del socio. En el MVP sus datos se muestran en la app de solo lectura: no se administran desde la aplicación, no tiene usuarios propios.

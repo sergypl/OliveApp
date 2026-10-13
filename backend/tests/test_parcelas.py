@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123"}
+DATOS = {"email": "socio@ejemplo.com", "contrasena": "segura123", "codigo_socio": "Socio 1"}
 
 
 def _entrar(client):
@@ -37,20 +37,34 @@ def test_la_parcela_creada_no_aparece_en_la_lista_de_otro_socio():
             "/api/v1/mis-parcelas", json={"nombre": "La Noria"}, headers=cabeceras
         )
 
-        # Las parcelas del otro socio (sembradas) no llevan la nueva...
+        # Un segundo socio (otra cuenta, otra cuenta de socio) ve solo lo suyo.
+        datos_otro = {
+            "email": "otro@ejemplo.com",
+            "contrasena": "segura123",
+            "codigo_socio": "Socio 2",
+        }
+        assert client.post("/api/v1/registro", json=datos_otro).status_code == 201
+        token_otro = client.post("/api/v1/login", json=datos_otro).json()["token"]
+        cabeceras_otro = {"Authorization": "Bearer " + token_otro}
+
         mias = {
             p["nombre"]
             for p in client.get("/api/v1/mis-parcelas", headers=cabeceras).json()
         }
-        del_otro = {
+        suyas = {
             p["nombre"]
-            for p in client.get(
-                "/api/v1/socios/socio-002/parcelas", headers=cabeceras
-            ).json()
+            for p in client.get("/api/v1/mis-parcelas", headers=cabeceras_otro).json()
         }
-        assert "La Noria" not in del_otro
-        # ...ni las suyas aparecen en la lista de este socio.
-        assert mias.isdisjoint(del_otro)
+        assert "La Noria" in mias
+        assert "La Noria" not in suyas
+        assert mias.isdisjoint(suyas)
+        # Y las rutas directas del otro socio responden 404 (aislamiento).
+        assert (
+            client.get(
+                "/api/v1/socios/socio-002/parcelas", headers=cabeceras
+            ).status_code
+            == 404
+        )
 
 
 def test_la_parcela_se_asocia_al_socio_de_la_cuenta():
