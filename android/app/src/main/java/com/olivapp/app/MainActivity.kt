@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -40,6 +42,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,6 +115,21 @@ fun OlivApp() {
     }
     var idCampana by remember { mutableStateOf<String?>(null) }
     var laborEnEdicion by remember { mutableStateOf<LaborEditable?>(null) }
+
+    // Al recuperar la conexión, la cola de notas pendientes se envía sola a
+    // transcribir (feature sincronizacion-pendientes-al-reconectar).
+    DisposableEffect(Unit) {
+        val gestor =
+            contexto.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(red: Network) {
+                SincronizadorNotas.sincronizar(contexto)
+            }
+        }
+        gestor.registerDefaultNetworkCallback(callback)
+        onDispose { gestor.unregisterNetworkCallback(callback) }
+    }
+
     when (pantalla) {
         "registro" -> PantallaRegistro(
             onVolver = { pantalla = "inicio" },
@@ -1116,8 +1134,9 @@ fun Desplegable(
 
 /**
  * Pantalla de notas de voz (features grabacion-de-nota-voz,
- * transcripcion-de-nota-voz, cola-offline-de-notas y
- * reintento-de-transcripcion-fallida).
+ * transcripcion-de-nota-voz, cola-offline-de-notas,
+ * reintento-de-transcripcion-fallida y
+ * sincronizacion-pendientes-al-reconectar).
  *
  * El socio graba una nota corta con el botón grande; la grabación queda
  * registrada como nota de voz con estado visible y se envía al backend para
@@ -1163,28 +1182,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                 token,
                 File(nota.fichero)
             ) { texto, error, sinConexion, audioInvalido ->
-                if (texto != null) {
-                    almacen.marcar(nota.id, "transcrita", texto)
-                    mensaje = "Nota transcrita. Ya puedes leer el texto."
-                } else if (sinConexion) {
-                    // Sin conexión la nota no se pierde: vuelve a la cola local
-                    // en estado 'pendiente' (feature cola-offline-de-notas).
-                    almacen.marcar(nota.id, "pendiente", "")
-                    mensaje =
-                        "Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar."
-                } else if (audioInvalido) {
-                    // El audio no se puede transcribir (ilegible o demasiado
-                    // corto): se pide repetir el dictado (feature
-                    // reintento-de-transcripcion-fallida).
-                    almacen.marcar(nota.id, "audio_invalido", "")
-                    mensaje = error
-                } else {
-                    // Fallo del servicio de transcripción: la nota queda con
-                    // error visible y se reintenta a mano (feature
-                    // reintento-de-transcripcion-fallida).
-                    almacen.marcar(nota.id, "error", "")
-                    mensaje = error
-                }
+                mensaje = aplicarTranscripcion(
+                    almacen,
+                    nota.id,
+                    texto,
+                    error,
+                    sinConexion,
+                    audioInvalido
+                )
                 notas = almacen.notas()
             }
         }
@@ -1205,14 +1210,16 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
         }
     }
 
-    // Al abrir la pantalla, las notas pendientes se envían a transcribir.
+    // Al abrir la pantalla se sincroniza la cola: las notas pendientes se
+    // envían en orden de grabación y sin duplicados.
     LaunchedEffect(Unit) {
-        val token = AlmacenSesiones(contexto).token()
-        for (nota in almacen.notas()) {
-            if (nota.estado == "pendiente" && token != null) {
-                transcribirNota(nota)
-            }
-        }
+        SincronizadorNotas.sincronizar(contexto)
+    }
+
+    // La cola también cambia sola al recuperar la conexión.
+    DisposableEffect(Unit) {
+        SincronizadorNotas.alCambiar = { notas = almacen.notas() }
+        onDispose { SincronizadorNotas.alCambiar = null }
     }
 
     // Reloj de la grabación: se detiene sola al llegar al límite.
@@ -1485,6 +1492,9 @@ interface NotasVozDao {
     @Query("SELECT * FROM notas_voz ORDER BY creada_en DESC")
     fun notas(): List<NotaVozFila>
 
+    @Query("SELECT * FROM notas_voz WHERE estado = 'pendiente' ORDER BY creada_en ASC")
+    fun pendientes(): List<NotaVozFila>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertar(nota: NotaVozFila)
 
@@ -1579,22 +1589,27 @@ class AlmacenNotasVoz(private val contexto: Context) {
         dao.marcar(id, estado, texto)
     }
 
-    fun notas(): List<NotaDeVoz> =
-        dao.notas().map { fila ->
-            val creada = try {
-                LocalDateTime.parse(fila.creadaEn).format(formato)
-            } catch (e: Exception) {
-                fila.creadaEn
-            }
-            NotaDeVoz(
-                id = fila.id,
-                fichero = fila.fichero,
-                cuando = creada,
-                segundos = fila.segundos,
-                estado = fila.estado,
-                texto = fila.texto
-            )
+    fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
+
+    /** Notas pendientes de enviar, de la más antigua a la más reciente. */
+    fun pendientesEnOrdenDeGrabacion(): List<NotaDeVoz> =
+        dao.pendientes().map { aNotaDeVoz(it) }
+
+    private fun aNotaDeVoz(fila: NotaVozFila): NotaDeVoz {
+        val creada = try {
+            LocalDateTime.parse(fila.creadaEn).format(formato)
+        } catch (e: Exception) {
+            fila.creadaEn
         }
+        return NotaDeVoz(
+            id = fila.id,
+            fichero = fila.fichero,
+            cuando = creada,
+            segundos = fila.segundos,
+            estado = fila.estado,
+            texto = fila.texto
+        )
+    }
 
     /**
      * Migración única desde el índice JSON de las versiones anteriores (antes
@@ -1622,6 +1637,105 @@ class AlmacenNotasVoz(private val contexto: Context) {
             indice.delete()
         } catch (e: Exception) {
             // El índice antiguo no se pudo leer: la cola de Room sigue mandando.
+        }
+    }
+}
+
+/**
+ * Aplica el resultado de una transcripción a la nota de la cola y devuelve el
+ * aviso para el socio (features cola-offline-de-notas y
+ * reintento-de-transcripcion-fallida).
+ */
+fun aplicarTranscripcion(
+    almacen: AlmacenNotasVoz,
+    id: String,
+    texto: String?,
+    error: String,
+    sinConexion: Boolean,
+    audioInvalido: Boolean
+): String {
+    return if (texto != null) {
+        almacen.marcar(id, "transcrita", texto)
+        "Nota transcrita. Ya puedes leer el texto."
+    } else if (sinConexion) {
+        // Sin conexión la nota no se pierde: vuelve a la cola local
+        // en estado 'pendiente' (feature cola-offline-de-notas).
+        almacen.marcar(id, "pendiente", "")
+        "Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar."
+    } else if (audioInvalido) {
+        // El audio no se puede transcribir (ilegible o demasiado corto): se
+        // pide repetir el dictado (feature reintento-de-transcripcion-fallida).
+        almacen.marcar(id, "audio_invalido", "")
+        error
+    } else {
+        // Fallo del servicio de transcripción: la nota queda con error visible
+        // y se reintenta a mano (feature reintento-de-transcripcion-fallida).
+        almacen.marcar(id, "error", "")
+        error
+    }
+}
+
+/**
+ * Sincroniza la cola de notas pendientes (feature
+ * sincronizacion-pendientes-al-reconectar).
+ *
+ * Al recuperar la conexión, las notas pendientes se envían a transcribir
+ * automáticamente en orden de grabación, una detrás de otra y sin duplicados.
+ * Los estados cambian en Room y `alCambiar` avisa a la pantalla de notas si
+ * está abierta.
+ */
+object SincronizadorNotas {
+    /** Aviso a la pantalla de notas cuando la cola cambia (si está abierta). */
+    var alCambiar: (() -> Unit)? = null
+
+    private val principal = Handler(Looper.getMainLooper())
+    private var sincronizando = false
+
+    /** Envía las notas pendientes en orden de grabación (si hay sesión). */
+    fun sincronizar(contexto: Context) {
+        principal.post {
+            if (sincronizando) return@post
+            val almacen = AlmacenNotasVoz(contexto)
+            val token = AlmacenSesiones(contexto).token() ?: return@post
+            val ids = almacen.pendientesEnOrdenDeGrabacion().map { it.id }
+            if (ids.isEmpty()) return@post
+            sincronizando = true
+            enviarSiguiente(almacen, token, ids, 0)
+        }
+    }
+
+    private fun enviarSiguiente(
+        almacen: AlmacenNotasVoz,
+        token: String,
+        ids: List<String>,
+        indice: Int
+    ) {
+        if (indice >= ids.size) {
+            sincronizando = false
+            return
+        }
+        // Estado comprobado justo antes de enviar: si otra ruta ya tomó la nota
+        // (o ya no está pendiente), se salta para no duplicar transcripciones.
+        val nota = almacen.notas().firstOrNull { it.id == ids[indice] }
+        if (nota == null || nota.estado != "pendiente") {
+            enviarSiguiente(almacen, token, ids, indice + 1)
+            return
+        }
+        almacen.marcar(nota.id, "transcribiendo", "")
+        alCambiar?.invoke()
+        ServicioCuentas.transcribirNota(
+            token,
+            File(nota.fichero)
+        ) { texto, error, sinConexion, audioInvalido ->
+            aplicarTranscripcion(almacen, nota.id, texto, error, sinConexion, audioInvalido)
+            alCambiar?.invoke()
+            if (sinConexion) {
+                // Sin conexión se detiene la cola: las notas siguen pendientes
+                // y se reanudará al recuperar la conexión.
+                sincronizando = false
+            } else {
+                enviarSiguiente(almacen, token, ids, indice + 1)
+            }
         }
     }
 }
