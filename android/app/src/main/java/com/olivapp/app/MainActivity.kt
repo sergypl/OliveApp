@@ -56,6 +56,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.room.ColumnInfo
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.delay
@@ -278,6 +288,8 @@ fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             BotonSecundario(texto = "Ir a iniciar sesión", alPulsar = onIniciarSesion)
         }
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonSecundario(texto = "Volver al inicio", alPulsar = onVolver)
     }
 }
 
@@ -359,6 +371,8 @@ fun PantallaInicioSesion(
         }
         Spacer(modifier = Modifier.height(24.dp))
         BotonSecundario(texto = "Crear cuenta", alPulsar = onCrearCuenta)
+        Spacer(modifier = Modifier.height(16.dp))
+        BotonSecundario(texto = "Volver al inicio", alPulsar = onVolver)
     }
 }
 
@@ -1101,11 +1115,14 @@ fun Desplegable(
 }
 
 /**
- * Pantalla de notas de voz (features grabacion-de-nota-voz y transcripcion-de-nota-voz).
+ * Pantalla de notas de voz (features grabacion-de-nota-voz,
+ * transcripcion-de-nota-voz y cola-offline-de-notas).
  *
  * El socio graba una nota corta con el botón grande; la grabación queda
  * registrada como nota de voz con estado visible y se envía al backend para
- * transcribirla (el servidor no conserva el audio).
+ * transcribirla (el servidor no conserva el audio). Sin conexión, la nota
+ * queda en la cola local (Room) en estado 'pendiente' con aviso visible y
+ * puede reintentarse desde la cola.
  */
 @Composable
 fun PantallaNotasVoz(onVolver: () -> Unit) {
@@ -1139,10 +1156,16 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
         } else {
             almacen.marcar(nota.id, "transcribiendo", "")
             notas = almacen.notas()
-            ServicioCuentas.transcribirNota(token, File(nota.fichero)) { texto, error ->
+            ServicioCuentas.transcribirNota(token, File(nota.fichero)) { texto, error, sinConexion ->
                 if (texto != null) {
                     almacen.marcar(nota.id, "transcrita", texto)
                     mensaje = "Nota transcrita. Ya puedes leer el texto."
+                } else if (sinConexion) {
+                    // Sin conexión la nota no se pierde: vuelve a la cola local
+                    // en estado 'pendiente' (feature cola-offline-de-notas).
+                    almacen.marcar(nota.id, "pendiente", "")
+                    mensaje =
+                        "Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar."
                 } else {
                     almacen.marcar(nota.id, "error", "")
                     mensaje = error
@@ -1279,14 +1302,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
             color = VerdeOliva
         )
         Spacer(modifier = Modifier.height(12.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (notas.isEmpty()) {
+        if (notas.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = "Todavía no has grabado ninguna nota de voz.",
                     fontSize = 18.sp,
@@ -1294,12 +1317,60 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                     color = TextoMarron,
                     textAlign = TextAlign.Center
                 )
-            } else {
-                for ((indice, nota) in notas.withIndex()) {
-                    if (indice > 0) {
+            }
+        } else {
+            val pendientes = notas.filter { it.estado == "pendiente" }
+            val demas = notas.filter { it.estado != "pendiente" }
+            if (pendientes.isNotEmpty()) {
+                // Cola local visible (feature cola-offline-de-notas).
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, TextoError, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (pendientes.size == 1) {
+                            "Cola: 1 nota pendiente de enviar"
+                        } else {
+                            "Cola: " + pendientes.size + " notas pendientes de enviar"
+                        },
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextoError
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Están guardadas en el teléfono y no se pierden. Se enviarán cuando haya conexión o al tocar Reintentar.",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoMarron,
+                        textAlign = TextAlign.Center
+                    )
+                    for (nota in pendientes) {
                         Spacer(modifier = Modifier.height(16.dp))
+                        FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
                     }
-                    FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
+                }
+            }
+            if (demas.isNotEmpty()) {
+                if (pendientes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    for ((indice, nota) in demas.withIndex()) {
+                        if (indice > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        FilaNotaVoz(nota, alReintentar = { transcribirNota(nota) })
+                    }
                 }
             }
         }
@@ -1347,7 +1418,7 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
                 color = TextoMarron
             )
         }
-        if (nota.estado == "error") {
+        if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
             BotonSecundario(texto = "Reintentar", alPulsar = alReintentar)
         }
@@ -1355,9 +1426,62 @@ fun FilaNotaVoz(nota: AlmacenNotasVoz.NotaDeVoz, alReintentar: () -> Unit) {
 }
 
 /**
- * Cola local de notas de voz: el audio vive en el dispositivo hasta que la
- * transcripción lo envíe al backend (feature transcripcion-de-nota-voz).
+ * Cola local de notas de voz (features transcripcion-de-nota-voz y
+ * cola-offline-de-notas).
+ *
+ * La cola vive en Room (SQLite del dispositivo) y el audio en el
+ * almacenamiento de la app hasta que la transcripción lo envíe al backend
+ * (el servidor no conserva el audio). Sin conexión, la nota se guarda en
+ * estado 'pendiente' y no se pierde ni al cerrar la app.
  */
+@Entity(tableName = "notas_voz")
+data class NotaVozFila(
+    @PrimaryKey val id: String,
+    val fichero: String,
+    @ColumnInfo(name = "creada_en") val creadaEn: String,
+    val segundos: Int,
+    val estado: String,
+    val texto: String
+)
+
+/** Acceso a la cola de notas de voz en Room. */
+@Dao
+interface NotasVozDao {
+    @Query("SELECT * FROM notas_voz ORDER BY creada_en DESC")
+    fun notas(): List<NotaVozFila>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertar(nota: NotaVozFila)
+
+    @Query("UPDATE notas_voz SET estado = :estado, texto = :texto WHERE id = :id")
+    fun marcar(id: String, estado: String, texto: String)
+}
+
+/** Base Room de la cola de notas de voz. */
+@Database(entities = [NotaVozFila::class], version = 1, exportSchema = false)
+abstract class BaseNotasVoz : RoomDatabase() {
+    abstract fun dao(): NotasVozDao
+
+    companion object {
+        @Volatile
+        private var instancia: BaseNotasVoz? = null
+
+        fun de(contexto: Context): BaseNotasVoz =
+            instancia ?: synchronized(this) {
+                instancia ?: Room.databaseBuilder(
+                    contexto.applicationContext,
+                    BaseNotasVoz::class.java,
+                    "notas-voz.db"
+                )
+                    // La cola es pequeña y las consultas son de pocos milisegundos:
+                    // el almacén mantiene la interfaz síncrona del resto de la app.
+                    .allowMainThreadQueries()
+                    .build()
+                    .also { instancia = it }
+            }
+    }
+}
+
 class AlmacenNotasVoz(private val contexto: Context) {
 
     class NotaDeVoz(
@@ -1370,6 +1494,7 @@ class AlmacenNotasVoz(private val contexto: Context) {
     ) {
         val estadoVisible: String
             get() = when (estado) {
+                "pendiente" -> "Pendiente de enviar. Está en la cola del teléfono."
                 "transcribiendo" -> "Transcribiendo…"
                 "transcrita" -> "Transcrita"
                 "error" -> "No se ha podido transcribir. Toca para reintentar."
@@ -1378,34 +1503,35 @@ class AlmacenNotasVoz(private val contexto: Context) {
     }
 
     private val carpeta = File(contexto.filesDir, "notas-voz")
-    private val indice = File(contexto.filesDir, "notas-voz.json")
     private val formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+    private val dao = BaseNotasVoz.de(contexto).dao()
+
+    init {
+        importarIndiceAntiguo()
+    }
 
     fun nuevaRutaDeAudio(): File {
         carpeta.mkdirs()
         return File(carpeta, "nota-" + System.currentTimeMillis() + ".m4a")
     }
 
-    /** Registra una nota grabada (la más reciente la primera). */
+    /** Registra una nota grabada en la cola (la más reciente la primera). */
     fun guardar(fichero: File, segundos: Int): NotaDeVoz {
-        val nota = JSONObject()
-            .put("id", fichero.name)
-            .put("fichero", fichero.absolutePath)
-            .put("creada_en", LocalDateTime.now().toString())
-            .put("segundos", segundos)
-            .put("estado", "pendiente")
-            .put("texto", "")
-        val lista = JSONArray()
-        lista.put(nota)
-        val anteriores = leer()
-        for (i in 0 until anteriores.length()) {
-            lista.put(anteriores.getJSONObject(i))
-        }
-        indice.writeText(lista.toString())
+        val ahora = LocalDateTime.now()
+        dao.insertar(
+            NotaVozFila(
+                id = fichero.name,
+                fichero = fichero.absolutePath,
+                creadaEn = ahora.toString(),
+                segundos = segundos,
+                estado = "pendiente",
+                texto = ""
+            )
+        )
         return NotaDeVoz(
             id = fichero.name,
             fichero = fichero.absolutePath,
-            cuando = LocalDateTime.now().format(formato),
+            cuando = ahora.format(formato),
             segundos = segundos,
             estado = "pendiente",
             texto = ""
@@ -1414,49 +1540,52 @@ class AlmacenNotasVoz(private val contexto: Context) {
 
     /** Cambia el estado de una nota (y guarda su transcripción cuando llega). */
     fun marcar(id: String, estado: String, texto: String) {
-        val anteriores = leer()
-        val lista = JSONArray()
-        for (i in 0 until anteriores.length()) {
-            val fila = anteriores.getJSONObject(i)
-            if (fila.optString("id") == id) {
-                fila.put("estado", estado)
-                fila.put("texto", texto)
-            }
-            lista.put(fila)
-        }
-        indice.writeText(lista.toString())
+        dao.marcar(id, estado, texto)
     }
 
-    fun notas(): List<NotaDeVoz> {
-        val filas = leer()
-        val resultado = mutableListOf<NotaDeVoz>()
-        for (i in 0 until filas.length()) {
-            val fila = filas.optJSONObject(i) ?: continue
+    fun notas(): List<NotaDeVoz> =
+        dao.notas().map { fila ->
             val creada = try {
-                LocalDateTime.parse(fila.optString("creada_en")).format(formato)
+                LocalDateTime.parse(fila.creadaEn).format(formato)
             } catch (e: Exception) {
-                fila.optString("creada_en")
+                fila.creadaEn
             }
-            resultado.add(
-                NotaDeVoz(
-                    id = fila.optString("id"),
-                    fichero = fila.optString("fichero"),
-                    cuando = creada,
-                    segundos = fila.optInt("segundos"),
-                    estado = fila.optString("estado"),
-                    texto = fila.optString("texto")
-                )
+            NotaDeVoz(
+                id = fila.id,
+                fichero = fila.fichero,
+                cuando = creada,
+                segundos = fila.segundos,
+                estado = fila.estado,
+                texto = fila.texto
             )
         }
-        return resultado
-    }
 
-    private fun leer(): JSONArray {
-        if (!indice.exists()) return JSONArray()
-        return try {
-            JSONArray(indice.readText())
+    /**
+     * Migración única desde el índice JSON de las versiones anteriores (antes
+     * de cola-offline-de-notas): lo que haya ahí pasa a Room y se borra el
+     * índice, para que ninguna nota grabada se pierda en el cambio.
+     */
+    private fun importarIndiceAntiguo() {
+        val indice = File(contexto.filesDir, "notas-voz.json")
+        if (!indice.exists()) return
+        try {
+            val filas = JSONArray(indice.readText())
+            for (i in 0 until filas.length()) {
+                val fila = filas.optJSONObject(i) ?: continue
+                dao.insertar(
+                    NotaVozFila(
+                        id = fila.optString("id"),
+                        fichero = fila.optString("fichero"),
+                        creadaEn = fila.optString("creada_en"),
+                        segundos = fila.optInt("segundos"),
+                        estado = fila.optString("estado", "pendiente"),
+                        texto = fila.optString("texto")
+                    )
+                )
+            }
+            indice.delete()
         } catch (e: Exception) {
-            JSONArray()
+            // El índice antiguo no se pudo leer: la cola de Room sigue mandando.
         }
     }
 }
@@ -2229,8 +2358,18 @@ object ServicioCuentas {
         })
     }
 
-    /** Envía una nota de voz al backend para transcribirla (llamada autenticada). */
-    fun transcribirNota(token: String, fichero: java.io.File, alTerminar: (String?, String) -> Unit) {
+    /**
+     * Envía una nota de voz al backend para transcribirla (llamada autenticada).
+     *
+     * El tercer parámetro del aviso indica si el fallo fue de conexión (la nota
+     * debe quedarse en la cola local, feature cola-offline-de-notas) o del
+     * servidor.
+     */
+    fun transcribirNota(
+        token: String,
+        fichero: java.io.File,
+        alTerminar: (String?, String, Boolean) -> Unit
+    ) {
         val cuerpo = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart(
@@ -2248,7 +2387,7 @@ object ServicioCuentas {
         cliente.newCall(peticion).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 principal.post {
-                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.", true)
                 }
             }
 
@@ -2257,11 +2396,11 @@ object ServicioCuentas {
                     if (it.isSuccessful) {
                         val respuesta = JSONObject(it.body?.string() ?: "")
                         val texto = respuesta.optString("texto")
-                        principal.post { alTerminar(texto, "") }
+                        principal.post { alTerminar(texto, "", false) }
                     } else {
                         val detalle = detalleDeError(it)
                             .ifEmpty { "No se pudo transcribir la nota." }
-                        principal.post { alTerminar(null, detalle) }
+                        principal.post { alTerminar(null, detalle, false) }
                     }
                 }
             }
