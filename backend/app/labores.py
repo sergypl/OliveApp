@@ -8,10 +8,13 @@ Reglas (docs/domain-model.md y ADR 0005):
 - La campaña se deriva de la fecha de la labor (decisión de esta feature):
   la campaña oleícola va del 1 de noviembre al 31 de octubre.
 - Las campañas cerradas no admiten nuevas labores (solo consulta).
+- Una Nota de voz produce como mucho una Labor (docs/domain-model.md): la
+  confirmación de su borrador lleva la `nota_id` y es idempotente.
 """
 
 import datetime
 import json
+import sqlite3
 import uuid
 
 CATEGORIAS = ("tratamiento", "riego", "cosecha")
@@ -150,30 +153,52 @@ def _preparar_labor(
 
 
 def crear_labor(
-    conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
+    conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones,
+    nota_id="",
 ):
-    """Crea una labor en la campaña que corresponde a su fecha."""
+    """Crea una labor en la campaña que corresponde a su fecha.
+
+    Con `nota_id` (la nota de voz que originó la labor) la creación es
+    idempotente (feature `confirmacion-de-borrador`): confirmar el borrador
+    dos veces devuelve la labor ya creada en lugar de duplicarla, porque una
+    Nota de voz produce como mucho una Labor. El alta manual no lleva nota y
+    sigue creando labores sueltas.
+    """
+    if nota_id:
+        existente = _labor_de_la_nota(conn, socio_id, nota_id)
+        if existente:
+            return existente
     fecha, parcela, campana_id, campos, observaciones = _preparar_labor(
         conn, socio_id, fecha_texto, parcela_id, categoria, campos, observaciones
     )
 
     labor_id = str(uuid.uuid4())
-    conn.execute(
-        "INSERT INTO labor "
-        "(id, socio_id, parcela_id, campana_id, categoria, fecha, campos, observaciones) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            labor_id,
-            socio_id,
-            parcela_id,
-            campana_id,
-            categoria,
-            fecha.isoformat(),
-            json.dumps(campos, ensure_ascii=False),
-            observaciones,
-        ),
-    )
-    conn.commit()
+    try:
+        conn.execute(
+            "INSERT INTO labor "
+            "(id, socio_id, parcela_id, campana_id, categoria, fecha, campos, "
+            "observaciones, nota_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                labor_id,
+                socio_id,
+                parcela_id,
+                campana_id,
+                categoria,
+                fecha.isoformat(),
+                json.dumps(campos, ensure_ascii=False),
+                observaciones,
+                nota_id or None,
+            ),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        # Dos confirmaciones de la misma nota a la vez: gana la primera y la
+        # segunda recibe esa misma labor.
+        conn.rollback()
+        if not nota_id:
+            raise
+        return _labor_de_la_nota(conn, socio_id, nota_id)
     return {
         "id": labor_id,
         "fecha": fecha.isoformat(),
@@ -183,6 +208,24 @@ def crear_labor(
         "observaciones": observaciones,
         "parcela": {"id": parcela["id"], "nombre": parcela["nombre"]},
     }
+
+
+def _labor_de_la_nota(conn, socio_id, nota_id):
+    """La labor que ya creó esta nota de voz, si la hay (nunca dos)."""
+    fila = conn.execute(
+        "SELECT id FROM labor WHERE socio_id = ? AND nota_id = ?",
+        (socio_id, nota_id),
+    ).fetchone()
+    if not fila:
+        return None
+    labor = conn.execute(
+        "SELECT l.id, l.fecha, l.categoria, l.campos, l.observaciones, "
+        "p.id AS parcela_id, p.nombre AS parcela_nombre "
+        "FROM labor l JOIN parcela p ON p.id = l.parcela_id "
+        "WHERE l.id = ?",
+        (fila["id"],),
+    ).fetchone()
+    return _labor_de_fila(labor)
 
 
 def actualizar_labor(
