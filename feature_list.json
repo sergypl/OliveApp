@@ -381,13 +381,21 @@
       "cola-offline-de-notas",
       "transcripcion-de-nota-voz"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Con dos notas pendientes, restaurar la conexión y comprobar que se transcriben en orden de grabación y sin duplicados"
     ],
-    "evidence": [],
-    "notes": "Idempotencia básica al confirmar para evitar duplicados al reconectar (docs/risks-and-open-questions.md). Ya existe el envío automático de las notas pendientes al abrir la pantalla de notas de voz (transcripcion-de-nota-voz); falta el disparo por reconexión y el orden de grabación."
+    "evidence": [
+      "./init.sh completo: 85/85 tests del backend, healthcheck 200, seed OK y APK instalado en el Xiaomi Redmi Note 10 Pro y el emulador",
+      "Dos notas pendientes (19:40 y 19:42) con el móvil sin conexión (modo avión + sin túnel adb reverse): la cola mostró 'Cola: 2 notas pendientes de enviar' con aviso y 'Reintentar' por fila; captura en captura-cola-2-pendientes.png",
+      "Al restaurar la conexión sin tocar la app, ambas se transcribieron solas (log del backend: exactamente 2 POST /api/v1/mis-notas-voz/transcripcion, sin duplicados) y la lista pasó a 'Transcrita' con su texto (captura-despues-reconexion.png)",
+      "Orden de grabación verificado con una nota antigua de 48 s y una nueva de 5 s: a los 8 s de reconectar la nota antigua (20:12) estaba en 'Transcribiendo…' mientras la nueva (20:14) seguía 'Pendiente de enviar'; a los 20 s la antigua 'Transcrita' y la nueva aún 'Pendiente'; al final ambas 'Transcrita' (2 POST en el backend)",
+      "La sincronización también funciona con la app en otra pantalla (un ciclo se completó con la app en el panel), sin intervención del socio",
+      "Resiliencia: en un ciclo la respuesta del backend se perdió en el WiFi recién reconectado (el backend registró 200 OK pero la app no lo recibió) y la nota volvió a 'Pendiente' sin duplicarse; al reabrir la cola se reenvió sola y quedó 'Transcrita' (12 peticiones para 12 envíos, ninguna nota repetida en la app)",
+      "8 notas sincronizadas en 4 ciclos con exactamente 2 peticiones por par: sin duplicados"
+    ],
+    "notes": "La cola se reenvía sola al recuperar conexión (ConnectivityManager.NetworkCallback a nivel de app) y al abrir la pantalla, en orden de grabación (creada_en ASC), una nota detrás de otra; cada nota solo se envía si sigue en estado 'pendiente' (comprobado justo antes de salir, con 'transcribiendo' marcado antes del envío), lo que evita duplicados. Si la respuesta se pierde, la nota vuelve a 'pendiente' y se reenvía en el siguiente disparo. La lógica de resultado se comparte con la pantalla (aplicarTranscripcion). Idempotencia de la confirmación de borradores sigue pendiente (docs/risks-and-open-questions.md)."
   },
   {
     "id": "borrador-ia-desde-transcripcion",
