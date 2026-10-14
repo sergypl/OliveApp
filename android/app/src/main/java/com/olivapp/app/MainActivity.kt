@@ -1522,7 +1522,8 @@ fun FilaNotaVoz(
 
 /**
  * Borrador IA de una nota transcrita (features borrador-ia-desde-transcripcion,
- * completar-borrador-por-preguntas y confirmacion-de-borrador).
+ * completar-borrador-por-preguntas, confirmacion-de-borrador y
+ * borrador-sin-parcela).
  *
  * Muestra la ficha que propone la IA (fecha, parcela, categoría y campos de
  * la categoría) esperando la confirmación del socio. Si la IA no reconoció la
@@ -1541,6 +1542,10 @@ fun FilaNotaVoz(
  * "Descartar" rechaza el borrador (features descarte-de-borrador): con
  * confirmación previa, porque no hay papelera que lo recupere, la nota queda
  * descartada y no se crea ninguna labor.
+ *
+ * Si la IA no identifica la parcela, la ficha deja la parcela vacía y el socio
+ * elige una de su lista (feature borrador-sin-parcela): hasta entonces
+ * "Confirmar" sigue deshabilitado.
  */
 @Composable
 fun BorradorIA(
@@ -1609,6 +1614,26 @@ fun BorradorIA(
         return
     }
     val faltantes = camposFaltantesDeBorrador(borrador)
+    // La parcela del borrador debe estar en la lista del socio (feature
+    // borrador-sin-parcela): si la IA no la identificó, queda vacía y hay que
+    // elegirla antes de poder confirmar.
+    val parcelaResuelta = borrador.optString("parcela").isNotBlank()
+    var parcelasDeLaCuenta by remember { mutableStateOf<List<String>>(emptyList()) }
+    var cargandoParcelas by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!parcelaResuelta) {
+            cargandoParcelas = true
+            val tokenDeParcelas = AlmacenSesiones(contexto).token()
+            if (tokenDeParcelas == null) {
+                cargandoParcelas = false
+            } else {
+                ServicioCuentas.cargarParcelas(tokenDeParcelas) { lista, _ ->
+                    parcelasDeLaCuenta = lista?.map { it.nombre } ?: emptyList()
+                    cargandoParcelas = false
+                }
+            }
+        }
+    }
     val grabador = remember { GrabadorNotas() }
     var grabando by remember { mutableStateOf(false) }
     var segundos by remember { mutableStateOf(0) }
@@ -1773,7 +1798,46 @@ fun BorradorIA(
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
-        if (faltantes.isEmpty()) {
+        if (!parcelaResuelta) {
+            // feature borrador-sin-parcela: la IA no identificó la parcela y el
+            // socio elige una de su lista antes de poder confirmar.
+            Text(
+                text = "Elige la parcela de esta labor:",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoError
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (cargandoParcelas) {
+                Text(
+                    text = "Cargando tus parcelas…",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            } else if (parcelasDeLaCuenta.isEmpty()) {
+                Text(
+                    text = "Todavía no has creado ninguna parcela. Crea una parcela " +
+                        "para poder apuntar esta labor.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoError
+                )
+            } else {
+                Desplegable(
+                    etiqueta = "Parcela",
+                    valor = "",
+                    opciones = parcelasDeLaCuenta,
+                    alElegir = { elegida ->
+                        // La parcela elegida queda guardada en la ficha.
+                        alGuardar(borrador.put("parcela", elegida).toString())
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        if (faltantes.isEmpty() && parcelaResuelta) {
             Text(
                 text = "Borrador completo. Ya se puede confirmar.",
                 fontSize = 18.sp,
@@ -1796,100 +1860,112 @@ fun BorradorIA(
                 )
             }
         } else {
-            Text(
-                text = "Faltan datos por responder: " +
-                    faltantes.joinToString(", ") { etiquetaDeCampo(it) } + ".",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoError
-            )
-            val pregunta = borrador.optString("pregunta")
-            if (pregunta.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+            if (faltantes.isNotEmpty()) {
                 Text(
-                    text = "El asistente te pregunta:",
+                    text = "Faltan datos por responder: " +
+                        faltantes.joinToString(", ") { etiquetaDeCampo(it) } + ".",
                     fontSize = 18.sp,
                     lineHeight = 26.sp,
                     fontWeight = FontWeight.Bold,
-                    color = VerdeOliva
-                )
-                Text(
-                    text = pregunta,
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron
-                )
-            }
-            ultimaRespuesta?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Tu respuesta: $it",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            if (grabando) {
-                Text(
-                    text = "Grabando tu respuesta… $segundos de " +
-                        "$LIMITE_SEGUNDOS_RESPUESTA segundos",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
                     color = TextoError
                 )
+                val pregunta = borrador.optString("pregunta")
+                if (pregunta.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "El asistente te pregunta:",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VerdeOliva
+                    )
+                    Text(
+                        text = pregunta,
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoMarron
+                    )
+                }
+                ultimaRespuesta?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tu respuesta: $it",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoMarron
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-                BotonPeligro(texto = "Parar", alPulsar = pararRespuesta)
-            } else if (enviando) {
-                Text(
-                    text = "Enviando tu respuesta…",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = VerdeOliva
-                )
-            } else if (ficheroRespuesta != null) {
-                // Respuesta ya grabada que aún no se ha podido enviar.
-                BotonPrincipal(texto = "Reintentar", alPulsar = { enviarRespuesta() })
-                Spacer(modifier = Modifier.height(8.dp))
-                BotonSecundario(
-                    texto = "Responder otra vez",
-                    alPulsar = {
-                        ficheroRespuesta?.delete()
-                        ficheroRespuesta = null
-                        empezarRespuesta()
-                    }
-                )
-            } else {
-                BotonPrincipal(
-                    texto = "Responder por voz",
-                    alPulsar = {
-                        if (
-                            ContextCompat.checkSelfPermission(
-                                contexto, Manifest.permission.RECORD_AUDIO
-                            ) == PackageManager.PERMISSION_GRANTED
-                        ) {
+                if (grabando) {
+                    Text(
+                        text = "Grabando tu respuesta… $segundos de " +
+                            "$LIMITE_SEGUNDOS_RESPUESTA segundos",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoError
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BotonPeligro(texto = "Parar", alPulsar = pararRespuesta)
+                } else if (enviando) {
+                    Text(
+                        text = "Enviando tu respuesta…",
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = VerdeOliva
+                    )
+                } else if (ficheroRespuesta != null) {
+                    // Respuesta ya grabada que aún no se ha podido enviar.
+                    BotonPrincipal(texto = "Reintentar", alPulsar = { enviarRespuesta() })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BotonSecundario(
+                        texto = "Responder otra vez",
+                        alPulsar = {
+                            ficheroRespuesta?.delete()
+                            ficheroRespuesta = null
                             empezarRespuesta()
-                        } else {
-                            lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
                         }
-                    }
-                )
+                    )
+                } else {
+                    BotonPrincipal(
+                        texto = "Responder por voz",
+                        alPulsar = {
+                            if (
+                                ContextCompat.checkSelfPermission(
+                                    contexto, Manifest.permission.RECORD_AUDIO
+                                ) == PackageManager.PERMISSION_GRANTED
+                            ) {
+                                empezarRespuesta()
+                            } else {
+                                lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
+                    )
+                }
+                aviso?.let {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        fontSize = 18.sp,
+                        lineHeight = 26.sp,
+                        color = TextoError
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
-            aviso?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = it,
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoError
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+            // Mientras falte un campo obligatorio o la parcela, el borrador no
+            // se puede confirmar.
             BotonPrincipal(texto = "Confirmar", habilitado = false, alPulsar = {})
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Faltan datos por responder para poder confirmar.",
+                text = when {
+                    faltantes.isNotEmpty() && !parcelaResuelta ->
+                        "Faltan datos por responder y hay que elegir la parcela " +
+                            "para poder confirmar."
+                    faltantes.isNotEmpty() ->
+                        "Faltan datos por responder para poder confirmar."
+                    else ->
+                        "Elige la parcela de esta labor para poder confirmar."
+                },
                 fontSize = 18.sp,
                 lineHeight = 26.sp,
                 color = TextoMarron
