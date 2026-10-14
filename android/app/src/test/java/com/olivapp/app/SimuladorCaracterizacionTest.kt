@@ -1,5 +1,9 @@
 package com.olivapp.app
 
+import com.olivapp.app.simulador.domain.ResultadoSimulacion
+import com.olivapp.app.simulador.domain.numeroDeCampo
+import com.olivapp.app.simulador.domain.recalcularConAjuste
+import com.olivapp.app.simulador.domain.simularLiquidacion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
