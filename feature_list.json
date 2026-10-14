@@ -502,13 +502,20 @@
       "borrador-ia-desde-transcripcion",
       "alta-de-parcela"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Dictar una labor con una parcela no reconocible y comprobar que el borrador pide elegir parcela y que sin parcela no se puede confirmar"
     ],
-    "evidence": [],
-    "notes": "Caso borde de docs/domain-model.md."
+    "evidence": [
+      "./init.sh completo el 2026-10-14 (pytest 119/119, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos conectados).",
+      "Verificación real en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro) con un dictado que nombra una parcela inexistente en la lista del socio ('Los Almendros'; voz sintética en español registrada por la ruta de migración JSON→Room y transcrita por la ruta real app → backend → gateway): el borrador IA dejó la parcela vacía ('Parcela: Sin identificar') y la tarjeta pide 'Elige la parcela de esta labor:' con un desplegable que lista las 5 parcelas del socio. Capturas en sesión (no versionadas).",
+      "Sin parcela no se puede confirmar: el botón 'Confirmar' está deshabilitado con 'Elige la parcela de esta labor para poder confirmar.' y pulsarlo no hace nada (comprobado en vivo).",
+      "Al elegir 'Cañada Honda' en el desplegable, la ficha muestra 'Parcela: Cañada Honda' —guardada en la ficha del borrador en Room—, aparece 'Borrador completo. Ya se puede confirmar.' y el botón se habilita; al confirmar, la labor se crea en 'Mi cuaderno' (Campaña 2025/2026) con esa parcela (en el backend la labor queda en la parcela de 'Cañada Honda'; labores del socio 6 → 7).",
+      "Caso combinado (faltan campos obligatorios y falta la parcela) verificado en vivo: la tarjeta muestra a la vez la pregunta del asistente ('¿Qué producto has echado?') y el selector de parcela, con 'Confirmar' deshabilitado y el aviso 'Faltan datos por responder y hay que elegir la parcela para poder confirmar.'.",
+      "Solo cambia la app en esta feature: el backend ya devuelve la parcela vacía cuando la IA no identifica ninguna de la lista del socio (borrador-ia-desde-transcripcion)."
+    ],
+    "notes": "Caso borde de docs/domain-model.md. Decisiones de esta feature: (1) el socio elige la parcela de su lista con un desplegable (no se pregunta por voz, según completar-borrador-por-preguntas): la elección se guarda en la ficha del borrador (Room) y 'Confirmar' solo se habilita con la ficha completa Y la parcela elegida; (2) el marcador es que la parcela del borrador esté vacía (el backend solo emite nombres exactos de la lista del socio o vacío); si al confirmar el nombre no coincidiera con ninguna de la lista, se mantiene el aviso de seguridad 'No se ha encontrado la parcela del borrador…'; (3) si el socio no tiene parcelas, la tarjeta lo dice ('Todavía no has creado ninguna parcela…') en lugar de mostrar un desplegable vacío. Estado de demo: la nota de verificación con la parcela elegida quedó confirmada con su labor (tratamiento del 10/10/2026 en Cañada Honda) y queda una nota de prueba con borrador incompleto y sin parcela que muestra el caso de esta feature."
   },
   {
     "id": "fecha-relativa-en-borrador",
