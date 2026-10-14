@@ -1,6 +1,6 @@
 package com.olivapp.app.campana.domain
 
-import com.olivapp.app.DatosLabor
+import com.olivapp.app.cuaderno.domain.DatosLabor
 
 /** Datos oficiales del panel, ya formateados para enseñar (formato español). */
 class DatosPanel(

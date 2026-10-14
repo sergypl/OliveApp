@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.olivapp.app.FilaLabor
+import com.olivapp.app.cuaderno.presentation.FilaLabor
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.campana.domain.CampanasRepositorio
 import com.olivapp.app.campana.domain.DatosCampana
