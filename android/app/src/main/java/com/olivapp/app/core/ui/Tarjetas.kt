@@ -68,7 +68,7 @@ fun CabeceraSeccion(
 /** Panel destacado: superficie con tinte suave para bloques de ayuda o avisos. */
 @Composable
 fun PanelDestacado(
-    colorFondo: Color = PanelDestacado,
+    colorFondo: Color = Contenedor,
     modificador: Modifier = Modifier,
     contenido: @Composable ColumnScope.() -> Unit
 ) {

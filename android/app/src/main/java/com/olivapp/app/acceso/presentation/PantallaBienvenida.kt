@@ -19,6 +19,7 @@ import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.pantallaCompleta
 
 /**
  * Pantalla de bienvenida: solo dos accesos (iniciar sesión y crear cuenta).
@@ -27,10 +28,7 @@ import com.olivapp.app.core.ui.TextoTitulo1
 @Composable
 fun PantallaBienvenida(onIniciarSesion: () -> Unit, onCrearCuenta: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .padding(24.dp),
+        modifier = Modifier.pantallaCompleta(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

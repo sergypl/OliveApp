@@ -34,6 +34,7 @@ import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
+import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.parcelas.domain.DatosParcela
 import com.olivapp.app.parcelas.domain.ParcelasRepositorio
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -123,10 +124,8 @@ fun PantallaParcelas(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(

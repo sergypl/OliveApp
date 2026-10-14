@@ -33,10 +33,11 @@ import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoBoton
 import com.olivapp.app.core.ui.TextoCifra
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.TextoError
+import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.TextoSecundario
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
+import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.simulador.domain.ResultadoSimulacion
 import com.olivapp.app.simulador.domain.numeroDeCampo
 import com.olivapp.app.simulador.domain.recalcularConAjuste
@@ -159,10 +160,8 @@ fun PantallaSimulador(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -214,7 +213,7 @@ fun PantallaSimulador(
             Text(
                 text = estado.error,
                 style = TextoBoton,
-                color = TextoError,
+                color = Error,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
