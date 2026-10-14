@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".AplicacionOlivApp"
         android:label="OlivApp"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.OlivApp">
