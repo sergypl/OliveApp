@@ -9,9 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
+/** Campo de formulario grande: etiqueta encima (18sp), 64dp mínimo de alto. */
 @Composable
 fun CampoDeTexto(
     etiqueta: String,
@@ -23,16 +24,14 @@ fun CampoDeTexto(
     OutlinedTextField(
         value = valor,
         onValueChange = alCambiar,
-        label = { Text(etiqueta, fontSize = 18.sp) },
+        label = { Text(etiqueta, style = TextoCuerpo) },
         singleLine = true,
         visualTransformation = if (oculto) PasswordVisualTransformation() else {
-            androidx.compose.ui.text.input.VisualTransformation.None
+            VisualTransformation.None
         },
         keyboardOptions = KeyboardOptions(keyboardType = tipo),
-        textStyle = androidx.compose.ui.text.TextStyle(
-            fontSize = 18.sp,
-            color = TextoMarron
-        ),
+        textStyle = TextoCuerpo.copy(color = Texto),
+        shape = FormasOlivApp.medium,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
