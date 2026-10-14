@@ -82,7 +82,8 @@ class RegistroViewModel @Inject constructor(
 fun PantallaRegistro(
     onVolver: () -> Unit,
     onIniciarSesion: () -> Unit,
-    viewModel: RegistroViewModel = hiltViewModel()
+    visita: Int = 0,
+    viewModel: RegistroViewModel = hiltViewModel(key = "visita-$visita")
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
