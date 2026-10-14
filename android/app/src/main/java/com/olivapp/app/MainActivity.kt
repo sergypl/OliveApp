@@ -2889,14 +2889,16 @@ fun FilaCampoLabor(etiqueta: String, valor: String) {
  * como estimación orientativa. La simulación es bajo demanda y no se guarda:
  * no compite con las cifras oficiales de la cooperativa (CONTEXT.md).
  *
- * El ajuste industrial está fijo al 10 % por defecto (ADR 0007); hacerlo
- * editable con recálculo al instante es la feature
- * `ajuste-industrial-configurable`.
+ * El ajuste industrial es configurable (feature ajuste-industrial-configurable):
+ * el campo arranca en el 10 % por defecto (ADR 0007) y, si ya hay un resultado,
+ * cambiarlo recalcula el aceite neto al instante. Cambiar kilos o rendimiento
+ * sigue borrando el resultado: el cálculo va bajo demanda con "Simular".
  */
 @Composable
 fun PantallaSimulador(onVolver: () -> Unit) {
     var kilos by remember { mutableStateOf("") }
     var rendimiento by remember { mutableStateOf("") }
+    var ajuste by remember { mutableStateOf("10") }
     var resultado by remember { mutableStateOf<ResultadoSimulacion?>(null) }
     var error by remember { mutableStateOf("") }
 
@@ -2944,6 +2946,24 @@ fun PantallaSimulador(onVolver: () -> Unit) {
             },
             tipo = KeyboardType.Decimal
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        CampoDeTexto(
+            etiqueta = "Ajuste industrial (%)",
+            valor = ajuste,
+            alCambiar = {
+                ajuste = it
+                // Recálculo al instante: si ya hay resultado y el nuevo ajuste
+                // es un porcentaje válido, el aceite neto se recalcula con él.
+                val ajusteNuevo = numeroDeCampo(it)
+                val anterior = resultado
+                if (anterior != null && ajusteNuevo != null &&
+                    ajusteNuevo >= 0.0 && ajusteNuevo <= 100.0
+                ) {
+                    resultado = recalcularConAjuste(anterior, ajusteNuevo)
+                }
+            },
+            tipo = KeyboardType.Decimal
+        )
         Spacer(modifier = Modifier.height(24.dp))
         BotonPrincipal(
             texto = "Simular",
@@ -2951,6 +2971,7 @@ fun PantallaSimulador(onVolver: () -> Unit) {
                 error = ""
                 val kilosSimulados = numeroDeCampo(kilos)
                 val rendimientoSimulado = numeroDeCampo(rendimiento)
+                val ajusteSimulado = numeroDeCampo(ajuste)
                 when {
                     kilosSimulados == null || kilosSimulados <= 0.0 -> {
                         resultado = null
@@ -2962,8 +2983,16 @@ fun PantallaSimulador(onVolver: () -> Unit) {
                         error = "Introduce el rendimiento graso como porcentaje " +
                             "entre 0 y 100 (por ejemplo, 20)."
                     }
+                    ajusteSimulado == null ||
+                        ajusteSimulado < 0.0 || ajusteSimulado > 100.0 -> {
+                        resultado = null
+                        error = "Introduce el ajuste industrial como porcentaje " +
+                            "entre 0 y 100 (por ejemplo, 10)."
+                    }
                     else -> resultado =
-                        simularLiquidacion(kilosSimulados, rendimientoSimulado)
+                        simularLiquidacion(
+                            kilosSimulados, rendimientoSimulado, ajusteSimulado
+                        )
                 }
             }
         )
@@ -2997,7 +3026,8 @@ fun PantallaSimulador(onVolver: () -> Unit) {
                 valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg"
             )
             FilaDato(
-                etiqueta = "Ajuste industrial (10 %)",
+                etiqueta = "Ajuste industrial (" +
+                    formatearCantidad(it.ajustePorcentaje) + " %)",
                 valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg"
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -3018,19 +3048,41 @@ fun PantallaSimulador(onVolver: () -> Unit) {
 /** Resultado de una simulación de liquidación en limpio (en kilos de aceite). */
 class ResultadoSimulacion(
     val aceiteSegunRendimiento: Double,
+    val ajustePorcentaje: Double,
     val ajusteIndustrial: Double,
     val aceiteNeto: Double
 )
 
 /**
  * Liquidación en limpio: kilos × rendimiento graso − ajuste industrial (única
- * deducción del MVP; 10 % por defecto, ADR 0007). No se guarda en ningún sitio.
+ * deducción del MVP). El ajuste se expresa en porcentaje (10 % por defecto,
+ * ADR 0007) y es configurable por el socio. No se guarda en ningún sitio.
  */
-fun simularLiquidacion(kilos: Double, rendimiento: Double, ajuste: Double = 0.10):
-    ResultadoSimulacion {
+fun simularLiquidacion(
+    kilos: Double,
+    rendimiento: Double,
+    ajustePorcentaje: Double = 10.0
+): ResultadoSimulacion {
     val aceite = kilos * rendimiento / 100.0
-    val merma = aceite * ajuste
-    return ResultadoSimulacion(aceite, merma, aceite - merma)
+    val merma = aceite * ajustePorcentaje / 100.0
+    return ResultadoSimulacion(aceite, ajustePorcentaje, merma, aceite - merma)
+}
+
+/**
+ * Recálculo al instante del resultado con un ajuste industrial nuevo: el aceite
+ * según el rendimiento no cambia, solo la deducción que se le aplica.
+ */
+fun recalcularConAjuste(
+    anterior: ResultadoSimulacion,
+    ajustePorcentaje: Double
+): ResultadoSimulacion {
+    val merma = anterior.aceiteSegunRendimiento * ajustePorcentaje / 100.0
+    return ResultadoSimulacion(
+        anterior.aceiteSegunRendimiento,
+        ajustePorcentaje,
+        merma,
+        anterior.aceiteSegunRendimiento - merma
+    )
 }
 
 /**
