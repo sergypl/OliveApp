@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible de "Mi cuaderno". */
 data class CuadernoUiState(
@@ -189,7 +190,7 @@ fun PantallaCuaderno(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
-        BotonPrincipal(texto = "Apuntar una labor", alPulsar = onApuntarLabor)
+        BotonPrincipal(texto = "Apuntar una labor", icono = R.drawable.ic_anadir, alPulsar = onApuntarLabor)
         Spacer(modifier = Modifier.height(24.dp))
         if (!estado.cargado) {
             Text(
@@ -247,6 +248,6 @@ fun PantallaCuaderno(
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

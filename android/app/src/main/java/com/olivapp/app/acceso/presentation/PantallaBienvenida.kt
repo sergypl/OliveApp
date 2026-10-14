@@ -20,6 +20,7 @@ import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.pantallaCompleta
+import com.olivapp.app.R
 
 /**
  * Pantalla de bienvenida: solo dos accesos (iniciar sesión y crear cuenta).
@@ -45,8 +46,8 @@ fun PantallaBienvenida(onIniciarSesion: () -> Unit, onCrearCuenta: () -> Unit) {
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(32.dp))
-        BotonPrincipal(texto = "Iniciar sesión", alPulsar = onIniciarSesion)
+        BotonPrincipal(texto = "Iniciar sesión", icono = R.drawable.ic_iniciar_sesion, alPulsar = onIniciarSesion)
         Spacer(modifier = Modifier.height(16.dp))
-        BotonSecundario(texto = "Crear cuenta", alPulsar = onCrearCuenta)
+        BotonSecundario(texto = "Crear cuenta", icono = R.drawable.ic_crear_cuenta, alPulsar = onCrearCuenta)
     }
 }
