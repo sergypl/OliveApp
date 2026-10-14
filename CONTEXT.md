@@ -86,7 +86,7 @@ Ficha propuesta por el módulo de IA a partir de la transcripción: fecha, parce
 Porcentaje de aceite obtenible por peso de aceituna (típicamente entre el 18 % y el 25 %). Entrada principal del simulador y, además, dato oficial de campaña que registra la cooperativa. En los datos oficiales se usa el **rendimiento de laboratorio**, el que el socio conoce del análisis de la muestra.
 
 ### Ajuste industrial
-Porcentaje configurable que se resta del aceite estimado para simular las mermas del proceso de la almazara. Es la única deducción del MVP y replica la merma real entre el rendimiento de laboratorio y el industrial (p. ej. 10 %).
+Porcentaje configurable que se resta del aceite estimado para simular las mermas del proceso de la almazara. Es la única deducción del MVP y replica la merma real entre el rendimiento de laboratorio y el industrial. El simulador arranca con el 10 % por defecto y el socio puede cambiarlo: el aceite neto se recalcula al instante con su valor.
 
 ### Liquidación en limpio
 Resultado del simulador: aceite neto estimado tras aplicar el ajuste industrial. Es una estimación orientativa, no el documento de liquidación real de una cooperativa.
