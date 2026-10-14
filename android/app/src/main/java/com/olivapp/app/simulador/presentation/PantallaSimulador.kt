@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -13,11 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,10 +25,18 @@ import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.FilaDato
-import com.olivapp.app.core.ui.FondoCrema
+import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.PanelDestacado
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.Tarjeta
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.TextoBoton
+import com.olivapp.app.core.ui.TextoCifra
+import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.TextoSecundario
+import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.simulador.domain.ResultadoSimulacion
 import com.olivapp.app.simulador.domain.numeroDeCampo
 import com.olivapp.app.simulador.domain.recalcularConAjuste
@@ -153,48 +160,50 @@ fun PantallaSimulador(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Liquidación en limpio",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoTitulo1,
+            color = Texto,
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Simula tu liquidación en limpio con los kilos de aceituna " +
                 "y el rendimiento graso.\nEs una estimación orientativa, no la " +
                 "liquidación oficial de la cooperativa.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
+            style = TextoCuerpo,
+            color = TextoSecundario,
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Kilos de aceituna",
-            valor = estado.kilos,
-            alCambiar = viewModel::cambiarKilos,
-            tipo = KeyboardType.Decimal
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Rendimiento graso (%)",
-            valor = estado.rendimiento,
-            alCambiar = viewModel::cambiarRendimiento,
-            tipo = KeyboardType.Decimal
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Ajuste industrial (%)",
-            valor = estado.ajuste,
-            alCambiar = viewModel::cambiarAjuste,
-            tipo = KeyboardType.Decimal
-        )
+        // Entradas agrupadas en tarjeta (sección de formulario del mockup).
+        Tarjeta {
+            CampoDeTexto(
+                etiqueta = "Kilos de aceituna",
+                valor = estado.kilos,
+                alCambiar = viewModel::cambiarKilos,
+                tipo = KeyboardType.Decimal
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            CampoDeTexto(
+                etiqueta = "Rendimiento graso (%)",
+                valor = estado.rendimiento,
+                alCambiar = viewModel::cambiarRendimiento,
+                tipo = KeyboardType.Decimal
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            CampoDeTexto(
+                etiqueta = "Ajuste industrial (%)",
+                valor = estado.ajuste,
+                alCambiar = viewModel::cambiarAjuste,
+                tipo = KeyboardType.Decimal
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         BotonPrincipal(
             texto = "Simular",
@@ -204,44 +213,51 @@ fun PantallaSimulador(
         if (estado.error.isNotEmpty()) {
             Text(
                 text = estado.error,
-                fontSize = 20.sp,
+                style = TextoBoton,
                 color = TextoError,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
         estado.resultado?.let {
-            Text(
-                text = "Aceite neto estimado",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoMarron
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = formatearCantidad(it.aceiteNeto) + " kg",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                color = VerdeOliva
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            FilaDato(
-                etiqueta = "Aceite según el rendimiento",
-                valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg"
-            )
-            FilaDato(
-                etiqueta = "Ajuste industrial (" +
-                    formatearCantidad(it.ajustePorcentaje) + " %)",
-                valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg"
-            )
+            // Panel de resultado destacado (estilo del desglose del mockup).
+            PanelDestacado {
+                Text(
+                    text = "Aceite neto estimado",
+                    style = TextoValor,
+                    color = Texto,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatearCantidad(it.aceiteNeto) + " kg",
+                    style = TextoCifra,
+                    color = Primario,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                FilaDato(
+                    etiqueta = "Aceite según el rendimiento",
+                    valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FilaDato(
+                    etiqueta = "Ajuste industrial (" +
+                        formatearCantidad(it.ajustePorcentaje) + " %)",
+                    valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg"
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Estimación orientativa: la liquidación oficial es la " +
                     "de la cooperativa.",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron,
-                textAlign = TextAlign.Center
+                style = TextoCuerpo,
+                color = TextoSecundario,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
