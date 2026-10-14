@@ -72,3 +72,25 @@ internal fun formatearLabor(labor: org.json.JSONObject): DatosLabor {
         )
     )
 }
+
+/**
+ * Variación porcentual entre la cifra actual y la anterior (tarjeta de dato de
+ * core/ui). Sin comparación posible (valores a 0 o sin cifra anterior) se
+ * devuelve null y no se muestra la variación.
+ */
+internal fun variacionPorcentual(actual: Double, anterior: Double): Double? {
+    if (actual <= 0.0 || anterior <= 0.0) return null
+    return (actual - anterior) / anterior * 100.0
+}
+
+/** Variación a texto con signo y formato español: "+48 %", "−12,5 %" o "0 %". */
+internal fun textoVariacion(porcentaje: Double): String {
+    val redondeado = kotlin.math.round(porcentaje * 10.0) / 10.0
+    val signo = when {
+        redondeado > 0.0 -> "+"
+        redondeado < 0.0 -> "−"
+        else -> ""
+    }
+    val decimales = if (redondeado % 1.0 == 0.0) 0 else 1
+    return signo + formatearNumero(kotlin.math.abs(redondeado), decimales) + " %"
+}
