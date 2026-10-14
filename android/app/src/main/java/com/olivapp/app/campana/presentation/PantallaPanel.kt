@@ -1,7 +1,6 @@
 package com.olivapp.app.campana.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,21 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,12 +24,21 @@ import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.campana.domain.CampanasRepositorio
 import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.DatosPanel
+import com.olivapp.app.core.ui.BotonAccion
+import com.olivapp.app.core.ui.BotonMicrofono
 import com.olivapp.app.core.ui.BotonSecundario
+import com.olivapp.app.core.ui.CabeceraSeccion
 import com.olivapp.app.core.ui.FilaDato
-import com.olivapp.app.core.ui.FondoCrema
+import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.PanelDestacado
+import com.olivapp.app.core.ui.Tarjeta
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.TextoSecundario
+import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.TextoTitulo2
+import com.olivapp.app.core.ui.TextoValor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -125,32 +127,24 @@ fun PantallaPanel(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         estado.datos?.let {
-            Text(
-                text = "Campaña ${it.campana}",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextoMarron
-            )
+            Tarjeta {
+                Text(
+                    text = "Campaña ${it.campana}",
+                    style = TextoTitulo1,
+                    color = Texto
+                )
+            }
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Datos oficiales de la cooperativa",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = VerdeOliva
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            ) {
+            // Los datos oficiales llevan cabecera y superficie propias para
+            // no confundirlos con las labores del socio (regla de DESIGN.md).
+            CabeceraSeccion(titulo = "Datos oficiales de la cooperativa")
+            Tarjeta {
                 FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados)
                 Spacer(modifier = Modifier.height(12.dp))
                 FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso)
@@ -160,24 +154,26 @@ fun PantallaPanel(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Estos son los datos que declara la cooperativa.\nTus labores van aparte, en el cuaderno de campo.",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron,
-                textAlign = TextAlign.Center
+                style = TextoCuerpo,
+                color = TextoSecundario,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         } ?: Text(
             text = "Cargando tus datos…",
-            fontSize = 18.sp,
-            color = TextoMarron
+            style = TextoCuerpo,
+            color = TextoSecundario,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
         estado.mensaje?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                style = TextoCuerpo,
                 color = TextoError,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
@@ -185,9 +181,9 @@ fun PantallaPanel(
         if (cerradas.isNotEmpty()) {
             Text(
                 text = "Campañas anteriores",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = VerdeOliva
+                style = TextoTitulo2,
+                color = Texto,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
             for (c in cerradas) {
@@ -201,43 +197,43 @@ fun PantallaPanel(
         }
         Text(
             text = "Tus herramientas",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = VerdeOliva
+            style = TextoTitulo2,
+            color = Texto,
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(12.dp))
-        // Botón grande de micrófono del panel: grabar una nota de voz.
-        Button(
-            onClick = onAbrirNotasVoz,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(88.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = VerdeOliva,
-                contentColor = Color.White
-            )
-        ) {
-            Text(
-                text = "Dictar una nota de voz",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+        // El micrófono es el protagonista del panel: naranja, circular, 96dp.
+        PanelDestacado {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BotonMicrofono(
+                    descripcion = "Dictar una nota de voz",
+                    alPulsar = onAbrirNotasVoz
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Dictar una nota de voz",
+                    style = TextoValor,
+                    color = Texto,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Graba una nota corta para apuntar una labor.",
+                    style = TextoCuerpo,
+                    color = TextoSecundario,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Graba una nota corta para apuntar una labor.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
         Spacer(modifier = Modifier.height(12.dp))
-        BotonSecundario(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
+        BotonAccion(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
         Spacer(modifier = Modifier.height(12.dp))
-        BotonSecundario(texto = "Cuaderno de campo", alPulsar = onAbrirCuaderno)
+        BotonAccion(texto = "Cuaderno de campo", alPulsar = onAbrirCuaderno)
         Spacer(modifier = Modifier.height(12.dp))
-        BotonSecundario(
+        BotonAccion(
             texto = "Simulador de liquidación en limpio",
             alPulsar = onAbrirSimulador
         )

@@ -3,6 +3,8 @@ package com.olivapp.app.core.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
@@ -13,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.olivapp.app.R
 
@@ -62,6 +65,32 @@ fun BotonPeligro(texto: String, alPulsar: () -> Unit) {
         border = BorderStroke(2.dp, Error)
     ) {
         Text(text = texto, style = TextoBoton, color = Error)
+    }
+}
+
+/**
+ * Acción grande tipo "tile" de los mockups: superficie clara, 72dp mínimo de
+ * alto y texto grande centrado. Para los accesos frecuentes del panel.
+ */
+@Composable
+fun BotonAccion(texto: String, alPulsar: () -> Unit) {
+    Button(
+        onClick = alPulsar,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 72.dp),
+        shape = FormasOlivApp.large,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = PanelDestacado,
+            contentColor = Texto
+        )
+    ) {
+        Text(
+            text = texto,
+            style = TextoBoton,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
     }
 }
 
