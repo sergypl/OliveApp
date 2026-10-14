@@ -478,13 +478,20 @@
     "depends_on": [
       "borrador-ia-desde-transcripcion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Descartar un borrador y comprobar que la nota queda 'descartada' y que no hay labor nueva en el cuaderno"
     ],
-    "evidence": [],
-    "notes": "Estados de Nota de voz en docs/domain-model.md."
+    "evidence": [
+      "./init.sh completo el 2026-10-14 (pytest 119/119, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos conectados).",
+      "Verificación real en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro) con una nota con borrador IA completo (frase 1 del set: 10/10/2026, Cañada Honda, tratamiento fitosanitario, cobre contra la mosca del olivo, 2 L; voz sintética en español registrada por la ruta de migración JSON→Room y transcrita por la ruta real app → backend → gateway): el botón 'Descartar' de la tarjeta abre el diálogo '¿Descartar este borrador?' con el aviso 'La nota quedará descartada y no se creará ninguna labor. No se puede deshacer.' y, al confirmar, la nota queda 'Descartada. No se ha creado ninguna labor.' y su tarjeta de borrador desaparece. Capturas en sesión (no versionadas).",
+      "Sin labor nueva en el cuaderno: las labores del socio en el backend se contaron antes y después del descarte (6 → 6, ninguna con la nota descartada) y 'Mi cuaderno' muestra solo las labores previas (las dos de 10/10/2026 en la campaña 2025/2026).",
+      "Persistencia y estado local: en Room (base del dispositivo) la nota queda con estado 'descartada' y, tras cerrar la app en seco y reabrirla, sigue descartada.",
+      "El borrador rechazado por la IA (frase 9 del set, categoría no reconocida) también se puede descartar: su mensaje de rechazo tiene el mismo botón 'Descartar' con diálogo y la nota pasa igualmente a 'Descartada. No se ha creado ninguna labor.'.",
+      "El descarte es solo local (no toca el backend) y la nota descartada no se reenvía ni se vuelve a proponer: solo salen a transcribir las notas 'pendientes'."
+    ],
+    "notes": "Estados de Nota de voz en docs/domain-model.md. Decisiones de esta feature: (1) 'Descartar' vive en la tarjeta del borrador IA —también con la ficha incompleta o rechazada— con diálogo de confirmación, como el borrado de labores, porque no hay papelera que lo recupere; con 'Confirmar' quedan cubiertas las dos salidas de 'transcrita' del modelo de dominio; (2) la nota descartada conserva texto y borrador en Room como registro (igual que la confirmada), pero la tarjeta deja de mostrarse. Ampliación declarada del alcance: los borradores que la IA rechaza por categoría no reconocida también admiten descarte; sin ello esa nota quedaba sin salida en la lista."
   },
   {
     "id": "borrador-sin-parcela",
