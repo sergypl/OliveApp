@@ -15,14 +15,14 @@ import com.olivapp.app.acceso.data.AlmacenSesiones
 import com.olivapp.app.acceso.presentation.PantallaBienvenida
 import com.olivapp.app.acceso.presentation.PantallaInicioSesion
 import com.olivapp.app.acceso.presentation.PantallaRegistro
-import com.olivapp.app.LaborEditable
-import com.olivapp.app.PantallaCuaderno
 import com.olivapp.app.PantallaNotasVoz
-import com.olivapp.app.PantallaNuevaLabor
 import com.olivapp.app.PantallaSimulador
 import com.olivapp.app.SincronizadorNotas
 import com.olivapp.app.campana.presentation.PantallaCampana
 import com.olivapp.app.campana.presentation.PantallaPanel
+import com.olivapp.app.cuaderno.domain.LaborEditable
+import com.olivapp.app.cuaderno.presentation.PantallaCuaderno
+import com.olivapp.app.cuaderno.presentation.PantallaNuevaLabor
 import com.olivapp.app.parcelas.presentation.PantallaParcelas
 
 /**
@@ -105,7 +105,8 @@ fun OlivApp() {
             onEditarLabor = { labor ->
                 laborEnEdicion = labor
                 irA("nueva_labor")
-            }
+            },
+            visita = visita
         )
         "nueva_labor" -> PantallaNuevaLabor(
             onVolver = { irA("cuaderno") },
@@ -113,7 +114,8 @@ fun OlivApp() {
                 idCampana = id
                 irA("campana")
             },
-            labor = laborEnEdicion
+            labor = laborEnEdicion,
+            visita = visita
         )
         else -> PantallaBienvenida(
             onIniciarSesion = { irA("inicio_sesion") },

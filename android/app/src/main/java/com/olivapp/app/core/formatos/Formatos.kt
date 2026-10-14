@@ -1,7 +1,7 @@
 package com.olivapp.app.core.formatos
 
-import com.olivapp.app.DatosLabor
-import com.olivapp.app.LaborEditable
+import com.olivapp.app.cuaderno.domain.DatosLabor
+import com.olivapp.app.cuaderno.domain.LaborEditable
 
 /** Números en formato español: 10.958 y 17,93. */
 internal fun formatearNumero(valor: Double, decimales: Int): String {
