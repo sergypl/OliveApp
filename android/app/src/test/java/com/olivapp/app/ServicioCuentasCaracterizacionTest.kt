@@ -207,6 +207,82 @@ class ServicioCuentasCaracterizacionTest {
     }
 
     @Test
+    fun `crear cuenta devuelve el aviso fijo de exito`() {
+        servidor.responderA("/api/v1/registro", RespuestaDePrueba(201, """{"id": "socio-1"}"""))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.crearCuenta("ana@example.com", "12345678", "Socio 1") { exitosa, texto ->
+            resultado.set(arrayOf(exitosa.toString(), texto))
+        }
+
+        val (exitosa, texto) = esperar { resultado.get() }
+        assertEquals("true", exitosa)
+        assertEquals("Cuenta creada. Ya puedes iniciar sesión.", texto)
+    }
+
+    @Test
+    fun `crear cuenta fallida devuelve el detalle del backend`() {
+        servidor.responderA(
+            "/api/v1/registro",
+            RespuestaDePrueba(409, """{"detail": "Ese email ya está registrado. Inicia sesión."}""")
+        )
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.crearCuenta("ana@example.com", "12345678", "Socio 1") { exitosa, texto ->
+            resultado.set(arrayOf(exitosa.toString(), texto))
+        }
+
+        val (exitosa, texto) = esperar { resultado.get() }
+        assertEquals("false", exitosa)
+        assertEquals("Ese email ya está registrado. Inicia sesión.", texto)
+    }
+
+    @Test
+    fun `iniciar sesion devuelve el token del backend`() {
+        servidor.responderA("/api/v1/login", RespuestaDePrueba(200, """{"token": "token-abc"}"""))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.iniciarSesion("ana@example.com", "12345678") { token, texto ->
+            resultado.set(arrayOf(token ?: "", texto))
+        }
+
+        val (token, texto) = esperar { resultado.get() }
+        assertEquals("token-abc", token)
+        assertEquals("", texto)
+    }
+
+    @Test
+    fun `iniciar sesion fallido devuelve el detalle del backend`() {
+        servidor.responderA(
+            "/api/v1/login",
+            RespuestaDePrueba(401, """{"detail": "Email o contraseña incorrectos."}""")
+        )
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.iniciarSesion("ana@example.com", "mal") { token, texto ->
+            resultado.set(arrayOf(token ?: "", texto))
+        }
+
+        val (token, texto) = esperar { resultado.get() }
+        assertEquals("", token)
+        assertEquals("Email o contraseña incorrectos.", texto)
+    }
+
+    @Test
+    fun `sin servidor iniciar sesion avisa de que no hay conexion`() {
+        servidor.parar()
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.iniciarSesion("ana@example.com", "12345678") { token, texto ->
+            resultado.set(arrayOf(token ?: "", texto))
+        }
+
+        val (token, texto) = esperar { resultado.get() }
+        assertEquals("", token)
+        assertEquals("No hay conexión con el servidor. Inténtalo de nuevo.", texto)
+    }
+
+    @Test
     fun `sin servidor la nota se marca como sin conexion`() {
         servidor.parar()
         val resultado = AtomicReference<Array<String>?>()

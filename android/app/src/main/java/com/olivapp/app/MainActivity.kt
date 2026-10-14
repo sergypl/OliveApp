@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.olivapp.app.acceso.data.AlmacenSesiones
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -69,8 +70,6 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.olivapp.app.core.formatos.NOMBRES_DE_CATEGORIA
 import com.olivapp.app.core.formatos.formatearCantidad
@@ -107,217 +106,8 @@ class MainActivity : ComponentActivity() {
 }
 
 
-@Composable
-fun PantallaBienvenida(onIniciarSesion: () -> Unit, onCrearCuenta: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FondoCrema)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "OlivApp",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Tus campañas y tu cuaderno de campo,\na la mano.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        BotonPrincipal(texto = "Iniciar sesión", alPulsar = onIniciarSesion)
-        Spacer(modifier = Modifier.height(16.dp))
-        BotonSecundario(texto = "Crear cuenta", alPulsar = onCrearCuenta)
-    }
-}
 
-@Composable
-fun PantallaRegistro(onVolver: () -> Unit, onIniciarSesion: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var contrasena by remember { mutableStateOf("") }
-    var codigoSocio by remember { mutableStateOf("") }
-    var mensaje by remember { mutableStateOf<String?>(null) }
-    var registrada by remember { mutableStateOf(false) }
-    var trabajando by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FondoCrema)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Crear cuenta",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Con tu email, una contraseña y tu código de socio.",
-            fontSize = 18.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Email",
-            valor = email,
-            alCambiar = { email = it },
-            tipo = KeyboardType.Email
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Contraseña",
-            valor = contrasena,
-            alCambiar = { contrasena = it },
-            tipo = KeyboardType.Password,
-            oculto = true
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Mínimo 8 caracteres.",
-            fontSize = 16.sp,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Código de socio",
-            valor = codigoSocio,
-            alCambiar = { codigoSocio = it },
-            tipo = KeyboardType.Text
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "El que te ha dado tu cooperativa (p. ej. Socio 1).",
-            fontSize = 16.sp,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonPrincipal(
-            texto = if (trabajando) "Creando la cuenta…" else "Crear cuenta",
-            habilitado = !trabajando,
-            alPulsar = {
-                trabajando = true
-                mensaje = null
-                registrada = false
-                ServicioCuentas.crearCuenta(email, contrasena, codigoSocio) { exitosa, texto ->
-                    trabajando = false
-                    registrada = exitosa
-                    mensaje = texto
-                }
-            }
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        mensaje?.let {
-            Text(
-                text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = if (registrada) VerdeOliva else TextoError,
-                textAlign = TextAlign.Center
-            )
-        }
-        if (registrada) {
-            Spacer(modifier = Modifier.height(24.dp))
-            BotonSecundario(texto = "Ir a iniciar sesión", alPulsar = onIniciarSesion)
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al inicio", alPulsar = onVolver)
-    }
-}
-
-@Composable
-fun PantallaInicioSesion(
-    onVolver: () -> Unit,
-    onCrearCuenta: () -> Unit,
-    onSesionAbierta: () -> Unit
-) {
-    val contexto = LocalContext.current
-    var email by remember { mutableStateOf("") }
-    var contrasena by remember { mutableStateOf("") }
-    var mensaje by remember { mutableStateOf<String?>(null) }
-    var trabajando by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FondoCrema)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Iniciar sesión",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Entra con tu email y contraseña.",
-            fontSize = 18.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Email",
-            valor = email,
-            alCambiar = { email = it },
-            tipo = KeyboardType.Email
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Contraseña",
-            valor = contrasena,
-            alCambiar = { contrasena = it },
-            tipo = KeyboardType.Password,
-            oculto = true
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonPrincipal(
-            texto = if (trabajando) "Entrando…" else "Iniciar sesión",
-            habilitado = !trabajando,
-            alPulsar = {
-                trabajando = true
-                mensaje = null
-                ServicioCuentas.iniciarSesion(email, contrasena) { token, texto ->
-                    trabajando = false
-                    if (token != null) {
-                        AlmacenSesiones(contexto).guardar(token)
-                        onSesionAbierta()
-                    } else {
-                        mensaje = texto
-                    }
-                }
-            }
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        mensaje?.let {
-            Text(
-                text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoError,
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Crear cuenta", alPulsar = onCrearCuenta)
-        Spacer(modifier = Modifier.height(16.dp))
-        BotonSecundario(texto = "Volver al inicio", alPulsar = onVolver)
-    }
-}
 
 /**
  * Panel de la campaña actual (pantalla de aterrizaje tras entrar).
@@ -2948,28 +2738,6 @@ fun numeroDeCampo(texto: String): Double? {
     return normalizado.toDoubleOrNull()
 }
 
-/** Una fila del bloque de datos oficiales: etiqueta grande y valor destacado. */
-@Composable
-fun FilaDato(etiqueta: String, valor: String) {
-    androidx.compose.foundation.layout.Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = etiqueta,
-            fontSize = 18.sp,
-            color = TextoMarron
-        )
-        Text(
-            text = valor,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-    }
-}
-
 /** Datos oficiales del panel, ya formateados para enseñar (formato español). */
 class DatosPanel(
     val campana: String,
@@ -3032,31 +2800,4 @@ private fun numeroInicial(labor: LaborEditable?, clave: String): String {
 }
 
 
-/**
- * Almacenamiento seguro del token de sesión: preferencias cifradas con una
- * clave del Keystore del dispositivo (AES-256).
- */
-class AlmacenSesiones(contexto: Context) {
-    private val preferencias = EncryptedSharedPreferences.create(
-        contexto,
-        "olivapp-sesiones",
-        MasterKey.Builder(contexto)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
-    fun guardar(token: String) {
-        preferencias.edit().putString("token", token).apply()
-    }
-
-    fun token(): String? = preferencias.getString("token", null)
-
-    fun hayToken(): Boolean = token() != null
-
-    fun borrar() {
-        preferencias.edit().remove("token").apply()
-    }
-}
 
