@@ -46,6 +46,7 @@ import com.olivapp.app.core.ui.TextoBoton
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
+import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.voz.data.AlmacenNotasVoz
 import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.voz.domain.GrabadorDeNotas
@@ -274,10 +275,8 @@ fun PantallaNotasVoz(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(

@@ -33,6 +33,7 @@ import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import com.olivapp.app.cuaderno.domain.fechaDeHoy
@@ -267,10 +268,8 @@ fun PantallaNuevaLabor(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(

@@ -81,7 +81,7 @@ fun BotonAccion(texto: String, alPulsar: () -> Unit) {
             .heightIn(min = 72.dp),
         shape = FormasOlivApp.large,
         colors = ButtonDefaults.buttonColors(
-            containerColor = PanelDestacado,
+            containerColor = Contenedor,
             contentColor = Texto
         )
     ) {

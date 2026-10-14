@@ -35,6 +35,7 @@ import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
+import com.olivapp.app.core.ui.pantallaCompleta
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,10 +88,8 @@ fun PantallaCampana(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         estado.datos?.let {
