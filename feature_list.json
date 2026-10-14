@@ -650,7 +650,7 @@
     "depends_on": [
       "rediseno-visual-android"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh completo en verde (backend pytest, healthcheck, datos sembrados, APK compilado, instalado y abierto en el dispositivo)",
       "cd android && ./gradlew testDebugUnitTest lint en verde (los tests existentes sin cambiar sus aserciones)",
@@ -659,8 +659,15 @@
       "Pares de contraste AA de la nueva paleta calculados y documentados en DESIGN.md (incluido su frontmatter de colors)",
       "Comprobar que ninguna pantalla queda tapada ni recortada por las barras del sistema, el teclado ni el hueco de la futura barra inferior"
     ],
-    "evidence": [],
-    "notes": "Base común de la oleada de modernización: todas las pistas dependen de estos fundamentos, así que se hace completo y estable antes de que arranquen. No cambia flujos, textos, ViewModels, Room ni endpoints: solo la base visual (pantalla completa, paleta, iconos) y los componentes nuevos de core/ui, que las pistas irán aplicando. Se mantiene el router propio de core/navegacion/Navegacion.kt y su tienda de ViewModels por visita (la rotación conserva pantalla y lo tecleado); las transiciones se hacen con AnimatedContent sin romper esa tienda. Gesto atrás predictivo con android:enableOnBackInvokedCallback=\"true\" en <application> (no es un permiso). Fuera de alcance: modo oscuro y widget de pantalla de inicio."
+    "evidence": [
+      "2026-10-15: ./init.sh completo en verde (backend 124/124 tests, healthcheck GET /health -> 200, datos sembrados OK con token de sesión, APK compilado, instalado y abierto en el Xiaomi M2101K6G)",
+      "2026-10-15: cd android && ./gradlew testDebugUnitTest lint -> BUILD SUCCESSFUL (tests y lint en verde; los tests requieren el puerto 8000 libre, como documenta PROGRESS.md)",
+      "2026-10-15: capturas antes/después de las 13 pantallas actuales en docs/evidencia/fundamentos-visuales-modernos/ (despues/, despues-fuente-grande/ con font_scale 1.3 y despues-horizontal/ con wm user-rotation), más despues-simulador-resultado.png; panel, filas de datos, cabeceras y categorías del cuaderno muestran los iconos Material Symbols junto a su texto",
+      "2026-10-15: smoke test en dispositivo: recorrido completo (panel, campaña, parcelas, cuaderno, formulario y ficha de labor, simulador con cálculo 1000 kg · 20 % · 10 % -> 180 kg, notas de voz, cierre y nuevo inicio de sesión) con rotaciones a horizontal y vuelta (la rotación conserva pantalla y lo tecleado); logcat sin FATAL EXCEPTION, sin errores de AndroidRuntime ni ANR de com.olivapp.app",
+      "2026-10-15: contraste AA de la nueva paleta calculado con la fórmula WCAG sRGB y documentado en DESIGN.md (frontmatter colors y sección Colors): texto principal 15,6:1 sobre fondo y 12,3-16,7:1 sobre superficies, texto secundario 6,6-8,5:1, blanco/primario 8,1:1, #663500/#FE932C 4,5:1; revisado además con fuente grande y en horizontal",
+      "2026-10-15: comprobado en las capturas que nada queda tapado ni recortado por la barra de estado, la de navegación, el teclado ni el hueco reservado de la futura barra inferior (80dp, retirado con el teclado abierto)"
+    ],
+    "notes": "Base común de la oleada de modernización: todas las pistas dependen de estos fundamentos, así que se hace completo y estable antes de que arranquen. No cambia flujos, textos, ViewModels, Room ni endpoints: solo la base visual (pantalla completa, paleta, iconos) y los componentes nuevos de core/ui, que las pistas irán aplicando. Se mantiene el router propio de core/navegacion/Navegacion.kt y su tienda de ViewModels por visita (la rotación conserva pantalla y lo tecleado); las transiciones se hacen con AnimatedContent sin romper esa tienda. Gesto atrás predictivo con android:enableOnBackInvokedCallback=\"true\" en <application> (no es un permiso). Fuera de alcance: modo oscuro y widget de pantalla de inicio. Detalle de decisiones y evidencia en docs/evidencia/fundamentos-visuales-modernos/NOTAS.md."
   },
   {
     "id": "navegacion-barra-inferior",
