@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tema mínimo sin ActionBar: la UI define sus colores (DESIGN.md). -->
-    <style name="Theme.OlivApp" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Splash de la API de splash (core-splashscreen, ADR 0010): el logo entra
+         animado y la app se muestra al primer frame, sin alargar el arranque. -->
+    <style name="Theme.OlivApp" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/fondo_app</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.OlivApp.App</item>
+    </style>
+
+    <!-- Tema de la app cuando el splash ya se ha ido: sin ActionBar y con el
+         fondo de marca (la UI define sus colores en DESIGN.md). -->
+    <style name="Theme.OlivApp.App" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/fondo_app</item>
     </style>
 </resources>

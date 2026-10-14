@@ -4,6 +4,14 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -12,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -59,79 +68,94 @@ fun OlivApp() {
         visita += 1
     }
 
-    val propietario = remember(visita) {
-        PropietarioDeVisita(
-            visitas.tiendaDe(visita),
-            contexto as ComponentActivity
-        )
+    // Al recuperar la conexión, la cola de notas pendientes se envía sola a
+    // transcribir (feature sincronizacion-pendientes-al-reconectar).
+    DisposableEffect(Unit) {
+        val gestor =
+            contexto.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(red: Network) {
+                SincronizadorNotas.sincronizar(contexto)
+            }
+        }
+        gestor.registerDefaultNetworkCallback(callback)
+        onDispose { gestor.unregisterNetworkCallback(callback) }
     }
 
-    CompositionLocalProvider(LocalViewModelStoreOwner provides propietario) {
-        // Al recuperar la conexión, la cola de notas pendientes se envía sola a
-        // transcribir (feature sincronizacion-pendientes-al-reconectar).
-        DisposableEffect(Unit) {
-            val gestor =
-                contexto.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val callback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(red: Network) {
-                    SincronizadorNotas.sincronizar(contexto)
-                }
-            }
-            gestor.registerDefaultNetworkCallback(callback)
-            onDispose { gestor.unregisterNetworkCallback(callback) }
+    // Transición suave entre pantallas del router propio. La tienda de
+    // ViewModels por visita se mantiene: cada contenido de la transición usa
+    // el propietario de SU visita, así la pantalla saliente conserva sus
+    // ViewModels mientras se desvanece y la entrante empieza con los suyos.
+    AnimatedContent(
+        modifier = Modifier.fillMaxSize(),
+        targetState = pantalla to visita,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(220)) +
+                slideInVertically(initialOffsetY = { it / 12 })) togetherWith
+                (fadeOut(animationSpec = tween(180)) +
+                    slideOutVertically(targetOffsetY = { -it / 12 }))
+        },
+        label = "pantalla"
+    ) { (pantallaActual, visitaActual) ->
+        val propietarioDeVisita = remember(visitaActual) {
+            PropietarioDeVisita(
+                visitas.tiendaDe(visitaActual),
+                contexto as ComponentActivity
+            )
         }
-
-        when (pantalla) {
-            "registro" -> PantallaRegistro(
-                onVolver = { irA("inicio") },
-                onIniciarSesion = { irA("inicio_sesion") }
-            )
-            "inicio_sesion" -> PantallaInicioSesion(
-                onVolver = { irA("inicio") },
-                onCrearCuenta = { irA("registro") },
-                onSesionAbierta = { irA("sesion") }
-            )
-            "campana" -> PantallaCampana(
-                campanaId = idCampana ?: "",
-                onVolver = { irA("sesion") }
-            )
-            "sesion" -> PantallaPanel(
-                onSesionCerrada = { irA("inicio") },
-                onAbrirParcelas = { irA("parcelas") },
-                onAbrirCuaderno = { irA("cuaderno") },
-                onAbrirNotasVoz = { irA("notas_voz") },
-                onAbrirSimulador = { irA("simulador") },
-                onAbrirCampana = { id ->
-                    idCampana = id
-                    irA("campana")
-                }
-            )
-            "parcelas" -> PantallaParcelas(onVolver = { irA("sesion") })
-            "notas_voz" -> PantallaNotasVoz(onVolver = { irA("sesion") })
-            "simulador" -> PantallaSimulador(onVolver = { irA("sesion") })
-            "cuaderno" -> PantallaCuaderno(
-                onVolver = { irA("sesion") },
-                onApuntarLabor = {
-                    laborEnEdicion = null
-                    irA("nueva_labor")
-                },
-                onEditarLabor = { labor ->
-                    laborEnEdicion = labor
-                    irA("nueva_labor")
-                }
-            )
-            "nueva_labor" -> PantallaNuevaLabor(
-                onVolver = { irA("cuaderno") },
-                onVerCampana = { id ->
-                    idCampana = id
-                    irA("campana")
-                },
-                labor = laborEnEdicion
-            )
-            else -> PantallaBienvenida(
-                onIniciarSesion = { irA("inicio_sesion") },
-                onCrearCuenta = { irA("registro") }
-            )
+        CompositionLocalProvider(LocalViewModelStoreOwner provides propietarioDeVisita) {
+            when (pantallaActual) {
+                "registro" -> PantallaRegistro(
+                    onVolver = { irA("inicio") },
+                    onIniciarSesion = { irA("inicio_sesion") }
+                )
+                "inicio_sesion" -> PantallaInicioSesion(
+                    onVolver = { irA("inicio") },
+                    onCrearCuenta = { irA("registro") },
+                    onSesionAbierta = { irA("sesion") }
+                )
+                "campana" -> PantallaCampana(
+                    campanaId = idCampana ?: "",
+                    onVolver = { irA("sesion") }
+                )
+                "sesion" -> PantallaPanel(
+                    onSesionCerrada = { irA("inicio") },
+                    onAbrirParcelas = { irA("parcelas") },
+                    onAbrirCuaderno = { irA("cuaderno") },
+                    onAbrirNotasVoz = { irA("notas_voz") },
+                    onAbrirSimulador = { irA("simulador") },
+                    onAbrirCampana = { id ->
+                        idCampana = id
+                        irA("campana")
+                    }
+                )
+                "parcelas" -> PantallaParcelas(onVolver = { irA("sesion") })
+                "notas_voz" -> PantallaNotasVoz(onVolver = { irA("sesion") })
+                "simulador" -> PantallaSimulador(onVolver = { irA("sesion") })
+                "cuaderno" -> PantallaCuaderno(
+                    onVolver = { irA("sesion") },
+                    onApuntarLabor = {
+                        laborEnEdicion = null
+                        irA("nueva_labor")
+                    },
+                    onEditarLabor = { labor ->
+                        laborEnEdicion = labor
+                        irA("nueva_labor")
+                    }
+                )
+                "nueva_labor" -> PantallaNuevaLabor(
+                    onVolver = { irA("cuaderno") },
+                    onVerCampana = { id ->
+                        idCampana = id
+                        irA("campana")
+                    },
+                    labor = laborEnEdicion
+                )
+                else -> PantallaBienvenida(
+                    onIniciarSesion = { irA("inicio_sesion") },
+                    onCrearCuenta = { irA("registro") }
+                )
+            }
         }
     }
 }
