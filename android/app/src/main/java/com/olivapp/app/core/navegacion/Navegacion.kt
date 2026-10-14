@@ -8,6 +8,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.olivapp.app.acceso.data.AlmacenSesiones
@@ -33,11 +34,21 @@ import com.olivapp.app.parcelas.presentation.PantallaParcelas
 fun OlivApp() {
     val contexto = LocalContext.current
     // Si ya hay token guardado, la sesión sigue abierta tras reiniciar la app.
-    var pantalla by remember {
+    // La navegación y su clave de visita sobreviven a la rotación (decisión del
+    // refactor-arquitectura-android).
+    var pantalla by rememberSaveable {
         mutableStateOf(if (AlmacenSesiones(contexto).hayToken()) "sesion" else "inicio")
     }
-    var idCampana by remember { mutableStateOf<String?>(null) }
+    var idCampana by rememberSaveable { mutableStateOf<String?>(null) }
     var laborEnEdicion by remember { mutableStateOf<LaborEditable?>(null) }
+    // Clave única por entrada en una pantalla: cada visita tiene su ViewModel y
+    // la rotación conserva el mismo (se pasa como `visita` a cada pantalla).
+    var visita by rememberSaveable { mutableStateOf(0) }
+
+    fun irA(destino: String) {
+        pantalla = destino
+        visita += 1
+    }
 
     // Al recuperar la conexión, la cola de notas pendientes se envía sola a
     // transcribir (feature sincronizacion-pendientes-al-reconectar).
@@ -55,54 +66,58 @@ fun OlivApp() {
 
     when (pantalla) {
         "registro" -> PantallaRegistro(
-            onVolver = { pantalla = "inicio" },
-            onIniciarSesion = { pantalla = "inicio_sesion" }
+            onVolver = { irA("inicio") },
+            onIniciarSesion = { irA("inicio_sesion") },
+            visita = visita
         )
         "inicio_sesion" -> PantallaInicioSesion(
-            onVolver = { pantalla = "inicio" },
-            onCrearCuenta = { pantalla = "registro" },
-            onSesionAbierta = { pantalla = "sesion" }
+            onVolver = { irA("inicio") },
+            onCrearCuenta = { irA("registro") },
+            onSesionAbierta = { irA("sesion") },
+            visita = visita
         )
         "campana" -> PantallaCampana(
             campanaId = idCampana ?: "",
-            onVolver = { pantalla = "sesion" }
+            onVolver = { irA("sesion") },
+            visita = visita
         )
         "sesion" -> PantallaPanel(
-            onSesionCerrada = { pantalla = "inicio" },
-            onAbrirParcelas = { pantalla = "parcelas" },
-            onAbrirCuaderno = { pantalla = "cuaderno" },
-            onAbrirNotasVoz = { pantalla = "notas_voz" },
-            onAbrirSimulador = { pantalla = "simulador" },
+            onSesionCerrada = { irA("inicio") },
+            onAbrirParcelas = { irA("parcelas") },
+            onAbrirCuaderno = { irA("cuaderno") },
+            onAbrirNotasVoz = { irA("notas_voz") },
+            onAbrirSimulador = { irA("simulador") },
             onAbrirCampana = { id ->
                 idCampana = id
-                pantalla = "campana"
-            }
+                irA("campana")
+            },
+            visita = visita
         )
-        "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
-        "notas_voz" -> PantallaNotasVoz(onVolver = { pantalla = "sesion" })
-        "simulador" -> PantallaSimulador(onVolver = { pantalla = "sesion" })
+        "parcelas" -> PantallaParcelas(onVolver = { irA("sesion") }, visita = visita)
+        "notas_voz" -> PantallaNotasVoz(onVolver = { irA("sesion") })
+        "simulador" -> PantallaSimulador(onVolver = { irA("sesion") })
         "cuaderno" -> PantallaCuaderno(
-            onVolver = { pantalla = "sesion" },
+            onVolver = { irA("sesion") },
             onApuntarLabor = {
                 laborEnEdicion = null
-                pantalla = "nueva_labor"
+                irA("nueva_labor")
             },
             onEditarLabor = { labor ->
                 laborEnEdicion = labor
-                pantalla = "nueva_labor"
+                irA("nueva_labor")
             }
         )
         "nueva_labor" -> PantallaNuevaLabor(
-            onVolver = { pantalla = "cuaderno" },
+            onVolver = { irA("cuaderno") },
             onVerCampana = { id ->
                 idCampana = id
-                pantalla = "campana"
+                irA("campana")
             },
             labor = laborEnEdicion
         )
         else -> PantallaBienvenida(
-            onIniciarSesion = { pantalla = "inicio_sesion" },
-            onCrearCuenta = { pantalla = "registro" }
+            onIniciarSesion = { irA("inicio_sesion") },
+            onCrearCuenta = { irA("registro") }
         )
     }
 }
