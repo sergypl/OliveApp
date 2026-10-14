@@ -5,12 +5,12 @@ import android.os.Looper
 import com.olivapp.app.AlmacenNotasVoz
 import com.olivapp.app.DatosCampanaDeLabores
 import com.olivapp.app.DatosLabor
-import com.olivapp.app.DatosParcela
 import com.olivapp.app.campana.domain.DatosCampana
 import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.DatosPanel
 import com.olivapp.app.core.formatos.formatearLabor
 import com.olivapp.app.core.formatos.formatearNumero
+import com.olivapp.app.parcelas.domain.DatosParcela
 import java.io.IOException
 import okhttp3.Call
 import okhttp3.Callback
