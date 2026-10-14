@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible de la pantalla de parcelas. */
 data class ParcelasUiState(
@@ -150,6 +151,7 @@ fun PantallaParcelas(
         Spacer(modifier = Modifier.height(16.dp))
         BotonPrincipal(
             texto = if (estado.trabajando) "Creando la parcela…" else "Crear parcela",
+            icono = R.drawable.ic_parcelas,
             habilitado = !estado.trabajando,
             alPulsar = viewModel::crearParcela
         )
@@ -196,6 +198,6 @@ fun PantallaParcelas(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible del formulario de una labor (alta nueva o edición). */
 data class NuevaLaborUiState(
@@ -311,18 +312,21 @@ fun PantallaNuevaLabor(
         Spacer(modifier = Modifier.height(8.dp))
         OpcionCategoria(
             texto = "Tratamiento fitosanitario",
+            icono = R.drawable.ic_tratamiento,
             elegida = estado.categoria == "tratamiento",
             alPulsar = { viewModel.elegirCategoria("tratamiento") }
         )
         Spacer(modifier = Modifier.height(8.dp))
         OpcionCategoria(
             texto = "Riego",
+            icono = R.drawable.ic_riego,
             elegida = estado.categoria == "riego",
             alPulsar = { viewModel.elegirCategoria("riego") }
         )
         Spacer(modifier = Modifier.height(8.dp))
         OpcionCategoria(
             texto = "Cosecha",
+            icono = R.drawable.ic_cosecha,
             elegida = estado.categoria == "cosecha",
             alPulsar = { viewModel.elegirCategoria("cosecha") }
         )
@@ -406,6 +410,7 @@ fun PantallaNuevaLabor(
                 } else {
                     if (estado.esEdicion) "Guardar cambios" else "Guardar labor"
                 },
+                icono = R.drawable.ic_confirmada,
                 habilitado = !estado.trabajando,
                 alPulsar = viewModel::guardar
             )
@@ -423,10 +428,11 @@ fun PantallaNuevaLabor(
             Spacer(modifier = Modifier.height(24.dp))
             BotonSecundario(
                 texto = "Ver Mi cuaderno de esa campaña",
+                icono = R.drawable.ic_cuaderno,
                 alPulsar = { onVerCampana(it) }
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver a Mi cuaderno", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver a Mi cuaderno", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

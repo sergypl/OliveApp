@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible del panel de la campaña actual. */
 data class PanelUiState(
@@ -142,13 +143,13 @@ fun PantallaPanel(
             Spacer(modifier = Modifier.height(24.dp))
             // Los datos oficiales llevan cabecera y superficie propias para
             // no confundirlos con las labores del socio (regla de DESIGN.md).
-            CabeceraSeccion(titulo = "Datos oficiales de la cooperativa")
+            CabeceraSeccion(icono = R.drawable.ic_cooperativa, titulo = "Datos oficiales de la cooperativa")
             Tarjeta {
-                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados)
+                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados, icono = R.drawable.ic_kilos)
                 Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso)
+                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso, icono = R.drawable.ic_rendimiento)
                 Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido)
+                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido, icono = R.drawable.ic_aceite)
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -228,17 +229,19 @@ fun PantallaPanel(
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        BotonAccion(texto = "Tus parcelas", alPulsar = onAbrirParcelas)
+        BotonAccion(texto = "Tus parcelas", icono = R.drawable.ic_parcelas, alPulsar = onAbrirParcelas)
         Spacer(modifier = Modifier.height(12.dp))
-        BotonAccion(texto = "Cuaderno de campo", alPulsar = onAbrirCuaderno)
+        BotonAccion(texto = "Cuaderno de campo", icono = R.drawable.ic_cuaderno, alPulsar = onAbrirCuaderno)
         Spacer(modifier = Modifier.height(12.dp))
         BotonAccion(
             texto = "Simulador de liquidación en limpio",
+            icono = R.drawable.ic_simulador,
             alPulsar = onAbrirSimulador
         )
         Spacer(modifier = Modifier.height(32.dp))
         BotonSecundario(
             texto = "Cerrar sesión",
+            icono = R.drawable.ic_cerrar_sesion,
             alPulsar = viewModel::cerrarSesion
         )
     }

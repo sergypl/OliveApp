@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible del detalle en consulta de una campaña. */
 data class CampanaUiState(
@@ -120,11 +121,11 @@ fun PantallaCampana(
                     .border(2.dp, Primario, RoundedCornerShape(12.dp))
                     .padding(16.dp)
             ) {
-                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados)
+                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados, icono = R.drawable.ic_kilos)
                 Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso)
+                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso, icono = R.drawable.ic_rendimiento)
                 Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido)
+                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido, icono = R.drawable.ic_aceite)
             }
             Spacer(modifier = Modifier.height(24.dp))
             Text(
@@ -171,6 +172,6 @@ fun PantallaCampana(
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

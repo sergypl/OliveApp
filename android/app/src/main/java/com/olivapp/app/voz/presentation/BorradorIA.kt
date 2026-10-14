@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Límite de duración de la respuesta por voz a una pregunta del asistente. */
 private const val LIMITE_SEGUNDOS_RESPUESTA = 20
@@ -465,7 +466,7 @@ fun BorradorIA(
             color = Error
         )
         Spacer(modifier = Modifier.height(8.dp))
-        BotonPeligro(texto = "Descartar", alPulsar = viewModel::pedirDescartar)
+        BotonPeligro(texto = "Descartar", icono = R.drawable.ic_eliminar, alPulsar = viewModel::pedirDescartar)
         return
     }
     val faltantes = camposFaltantesDeBorrador(borrador)
@@ -605,6 +606,7 @@ fun BorradorIA(
             Spacer(modifier = Modifier.height(8.dp))
             BotonPrincipal(
                 texto = if (estado.confirmando) "Confirmando…" else "Confirmar",
+                icono = R.drawable.ic_confirmada,
                 habilitado = !estado.grabando && !estado.enviando && !estado.confirmando,
                 alPulsar = { viewModel.confirmar(alConfirmar) }
             )
@@ -671,16 +673,19 @@ fun BorradorIA(
                     // Respuesta ya grabada que aún no se ha podido enviar.
                     BotonPrincipal(
                         texto = "Reintentar",
+                        icono = R.drawable.ic_refrescar,
                         alPulsar = { viewModel.enviarRespuesta(alGuardar) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     BotonSecundario(
                         texto = "Responder otra vez",
+                        icono = R.drawable.ic_mic,
                         alPulsar = { viewModel.reiniciarRespuesta(alGuardar) }
                     )
                 } else {
                     BotonPrincipal(
                         texto = "Responder por voz",
+                        icono = R.drawable.ic_mic,
                         alPulsar = {
                             if (
                                 ContextCompat.checkSelfPermission(
@@ -706,7 +711,7 @@ fun BorradorIA(
             }
             // Mientras falte un campo obligatorio o la parcela, el borrador no
             // se puede confirmar.
-            BotonPrincipal(texto = "Confirmar", habilitado = false, alPulsar = {})
+            BotonPrincipal(texto = "Confirmar", icono = R.drawable.ic_confirmada, habilitado = false, alPulsar = {})
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = when {
@@ -747,7 +752,7 @@ fun BorradorIA(
         // ficha completa o incompleta: la nota queda descartada y no se crea
         // ninguna labor.
         Spacer(modifier = Modifier.height(12.dp))
-        BotonPeligro(texto = "Descartar", alPulsar = viewModel::pedirDescartar)
+        BotonPeligro(texto = "Descartar", icono = R.drawable.ic_eliminar, alPulsar = viewModel::pedirDescartar)
     }
 }
 

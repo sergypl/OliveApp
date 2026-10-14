@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible del simulador: los tres campos y el resultado (o el error). */
 data class SimuladorUiState(
@@ -206,6 +207,7 @@ fun PantallaSimulador(
         Spacer(modifier = Modifier.height(24.dp))
         BotonPrincipal(
             texto = "Simular",
+            icono = R.drawable.ic_simulador,
             alPulsar = viewModel::simular
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -240,13 +242,15 @@ fun PantallaSimulador(
                 Spacer(modifier = Modifier.height(16.dp))
                 FilaDato(
                     etiqueta = "Aceite según el rendimiento",
-                    valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg"
+                    valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg",
+                    icono = R.drawable.ic_aceite
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 FilaDato(
                     etiqueta = "Ajuste industrial (" +
                         formatearCantidad(it.ajustePorcentaje) + " %)",
-                    valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg"
+                    valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg",
+                    icono = R.drawable.ic_kilos
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -260,6 +264,6 @@ fun PantallaSimulador(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

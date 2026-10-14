@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Límite de duración de una nota de voz (decisión de esta feature). */
 private const val LIMITE_SEGUNDOS_NOTA = 60
@@ -442,7 +443,7 @@ fun PantallaNotasVoz(
                 textAlign = TextAlign.Center
             )
         } else {
-            BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+            BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
         }
     }
 }
