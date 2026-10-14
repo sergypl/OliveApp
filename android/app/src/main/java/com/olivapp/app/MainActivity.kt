@@ -93,6 +93,8 @@ import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import dagger.hilt.android.AndroidEntryPoint
+
 // Dirección visual de DESIGN.md: fondo crema, texto marrón oscuro, cuerpo 18sp mínimo.
 private val FondoCrema = Color(0xFFFAF7F0)
 private val TextoMarron = Color(0xFF2E2A20)
@@ -104,6 +106,7 @@ private val TextoError = Color(0xFF8B1E1E)
 // (init.sh lo configura en cada dispositivo conectado).
 private const val URL_BASE = "http://127.0.0.1:8000"
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
