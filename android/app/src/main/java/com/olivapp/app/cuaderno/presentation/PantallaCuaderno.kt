@@ -19,10 +19,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,10 +28,14 @@ import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.formatos.NOMBRES_DE_CATEGORIA
 import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
-import com.olivapp.app.core.ui.FondoCrema
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoBoton
+import com.olivapp.app.core.ui.TextoCuerpo
+import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.cuaderno.domain.DatosCampanaDeLabores
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
@@ -141,9 +143,8 @@ fun PantallaCuaderno(
             title = {
                 Text(
                     text = "¿Eliminar esta labor?",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoMarron
+                    style = TextoValor,
+                    color = Texto
                 )
             },
             text = {
@@ -151,19 +152,18 @@ fun PantallaCuaderno(
                     text = labor.fechaVisible + " · " +
                         (NOMBRES_DE_CATEGORIA[labor.categoria] ?: labor.categoria) +
                         "\n\nSe borrará de tu cuaderno. No se puede deshacer.",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron
+                    style = TextoCuerpo,
+                    color = Texto
                 )
             },
             confirmButton = {
                 TextButton(onClick = viewModel::confirmarEliminar) {
-                    Text(text = "Eliminar", fontSize = 20.sp, color = TextoError)
+                    Text(text = "Eliminar", style = TextoBoton, color = Error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::cancelarEliminar) {
-                    Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+                    Text(text = "Cancelar", style = TextoBoton, color = Primario)
                 }
             }
         )
@@ -172,23 +172,21 @@ fun PantallaCuaderno(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Mi cuaderno",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoTitulo1,
+            color = Texto
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Historial de tus labores por campaña,\nde la más reciente a la más antigua.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
+            style = TextoCuerpo,
+            color = Texto,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -197,15 +195,14 @@ fun PantallaCuaderno(
         if (!estado.cargado) {
             Text(
                 text = "Cargando tu cuaderno…",
-                fontSize = 18.sp,
-                color = TextoMarron
+                style = TextoCuerpo,
+                color = Texto
             )
         } else if (estado.campanas.isEmpty() && estado.mensaje == null) {
             Text(
                 text = "Todavía no has apuntado labores.",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron,
+                style = TextoCuerpo,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
         } else {
@@ -217,15 +214,14 @@ fun PantallaCuaderno(
                     Text(
                         text = "Campaña " + campana.nombre +
                             if (campana.esActual) " · Campaña actual" else "",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = VerdeOliva
+                        style = TextoValor,
+                        color = Primario
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                            .border(2.dp, Primario, RoundedCornerShape(12.dp))
                             .padding(16.dp)
                     ) {
                         for ((indiceLabor, labor) in campana.labores.withIndex()) {
@@ -246,9 +242,8 @@ fun PantallaCuaderno(
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoError,
+                style = TextoCuerpo,
+                color = Error,
                 textAlign = TextAlign.Center
             )
         }

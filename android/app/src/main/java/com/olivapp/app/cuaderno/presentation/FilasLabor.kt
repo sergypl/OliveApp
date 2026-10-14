@@ -10,10 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.olivapp.app.core.ui.BotonPeligro
 import com.olivapp.app.core.ui.BotonSecundario
-import com.olivapp.app.core.ui.TextoMarron
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.cuaderno.domain.DatosLabor
 
 /** Una fila de "Mi cuaderno": fecha y categoría, con sus campos legibles de un vistazo. */
@@ -26,9 +26,9 @@ fun FilaLabor(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = labor.fecha + " · " + labor.categoria,
-            fontSize = 18.sp,
+            style = TextoCuerpo,
             fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            color = Texto
         )
         if (labor.parcela.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
@@ -42,9 +42,8 @@ fun FilaLabor(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = labor.observaciones,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron
+                style = TextoCuerpo,
+                color = Texto
             )
         }
         if (alEditar != null) {
@@ -64,15 +63,14 @@ fun FilaCampoLabor(etiqueta: String, valor: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "$etiqueta: ",
-            fontSize = 18.sp,
+            style = TextoCuerpo,
             fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            color = Texto
         )
         Text(
             text = valor,
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron
+            style = TextoCuerpo,
+            color = Texto
         )
     }
 }
