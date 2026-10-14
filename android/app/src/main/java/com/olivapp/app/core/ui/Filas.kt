@@ -7,8 +7,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 
 /** Una fila del bloque de datos oficiales: etiqueta grande y valor destacado. */
 @Composable
@@ -20,14 +18,13 @@ fun FilaDato(etiqueta: String, valor: String) {
     ) {
         Text(
             text = etiqueta,
-            fontSize = 18.sp,
-            color = TextoMarron
+            style = TextoCuerpo,
+            color = TextoSecundario
         )
         Text(
             text = valor,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoValor,
+            color = Texto
         )
     }
 }
