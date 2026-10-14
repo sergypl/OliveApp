@@ -2,7 +2,7 @@ package com.olivapp.app.core.red
 
 import android.os.Handler
 import android.os.Looper
-import com.olivapp.app.AlmacenNotasVoz
+import com.olivapp.app.voz.data.AlmacenNotasVoz
 import com.olivapp.app.campana.domain.DatosCampana
 import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.DatosPanel

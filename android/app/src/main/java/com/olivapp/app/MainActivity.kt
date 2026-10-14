@@ -88,6 +88,14 @@ import com.olivapp.app.core.ui.OpcionCategoria
 import com.olivapp.app.core.ui.TextoError
 import com.olivapp.app.core.ui.TextoMarron
 import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.voz.data.AlmacenNotasVoz
+import com.olivapp.app.voz.data.GrabadorNotas
+import com.olivapp.app.voz.data.SincronizadorNotas
+import com.olivapp.app.voz.domain.aplicarTranscripcion
+import com.olivapp.app.voz.domain.camposFaltantesDeBorrador
+import com.olivapp.app.voz.domain.etiquetaDeCampo
+import com.olivapp.app.voz.domain.fechaIsoDeBorrador
+import com.olivapp.app.voz.domain.lineasDeBorrador
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
@@ -1057,12 +1065,6 @@ fun BorradorIA(
 /** Límite de duración de la respuesta por voz a una pregunta del asistente. */
 private const val LIMITE_SEGUNDOS_RESPUESTA = 20
 
-/** Campos obligatorios de la categoría que aún faltan en el borrador IA. */
-/** Fecha concreta del borrador (AAAA-MM-DD), o vacía si todavía no la tiene. */
-fun fechaIsoDeBorrador(borrador: JSONObject): String {
-    val fecha = borrador.optString("fecha").trim()
-    return if (Regex("\\d{4}-\\d{2}-\\d{2}").matches(fecha)) fecha else ""
-}
 
 
 /** Calendario para elegir la fecha concreta de una labor (AAAA-MM-DD). */
@@ -1095,85 +1097,11 @@ fun CalendarioDeFecha(alElegir: (String) -> Unit, alCerrar: () -> Unit) {
     }
 }
 
-fun camposFaltantesDeBorrador(borrador: JSONObject): List<String> {
-    val categoria = borrador.optString("categoria")
-    val campos = borrador.optJSONObject("campos") ?: JSONObject()
-    val obligatorios = when (categoria) {
-        "tratamiento" -> listOf("producto", "plaga_a_controlar", "cantidad", "unidad")
-        "riego" -> listOf("cantidad", "unidad")
-        "cosecha" -> listOf("modalidad", "kilos")
-        else -> emptyList()
-    }
-    return obligatorios.filter { campo ->
-        val valor = campos.opt(campo)
-        valor == null || valor.toString().isBlank()
-    }
-}
 
-/** Etiqueta para el socio de un campo del borrador IA. */
-fun etiquetaDeCampo(campo: String): String = when (campo) {
-    "producto" -> "Producto"
-    "plaga_a_controlar" -> "Plaga a controlar"
-    "cantidad" -> "Cantidad"
-    "unidad" -> "Unidad"
-    "modalidad" -> "Modalidad"
-    "kilos" -> "Kilos"
-    else -> campo
-}
 
-/** Etiquetas y valores del borrador IA, en el orden de la ficha del dominio. */
-fun lineasDeBorrador(borrador: JSONObject): List<Pair<String, String>> {
-    val categoria = borrador.optString("categoria")
-    val campos = borrador.optJSONObject("campos") ?: JSONObject()
-    val lineas = mutableListOf(
-        "Fecha" to fechaVisible(borrador.optString("fecha")),
-        "Parcela" to borrador.optString("parcela").ifEmpty { "Sin identificar" },
-        "Categoría" to when (categoria) {
-            "tratamiento" -> "Tratamiento fitosanitario"
-            "riego" -> "Riego"
-            "cosecha" -> "Cosecha"
-            else -> categoria
-        }
-    )
-    when (categoria) {
-        "tratamiento" -> {
-            lineas += "Producto" to campos.optString("producto").ifEmpty { "(falta)" }
-            lineas += "Plaga a controlar" to
-                campos.optString("plaga_a_controlar").ifEmpty { "(falta)" }
-            lineas += "Cantidad" to
-                cantidadVisible(campos, "cantidad", "unidad").ifEmpty { "(falta)" }
-        }
-        "riego" -> lineas += "Cantidad" to
-            cantidadVisible(campos, "cantidad", "unidad").ifEmpty { "(falta)" }
-        "cosecha" -> {
-            lineas += "Modalidad" to campos.optString("modalidad").ifEmpty { "(falta)" }
-            lineas += "Kilos" to numeroVisible(campos.opt("kilos")).ifEmpty { "(falta)" }
-        }
-    }
-    val observaciones = borrador.optString("observaciones")
-    if (observaciones.isNotBlank()) lineas += "Observaciones" to observaciones
-    return lineas
-}
 
-/** Fecha del borrador para el socio: 2026-01-20 se lee como 20/01/2026. */
-fun fechaVisible(fecha: String): String {
-    val partes = Regex("(\\d{4})-(\\d{2})-(\\d{2})").find(fecha) ?: return fecha
-    val (anio, mes, dia) = partes.destructured
-    return "$dia/$mes/$anio"
-}
 
-/** Números del borrador sin decimales de más (2.0 se lee como 2). */
-fun numeroVisible(valor: Any?): String {
-    val texto = valor?.toString() ?: ""
-    return if (texto.endsWith(".0")) texto.dropLast(2) else texto
-}
 
-/** Cantidad con su unidad, según las listas cerradas del dominio. */
-fun cantidadVisible(campos: JSONObject, cantidad: String, unidad: String): String {
-    val numero = numeroVisible(campos.opt(cantidad))
-    val etiqueta = campos.optString(unidad)
-    return if (etiqueta.isBlank()) numero else "$numero $etiqueta"
-}
 
 /**
  * Cola local de notas de voz (features transcripcion-de-nota-voz y
@@ -1184,347 +1112,12 @@ fun cantidadVisible(campos: JSONObject, cantidad: String, unidad: String): Strin
  * (el servidor no conserva el audio). Sin conexión, la nota se guarda en
  * estado 'pendiente' y no se pierde ni al cerrar la app.
  */
-@Entity(tableName = "notas_voz")
-data class NotaVozFila(
-    @PrimaryKey val id: String,
-    val fichero: String,
-    @ColumnInfo(name = "creada_en") val creadaEn: String,
-    val segundos: Int,
-    val estado: String,
-    val texto: String,
-    /** Borrador IA en JSON (borrador-ia-desde-transcripcion); vacío si no hay. */
-    @ColumnInfo(defaultValue = "") val borrador: String = ""
-)
 
-/** Acceso a la cola de notas de voz en Room. */
-@Dao
-interface NotasVozDao {
-    @Query("SELECT * FROM notas_voz ORDER BY creada_en DESC")
-    fun notas(): List<NotaVozFila>
 
-    @Query("SELECT * FROM notas_voz WHERE estado = 'pendiente' ORDER BY creada_en ASC")
-    fun pendientes(): List<NotaVozFila>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    fun insertar(nota: NotaVozFila)
 
-    @Query(
-        "UPDATE notas_voz SET estado = :estado, texto = :texto, " +
-            "borrador = :borrador WHERE id = :id"
-    )
-    fun marcar(id: String, estado: String, texto: String, borrador: String)
 
-    @Query("UPDATE notas_voz SET borrador = :borrador WHERE id = :id")
-    fun actualizarBorrador(id: String, borrador: String)
-}
 
-/** Base Room de la cola de notas de voz. */
-@Database(entities = [NotaVozFila::class], version = 2, exportSchema = false)
-abstract class BaseNotasVoz : RoomDatabase() {
-    abstract fun dao(): NotasVozDao
-
-    companion object {
-        @Volatile
-        private var instancia: BaseNotasVoz? = null
-
-        /** v2 (borrador-ia-desde-transcripcion): cada nota guarda su borrador IA. */
-        private val MIGRACION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE notas_voz ADD COLUMN borrador TEXT NOT NULL DEFAULT ''"
-                )
-            }
-        }
-
-        fun de(contexto: Context): BaseNotasVoz =
-            instancia ?: synchronized(this) {
-                instancia ?: Room.databaseBuilder(
-                    contexto.applicationContext,
-                    BaseNotasVoz::class.java,
-                    "notas-voz.db"
-                )
-                    .addMigrations(MIGRACION_1_2)
-                    // La cola es pequeña y las consultas son de pocos milisegundos:
-                    // el almacén mantiene la interfaz síncrona del resto de la app.
-                    .allowMainThreadQueries()
-                    .build()
-                    .also { instancia = it }
-            }
-    }
-}
-
-class AlmacenNotasVoz(private val contexto: Context) {
-
-    class NotaDeVoz(
-        val id: String,
-        val fichero: String,
-        val cuando: String,
-        val segundos: Int,
-        val estado: String,
-        val texto: String,
-        val borrador: String
-    ) {
-        val estadoVisible: String
-            get() = when (estado) {
-                "pendiente" -> "Pendiente de enviar. Está en la cola del teléfono."
-                "transcribiendo" -> "Transcribiendo…"
-                "transcrita" -> "Transcrita"
-                "confirmada" -> "Confirmada. La labor ya está en Mi cuaderno."
-                "descartada" -> "Descartada. No se ha creado ninguna labor."
-                "error" -> "No se ha podido transcribir. Toca para reintentar."
-                "audio_invalido" -> "Este audio no se puede transcribir. Vuelve a grabar la nota."
-                else -> "Pendiente de transcripción"
-            }
-    }
-
-    companion object {
-        /** Marcador guardado cuando la IA no reconoce la categoría de la labor. */
-        const val BORRADOR_RECHAZADO = """{"rechazado": true}"""
-    }
-
-    private val carpeta = File(contexto.filesDir, "notas-voz")
-    private val formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-    private val dao = BaseNotasVoz.de(contexto).dao()
-
-    init {
-        importarIndiceAntiguo()
-    }
-
-    fun nuevaRutaDeAudio(): File {
-        carpeta.mkdirs()
-        return File(carpeta, "nota-" + System.currentTimeMillis() + ".m4a")
-    }
-
-    /** Registra una nota grabada en la cola (la más reciente la primera). */
-    fun guardar(fichero: File, segundos: Int): NotaDeVoz {
-        val ahora = LocalDateTime.now()
-        dao.insertar(
-            NotaVozFila(
-                id = fichero.name,
-                fichero = fichero.absolutePath,
-                creadaEn = ahora.toString(),
-                segundos = segundos,
-                estado = "pendiente",
-                texto = ""
-            )
-        )
-        return NotaDeVoz(
-            id = fichero.name,
-            fichero = fichero.absolutePath,
-            cuando = ahora.format(formato),
-            segundos = segundos,
-            estado = "pendiente",
-            texto = "",
-            borrador = ""
-        )
-    }
-
-    /** Cambia el estado de una nota (y guarda texto y borrador cuando llegan). */
-    fun marcar(id: String, estado: String, texto: String, borrador: String = "") {
-        dao.marcar(id, estado, texto, borrador)
-    }
-
-    /** Guarda el borrador IA de una nota sin tocar su estado ni su texto. */
-    fun actualizarBorrador(id: String, borrador: String) {
-        dao.actualizarBorrador(id, borrador)
-    }
-
-    fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
-
-    /** Notas pendientes de enviar, de la más antigua a la más reciente. */
-    fun pendientesEnOrdenDeGrabacion(): List<NotaDeVoz> =
-        dao.pendientes().map { aNotaDeVoz(it) }
-
-    private fun aNotaDeVoz(fila: NotaVozFila): NotaDeVoz {
-        val creada = try {
-            LocalDateTime.parse(fila.creadaEn).format(formato)
-        } catch (e: Exception) {
-            fila.creadaEn
-        }
-        return NotaDeVoz(
-            id = fila.id,
-            fichero = fila.fichero,
-            cuando = creada,
-            segundos = fila.segundos,
-            estado = fila.estado,
-            texto = fila.texto,
-            borrador = fila.borrador
-        )
-    }
-
-    /**
-     * Migración única desde el índice JSON de las versiones anteriores (antes
-     * de cola-offline-de-notas): lo que haya ahí pasa a Room y se borra el
-     * índice, para que ninguna nota grabada se pierda en el cambio.
-     */
-    private fun importarIndiceAntiguo() {
-        val indice = File(contexto.filesDir, "notas-voz.json")
-        if (!indice.exists()) return
-        try {
-            val filas = JSONArray(indice.readText())
-            for (i in 0 until filas.length()) {
-                val fila = filas.optJSONObject(i) ?: continue
-                dao.insertar(
-                    NotaVozFila(
-                        id = fila.optString("id"),
-                        fichero = fila.optString("fichero"),
-                        creadaEn = fila.optString("creada_en"),
-                        segundos = fila.optInt("segundos"),
-                        estado = fila.optString("estado", "pendiente"),
-                        texto = fila.optString("texto")
-                    )
-                )
-            }
-            indice.delete()
-        } catch (e: Exception) {
-            // El índice antiguo no se pudo leer: la cola de Room sigue mandando.
-        }
-    }
-}
-
-/**
- * Aplica el resultado de una transcripción a la nota de la cola y devuelve el
- * aviso para el socio (features cola-offline-de-notas,
- * reintento-de-transcripcion-fallida y borrador-ia-desde-transcripcion).
- */
-fun aplicarTranscripcion(
-    almacen: AlmacenNotasVoz,
-    id: String,
-    texto: String?,
-    borrador: String,
-    error: String,
-    sinConexion: Boolean,
-    audioInvalido: Boolean
-): String {
-    return if (texto != null) {
-        // La nota queda transcrita con su borrador IA (o el marcador de
-        // rechazo cuando la IA no reconoce la categoría de la labor).
-        almacen.marcar(id, "transcrita", texto, borrador)
-        "Nota transcrita. Ya puedes leer el texto."
-    } else if (sinConexion) {
-        // Sin conexión la nota no se pierde: vuelve a la cola local
-        // en estado 'pendiente' (feature cola-offline-de-notas).
-        almacen.marcar(id, "pendiente", "")
-        "Sin conexión con el servidor. Tu nota está guardada en el teléfono, pendiente de enviar."
-    } else if (audioInvalido) {
-        // El audio no se puede transcribir (ilegible o demasiado corto): se
-        // pide repetir el dictado (feature reintento-de-transcripcion-fallida).
-        almacen.marcar(id, "audio_invalido", "")
-        error
-    } else {
-        // Fallo del servicio de transcripción: la nota queda con error visible
-        // y se reintenta a mano (feature reintento-de-transcripcion-fallida).
-        almacen.marcar(id, "error", "")
-        error
-    }
-}
-
-/**
- * Sincroniza la cola de notas pendientes (feature
- * sincronizacion-pendientes-al-reconectar).
- *
- * Al recuperar la conexión, las notas pendientes se envían a transcribir
- * automáticamente en orden de grabación, una detrás de otra y sin duplicados.
- * Los estados cambian en Room y `alCambiar` avisa a la pantalla de notas si
- * está abierta.
- */
-object SincronizadorNotas {
-    /** Aviso a la pantalla de notas cuando la cola cambia (si está abierta). */
-    var alCambiar: (() -> Unit)? = null
-
-    private val principal = Handler(Looper.getMainLooper())
-    private var sincronizando = false
-
-    /** Envía las notas pendientes en orden de grabación (si hay sesión). */
-    fun sincronizar(contexto: Context) {
-        principal.post {
-            if (sincronizando) return@post
-            val almacen = AlmacenNotasVoz(contexto)
-            val token = AlmacenSesiones(contexto).token() ?: return@post
-            val ids = almacen.pendientesEnOrdenDeGrabacion().map { it.id }
-            if (ids.isEmpty()) return@post
-            sincronizando = true
-            enviarSiguiente(almacen, token, ids, 0)
-        }
-    }
-
-    private fun enviarSiguiente(
-        almacen: AlmacenNotasVoz,
-        token: String,
-        ids: List<String>,
-        indice: Int
-    ) {
-        if (indice >= ids.size) {
-            sincronizando = false
-            return
-        }
-        // Estado comprobado justo antes de enviar: si otra ruta ya tomó la nota
-        // (o ya no está pendiente), se salta para no duplicar transcripciones.
-        val nota = almacen.notas().firstOrNull { it.id == ids[indice] }
-        if (nota == null || nota.estado != "pendiente") {
-            enviarSiguiente(almacen, token, ids, indice + 1)
-            return
-        }
-        almacen.marcar(nota.id, "transcribiendo", "")
-        alCambiar?.invoke()
-        ServicioCuentas.transcribirNota(
-            token,
-            File(nota.fichero)
-        ) { texto, borrador, error, sinConexion, audioInvalido ->
-            aplicarTranscripcion(
-                almacen,
-                nota.id,
-                texto,
-                borrador,
-                error,
-                sinConexion,
-                audioInvalido
-            )
-            alCambiar?.invoke()
-            if (sinConexion) {
-                // Sin conexión se detiene la cola: las notas siguen pendientes
-                // y se reanudará al recuperar la conexión.
-                sincronizando = false
-            } else {
-                enviarSiguiente(almacen, token, ids, indice + 1)
-            }
-        }
-    }
-}
-
-/** Grabadora de una nota de voz: MPEG-4 con audio AAC. */
-class GrabadorNotas {
-    private var grabador: MediaRecorder? = null
-    private var empezadoEn = 0L
-
-    @Suppress("DEPRECATION")
-    fun empezar(fichero: File) {
-        val r = MediaRecorder()
-        r.setAudioSource(MediaRecorder.AudioSource.MIC)
-        r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-        r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-        r.setAudioSamplingRate(16000)
-        r.setOutputFile(fichero.absolutePath)
-        r.prepare()
-        r.start()
-        grabador = r
-        empezadoEn = android.os.SystemClock.elapsedRealtime()
-    }
-
-    /** Para la grabación y devuelve los segundos grabados. */
-    fun parar(): Int {
-        val r = grabador ?: return 0
-        grabador = null
-        val segundos = ((android.os.SystemClock.elapsedRealtime() - empezadoEn) / 1000).toInt()
-        try {
-            r.stop()
-        } catch (e: Exception) {
-            // Grabación demasiado corta: stop() falla y el fichero no sirve.
-        }
-        r.release()
-        return segundos
-    }
-}
 
 
 
