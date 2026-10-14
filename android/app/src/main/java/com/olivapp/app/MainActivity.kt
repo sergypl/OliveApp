@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.olivapp.app.acceso.data.AlmacenSesiones
 import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.idCampanaDeLaFecha
+import com.olivapp.app.parcelas.domain.DatosParcela
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -2001,144 +2002,6 @@ class GrabadorNotas {
     }
 }
 
-/**
- * Pantalla de parcelas del socio: alta con nombre propio y lista.
- *
- * Las parcelas no se eliminan ni archivan en el MVP (docs/domain-model.md).
- */
-@Composable
-fun PantallaParcelas(onVolver: () -> Unit) {
-    val contexto = LocalContext.current
-    var nombre by remember { mutableStateOf("") }
-    var parcelas by remember { mutableStateOf<List<DatosParcela>>(emptyList()) }
-    var mensaje by remember { mutableStateOf<String?>(null) }
-    var creada by remember { mutableStateOf(false) }
-    var trabajando by remember { mutableStateOf(false) }
-
-    fun cargar() {
-        val token = AlmacenSesiones(contexto).token() ?: return
-        ServicioCuentas.cargarParcelas(token) { lista, texto ->
-            if (lista != null) {
-                parcelas = lista
-            } else {
-                mensaje = texto
-            }
-        }
-    }
-
-    remember {
-        val token = AlmacenSesiones(contexto).token()
-        if (token == null) {
-            mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
-        } else {
-            cargar()
-        }
-        true
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FondoCrema)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Tus parcelas",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Aquí viven tus parcelas.\nLes pondrás labores desde el cuaderno.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Nombre de la parcela",
-            valor = nombre,
-            alCambiar = { nombre = it },
-            tipo = KeyboardType.Text
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        BotonPrincipal(
-            texto = if (trabajando) "Creando la parcela…" else "Crear parcela",
-            habilitado = !trabajando,
-            alPulsar = {
-                trabajando = true
-                mensaje = null
-                creada = false
-                val token = AlmacenSesiones(contexto).token()
-                if (token == null) {
-                    trabajando = false
-                    mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
-                } else {
-                    ServicioCuentas.crearParcela(token, nombre) { exitosa, texto ->
-                        trabajando = false
-                        creada = exitosa
-                        mensaje = texto
-                        if (exitosa) {
-                            nombre = ""
-                            cargar()
-                        }
-                    }
-                }
-            }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        mensaje?.let {
-            Text(
-                text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = if (creada) VerdeOliva else TextoError,
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        if (parcelas.isNotEmpty()) {
-            Text(
-                text = "Parcelas de este socio",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = VerdeOliva
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            ) {
-                for ((indice, parcela) in parcelas.withIndex()) {
-                    if (indice > 0) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-                    Text(
-                        text = parcela.nombre,
-                        fontSize = 18.sp,
-                        color = TextoMarron
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        Text(
-            text = "Las parcelas no se borran en esta versión.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
-    }
-}
 
 
 /** Una fila de "Mi cuaderno": fecha y categoría, con sus campos legibles de un vistazo. */
@@ -2454,8 +2317,6 @@ class DatosCampanaDeLabores(
     val labores: List<DatosLabor>
 )
 
-/** Una parcela del socio. */
-class DatosParcela(val id: String, val nombre: String)
 
 
 /** Un número guardado en los campos de la labor, para prellenar el formulario. */

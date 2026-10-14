@@ -18,11 +18,11 @@ import com.olivapp.app.LaborEditable
 import com.olivapp.app.PantallaCuaderno
 import com.olivapp.app.PantallaNotasVoz
 import com.olivapp.app.PantallaNuevaLabor
-import com.olivapp.app.PantallaParcelas
 import com.olivapp.app.PantallaSimulador
 import com.olivapp.app.SincronizadorNotas
 import com.olivapp.app.campana.presentation.PantallaCampana
 import com.olivapp.app.campana.presentation.PantallaPanel
+import com.olivapp.app.parcelas.presentation.PantallaParcelas
 
 /**
  * Navegación de la app: un router propio sobre los nombres de pantalla (sin
