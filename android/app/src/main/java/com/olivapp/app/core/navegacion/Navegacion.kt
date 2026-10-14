@@ -20,7 +20,7 @@ import com.olivapp.app.acceso.presentation.PantallaBienvenida
 import com.olivapp.app.acceso.presentation.PantallaInicioSesion
 import com.olivapp.app.acceso.presentation.PantallaRegistro
 import com.olivapp.app.voz.presentation.PantallaNotasVoz
-import com.olivapp.app.PantallaSimulador
+import com.olivapp.app.simulador.presentation.PantallaSimulador
 import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.campana.presentation.PantallaCampana
 import com.olivapp.app.campana.presentation.PantallaPanel
