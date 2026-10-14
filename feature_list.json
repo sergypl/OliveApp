@@ -572,12 +572,19 @@
     "depends_on": [
       "calculo-de-liquidacion-en-limpio"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Cambiar el ajuste industrial y comprobar que el aceite neto se recalcula con la única deducción del MVP"
     ],
-    "evidence": [],
-    "notes": "Única deducción del MVP (CONTEXT.md). Valor por defecto 10 % y editable según ADR 0007: replica la merma real medida entre rendimiento de laboratorio e industrial (9,7 %) en la cooperativa de la referencia de producto."
+    "evidence": [
+      "./init.sh en verde (2026-10-14): 124 tests backend (pytest), healthcheck (GET /health -> 200), datos sembrados con token y APK compilado e instalado.",
+      "Campo nuevo 'Ajuste industrial (%)' en el simulador, con el valor por defecto 10 visible al abrir la pantalla (verificado en el Xiaomi físico).",
+      "Recálculo al instante verificado en el Xiaomi físico con el ejemplo del caso de uso (1000 kg al 20 % con ajuste 5 %): tras simular con el 10 % por defecto ('Aceite neto estimado: 180 kg', 'Aceite según el rendimiento: 200 kg', 'Ajuste industrial (10 %): -20 kg'), se cambió el ajuste a 5 sin volver a pulsar 'Simular' y el resultado pasó al instante a '190 kg' con desglose '200 kg' y 'Ajuste industrial (5 %): -10 kg' (200 − 10 = 190 ✓ a mano).",
+      "Ajuste decimal tecleado con coma española: 10.000 kg al 20 % con ajuste 5,5 % → '1.890 kg' netos, '2.000 kg' de aceite y 'Ajuste industrial (5,5 %): -110 kg' (2000 − 110 = 1890 ✓), con formato español en la etiqueta del desglose.",
+      "El ajuste industrial sigue siendo la única deducción del MVP: el desglose muestra solo 'Aceite según el rendimiento' y 'Ajuste industrial (X %)' y bajo el resultado se lee 'Estimación orientativa: la liquidación oficial es la de la cooperativa.'.",
+      "Límites cubiertos en el dispositivo: con el campo vacío, 'Simular' responde 'Introduce el ajuste industrial como porcentaje entre 0 y 100 (por ejemplo, 10).'; cambiar kilos o rendimiento sigue borrando el resultado (cálculo bajo demanda con 'Simular')."
+    ],
+    "notes": "Única deducción del MVP (CONTEXT.md). Valor por defecto 10 % y editable según ADR 0007: replica la merma real medida entre rendimiento de laboratorio e industrial (9,7 %) en la cooperativa de la referencia de producto. Decisiones acordadas con el usuario (sesión 034): (1) el campo arranca en el 10 % por defecto y vacío se considera error con mensaje claro (no se aplica el 10 % en silencio); (2) el recálculo al instante es solo al cambiar el ajuste: si ya hay resultado y el nuevo valor es un porcentaje válido, el neto se recalcula con él; kilos y rendimiento siguen borrando el resultado y el cálculo va bajo demanda con 'Simular'."
   }
 ]

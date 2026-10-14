@@ -47,7 +47,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 2. **Dictado con cobertura:** grabar → transcribir → borrador → confirmar → labor en el cuaderno (en la campaña correspondiente).
 3. **Dictado sin cobertura:** la nota queda pendiente con aviso visible; al reconectar se transcribe y se pide confirmación.
 4. **Corrección manual:** el socio edita cualquier campo de una labor desde el formulario auxiliar.
-5. **Simulación:** introduce kilos y rendimiento graso y ve el aceite neto con el ajuste industrial aplicado.
+5. **Simulación:** introduce kilos y rendimiento graso y ve el aceite neto con el ajuste industrial aplicado (10 % por defecto, configurable por el socio; al cambiarlo el neto se recalcula al instante).
 6. **Relleno conversacional del borrador:** el dictado no trae todos los campos, el asistente pregunta por los que faltan (una pregunta por respuesta) y el socio responde por voz hasta completar la ficha; una respuesta puede completar varios campos. Entonces confirma.
 
 ## Edge Cases
