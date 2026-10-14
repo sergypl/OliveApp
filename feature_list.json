@@ -521,18 +521,25 @@
     "id": "fecha-relativa-en-borrador",
     "area": "voz",
     "title": "El borrador resuelve fechas relativas a una fecha concreta",
-    "user_visible_behavior": "Cuando el dictado lleva fechas relativas ('hoy', 'ayer'), el borrador muestra una fecha concreta editable antes de confirmar; si la fecha pertenece a otra campaña, el borrador propone esa campaña para que el socio la confirme.",
+    "user_visible_behavior": "Cuando el dictado lleva fechas relativas ('hoy', 'ayer'), el borrador muestra una fecha concreta editable en el calendario antes de confirmar; si la fecha pertenece a otra campaña, el borrador avisa de esa campaña y no deja confirmar hasta corregir la fecha.",
     "depends_on": [
       "borrador-ia-desde-transcripcion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Dictar con 'hoy' y 'ayer' y comprobar la fecha concreta resuelta en el borrador",
       "Dictar una fecha de campaña anterior y comprobar que el borrador propone esa campaña"
     ],
-    "evidence": [],
-    "notes": "Casos borde de docs/domain-model.md. Comportamiento con fecha ambigua por decidir (docs/risks-and-open-questions.md)."
+    "evidence": [
+      "./init.sh completo el 2026-10-14 (pytest 124/124 con los 5 tests nuevos de resolución de fecha, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en el dispositivo conectado).",
+      "Verificación real en el móvil físico de la demo (Xiaomi Redmi Note 10 Pro) con dictados sintéticos en español inyectados por la ruta de migración JSON→Room y transcritos por la ruta real app → backend → gateway: 'Hoy he hecho un tratamiento...' → el borrador muestra 'Fecha: 14/10/2026' y 'Ayer regué...' → 'Fecha: 13/10/2026' (fechas concretas resueltas por el backend contra la fecha de hoy).",
+      "Dictado con fecha de campaña anterior ('El veinte de enero de dos mil veinticinco...') → la ficha muestra 'Fecha: 20/01/2025' con el aviso 'Esta fecha es de la Campaña 2024/2025 (cerrada: solo consulta). Las labores se apuntan en la Campaña 2025/2026. Corrige la fecha para poder confirmar.' y 'Confirmar' deshabilitado con la explicación correspondiente.",
+      "La fecha es editable en el calendario en vivo: 'Cambiar la fecha' abre el selector de fecha de Material 3 (con el día de hoy preseleccionado); al elegir el 13/10/2026 la ficha pasa a 'Fecha: 13/10/2026', el aviso de campaña desaparece y, con la ficha completa, aparece 'Borrador completo. Ya se puede confirmar.'.",
+      "El flujo completo cierra en la app: al confirmar con la fecha corregida, la nota queda 'Confirmada. La labor ya está en Mi cuaderno.' y la labor se crea en la Campaña 2025/2026 con esa fecha (labores del socio 7 → 8: cosecha del 13/10/2026 en Cañada Honda, comprobada en la base del backend).",
+      "Fecha ambigua verificada en vivo ('La semana pasada eché...'): el borrador deja la expresión dictada ('Fecha: la semana pasada'), la tarjeta pide 'Elige la fecha de esta labor:' con el botón 'Elegir fecha' (el mismo calendario) y, sin fecha concreta, 'Confirmar' está deshabilitado ('Elige la fecha de esta labor para poder confirmar.'; combinado con campos faltantes: 'Faltan datos por responder y hay que elegir la fecha para poder confirmar.')."
+    ],
+    "notes": "Casos borde de docs/domain-model.md. Decisiones de esta feature (acordadas con el usuario): (1) las expresiones relativas sencillas ('hoy', 'ayer', 'anteayer') las resuelve el backend de forma determinista contra la fecha de hoy; las fechas ambiguas (sin año, como 'el 5 de diciembre', o imprecisas, como 'la semana pasada') y los dictados sin fecha quedan sin resolver y el socio las elige con el calendario antes de poder confirmar (mismo patrón que la parcela en borrador-sin-parcela, sin vueltas de voz); (2) una fecha de otra campaña no deja confirmar: el borrador avisa de la campaña que corresponde a la fecha ('cerrada: solo consulta') y el socio corrige la fecha en el calendario (editable también con 'Cambiar la fecha'); se mantiene la regla de que las campañas cerradas son de solo consulta y, como red de seguridad, el error claro del backend si una fecha así llegara a confirmarse; (3) el calendario es el selector de fecha de Material 3 con el día de hoy preseleccionado. Cambios de contrato declarados: la extracción del borrador resuelve las fechas relativas sencillas a AAAA-MM-DD (las ambiguas siguen saliendo tal cual) y la app calcula la campaña de la fecha con la misma regla que el backend (1 nov–31 oct) para el aviso. Estado de demo: la nota con la fecha de campaña anterior quedó confirmada con su labor (cosecha del 13/10/2026 en Cañada Honda) y quedan notas de prueba con 'Fecha: hoy'/'Fecha: ayer' sin resolver (extraídas contra un backend anterior al cambio) y con fecha ambigua, que muestran el selector de fecha; limpiar antes de la demo. Nota operativa: el backend de desarrollo se reinició con el código nuevo y un JWT_SECRET guardado en backend/.dev-env (gitignored); al cambiar el secreto caducaron las sesiones y el móvil volvió a iniciar sesión con la cuenta de verificación verificacion.preguntas@ejemplo.com (socio-001, mismos datos)."
   },
   {
     "id": "calculo-de-liquidacion-en-limpio",
