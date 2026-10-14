@@ -12,8 +12,11 @@ Reglas (ADR 0004, ADR 0005 y docs/domain-model.md):
   asistente pregunta por ellos (una pregunta por respuesta) y el socio contesta
   por voz hasta completar la ficha. Cada borrador lleva su `pregunta` (vacía
   cuando ya está completo y listo para confirmar).
-- Las fechas relativas ("hoy", "ayer") se dejan tal cual: las resuelve la
-  feature `fecha-relativa-en-borrador` antes de confirmar.
+- Las fechas relativas sencillas ("hoy", "ayer", "anteayer") se resuelven a un
+  día concreto contra la fecha de hoy (feature `fecha-relativa-en-borrador`).
+  Las fechas ambiguas ("el 5 de diciembre", "la semana pasada") quedan tal cual:
+  no tienen un día concreto y la fecha la elige el socio en el calendario antes
+  de confirmar.
 """
 
 import datetime
@@ -171,7 +174,7 @@ def extraer(api_key, texto, parcelas, hoy=None):
         },
     ]
     datos = _extraer_json(api_key, mensajes)
-    return _con_pregunta(_construir_borrador(datos, parcelas), datos.get("preguntas"))
+    return _con_pregunta(_construir_borrador(datos, parcelas, hoy), datos.get("preguntas"))
 
 
 def completar(api_key, borrador, texto_respuesta):
@@ -360,7 +363,29 @@ def _con_pregunta(borrador, preguntas=None):
     return borrador
 
 
-def _construir_borrador(datos, parcelas):
+# Expresiones de fecha que sí tienen un día concreto (fecha-relativa-en-borrador).
+FECHAS_RELATIVAS = {"hoy": 0, "ayer": 1, "anteayer": 2}
+
+
+def resolver_fecha(fecha, hoy):
+    """Fecha del borrador IA a un día concreto (fecha-relativa-en-borrador).
+
+    Las expresiones relativas sencillas ("hoy", "ayer", "anteayer") se resuelven
+    contra `hoy` (AAAA-MM-DD). El resto queda tal cual: las fechas ambiguas
+    ("el 5 de diciembre", "la semana pasada") y las vacías no tienen un día
+    concreto y la fecha la elige el socio en el calendario antes de confirmar.
+    """
+    texto = str(fecha or "").strip()
+    if not texto:
+        return ""
+    dias = FECHAS_RELATIVAS.get(_sin_acentos(texto))
+    if dias is None:
+        return texto
+    base = datetime.date.fromisoformat(str(hoy))
+    return str(base - datetime.timedelta(days=dias))
+
+
+def _construir_borrador(datos, parcelas, hoy):
     """Normaliza la salida de la IA al borrador del dominio.
 
     Si la categoría no es una de las tres del MVP, el borrador se rechaza.
@@ -371,7 +396,7 @@ def _construir_borrador(datos, parcelas):
             "La IA no reconoció la categoría de la labor."
         )
     return {
-        "fecha": str(datos.get("fecha") or "").strip(),
+        "fecha": resolver_fecha(datos.get("fecha"), hoy),
         "parcela": _buscar_parcela(datos.get("parcela"), parcelas),
         "categoria": categoria,
         "campos": _normalizar_campos(categoria, datos.get("campos")),

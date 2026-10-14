@@ -11,7 +11,7 @@ y los casos borde del dominio (`docs/domain-model.md`).
 | # | Frase dictada | Qué se espera |
 |---|---|---|
 | 1 | "He hecho un tratamiento fitosanitario en la parcela Cañada Honda contra la mosca del olivo con dos litros de cobre, el diez de octubre de dos mil veintiséis." | Tratamiento: fecha 2026-10-10, parcela Cañada Honda, producto cobre, plaga mosca del olivo, cantidad 2 L |
-| 2 | "Ayer eché un tratamiento en El Encinar para las malas hierbas, un kilo de producto." | Tratamiento con fecha relativa (la resuelve `fecha-relativa-en-borrador`) y producto genérico |
+| 2 | "Ayer eché un tratamiento en El Encinar para las malas hierbas, un kilo de producto." | Tratamiento con fecha relativa: el borrador muestra la fecha concreta (ayer → el día anterior), editable en el calendario, y producto genérico |
 | 3 | "He regado la parcela Los Llanos durante tres horas, el once de octubre de dos mil veintiséis." | Riego: cantidad 3 horas |
 | 4 | "Regué La Umbría con cuatrocientos litros de agua, el doce de octubre de dos mil veintiséis." | Riego: cantidad 400 L |
 | 5 | "He cosechado El Encinar a vuelo, ochocientos kilos de aceituna, el trece de octubre de dos mil veintiséis." | Cosecha: modalidad a vuelo, kilos 800 |
@@ -20,7 +20,7 @@ y los casos borde del dominio (`docs/domain-model.md`).
 | 8 | "Tratamiento contra el repilo en la parcela Canyada Honda, un kilo de cobre, el veinte de marzo de dos mil veintiséis." | Desambiguación de typo de parcela ("Canyada Honda" → Cañada Honda) |
 | 9 | "Hoy he estado paseando por el campo y he visto pajaritos." | Rechazo claro: no hay categoría reconocible |
 | 10 | "He regado la parcela de mi cuñado tres horas." | Borrador sin parcela (la elige el socio en `borrador-sin-parcela`) |
-| 11 | "Ayer regué El Encinar dos horas." | Fecha relativa pendiente de resolver |
+| 11 | "Ayer regué El Encinar dos horas." | Riego con fecha relativa resuelta a día concreto (ayer → el día anterior), editable en el calendario |
 | 12 | "Tratamiento fitosanitario en La Umbría contra prays, trescientos gramos de producto, el veinte de marzo de dos mil veintiséis." | Tratamiento: plaga prays, cantidad 300 g |
 | 13 | "He hecho tratamiento en El Encinar y luego he regado Los Llanos." | Dos labores en un dictado: solo cabe un borrador por nota (limitación conocida) |
 | 14 | "He hecho un tratamiento en la parcela Cañada Honda contra la mosca del olivo, el diez de octubre de dos mil veintiséis." | Tratamiento sin producto ni cantidad: el asistente pregunta por lo que falta ("¿Qué producto has echado?") y las respuestas por voz completan la ficha |
