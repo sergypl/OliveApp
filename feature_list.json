@@ -549,13 +549,20 @@
     "depends_on": [
       "inicio-de-sesion"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
-      "Simular con valores conocidos (p. ej. 1000 kg al 20 % con ajuste 5 %) y comprobar el resultado verificado a mano"
+      "Simular con valores conocidos (1000 kg al 20 %) con el ajuste industrial fijo del 10 % (ADR 0007) y comprobar el resultado verificado a mano"
     ],
-    "evidence": [],
-    "notes": "La simulación no se persiste ni compite con las cifras oficiales de la cooperativa (CONTEXT.md). Usar 'liquidación en limpio', nunca 'liquidación' a secas. Con el ajuste industrial por defecto (10 %, ADR 0007), el resultado cuadra con el aceite industrial real de la cooperativa."
+    "evidence": [
+      "./init.sh en verde (2026-10-14): 124 tests backend (pytest), healthcheck (GET /health -> 200), datos sembrados y APK compilado.",
+      "El botón del panel 'Simulador de liquidación en limpio' (antes mostraba 'disponible próximamente') abre la pantalla con la explicación 'Simula tu liquidación en limpio con los kilos de aceituna y el rendimiento graso. Es una estimación orientativa, no la liquidación oficial de la cooperativa.' y los campos 'Kilos de aceituna' y 'Rendimiento graso (%)' (verificado en el Xiaomi físico).",
+      "Simulación con valores conocidos en el Xiaomi físico, verificada a mano: 1000 kg al 20 % → 'Aceite neto estimado: 180 kg', con desglose 'Aceite según el rendimiento: 200 kg' y 'Ajuste industrial (10 %): -20 kg' (200 − 20 = 180 ✓).",
+      "Segunda simulación con decimales y coma española: 2650,5 kg al 22 % → '524,8 kg' netos, '583,11 kg' de aceite según rendimiento y '-58,31 kg' de ajuste (583,11 − 58,311 = 524,799 ✓), con formato español (comas decimales) en la entrada y la salida.",
+      "Simulación bajo demanda y sin guardar: el resultado aparece al pulsar 'Simular' (sin recálculo al instante, que es la feature siguiente), se borra al cambiar las entradas y no viaja a ningún servidor; simulando sin kilos muestra 'Introduce los kilos de aceituna, mayores que cero.'.",
+      "Estimación orientativa claramente etiquetada: bajo el resultado se lee 'Estimación orientativa: la liquidación oficial es la de la cooperativa.' y el desglose muestra el ajuste industrial como única deducción del MVP."
+    ],
+    "notes": "La simulación no se persiste ni compite con las cifras oficiales de la cooperativa (CONTEXT.md). Usar 'liquidación en limpio', nunca 'liquidación' a secas (el botón del panel pasó de 'Simulador de liquidación' a 'Simulador de liquidación en limpio' por eso). Con el ajuste industrial por defecto (10 %, ADR 0007), el resultado cuadra con el aceite industrial real de la cooperativa. Decisión de usuario (sesión 033): en esta feature el ajuste industrial está fijo al 10 % y se muestra en el desglose; el campo editable con recálculo al instante es `ajuste-industrial-configurable`. Por eso el paso de verificación se adaptó abiertamente: el ejemplo original ('1000 kg al 20 % con ajuste 5 %') corresponde al ajuste editable de la feature siguiente; aquí se verificó con el ajuste fijo del 10 %."
   },
   {
     "id": "ajuste-industrial-configurable",
