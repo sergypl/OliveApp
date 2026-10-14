@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -39,10 +38,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonSecundario
-import com.olivapp.app.core.ui.FondoCrema
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoBoton
+import com.olivapp.app.core.ui.TextoCuerpo
+import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.voz.data.AlmacenNotasVoz
 import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.voz.domain.GrabadorDeNotas
@@ -272,23 +275,21 @@ fun PantallaNotasVoz(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Notas de voz",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoTitulo1,
+            color = Texto
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Graba una nota corta para apuntar una labor.\nMáximo $LIMITE_SEGUNDOS_NOTA segundos.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
+            style = TextoCuerpo,
+            color = Texto,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -309,13 +310,13 @@ fun PantallaNotasVoz(
             modifier = Modifier.size(120.dp),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (estado.grabando) TextoError else VerdeOliva,
+                containerColor = if (estado.grabando) Error else Primario,
                 contentColor = Color.White
             )
         ) {
             Text(
                 text = if (estado.grabando) "Parar" else "Grabar",
-                fontSize = 20.sp,
+                style = TextoBoton,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -326,42 +327,38 @@ fun PantallaNotasVoz(
             } else {
                 "Toca el botón para empezar a grabar."
             },
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = if (estado.grabando) TextoError else TextoMarron,
+            style = TextoCuerpo,
+            color = if (estado.grabando) Error else Texto,
             textAlign = TextAlign.Center
         )
         estado.mensaje?.let {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron,
+                style = TextoCuerpo,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "Tus notas de voz",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = VerdeOliva
+            style = TextoValor,
+            color = Primario
         )
         Spacer(modifier = Modifier.height(12.dp))
         if (estado.notas.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Todavía no has grabado ninguna nota de voz.",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron,
+                    style = TextoCuerpo,
+                    color = Texto,
                     textAlign = TextAlign.Center
                 )
             }
@@ -373,7 +370,7 @@ fun PantallaNotasVoz(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, TextoError, RoundedCornerShape(12.dp))
+                        .border(2.dp, Error, RoundedCornerShape(12.dp))
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -383,16 +380,14 @@ fun PantallaNotasVoz(
                         } else {
                             "Cola: " + pendientes.size + " notas pendientes de enviar"
                         },
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoError
+                        style = TextoValor,
+                        color = Error
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Están guardadas en el teléfono y no se pierden. Se enviarán cuando haya conexión o al tocar Reintentar.",
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = TextoMarron,
+                        style = TextoCuerpo,
+                        color = Texto,
                         textAlign = TextAlign.Center
                     )
                     for (nota in pendientes) {
@@ -417,7 +412,7 @@ fun PantallaNotasVoz(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                        .border(2.dp, Primario, RoundedCornerShape(12.dp))
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -443,9 +438,8 @@ fun PantallaNotasVoz(
         if (estado.grabando) {
             Text(
                 text = "Termina la grabación para volver.",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron,
+                style = TextoCuerpo,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
         } else {

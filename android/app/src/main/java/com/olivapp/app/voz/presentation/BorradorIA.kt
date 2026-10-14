@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -41,9 +40,12 @@ import com.olivapp.app.core.ui.BotonPeligro
 import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.Desplegable
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoBoton
+import com.olivapp.app.core.ui.TextoCuerpo
+import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.parcelas.domain.ParcelasRepositorio
 import com.olivapp.app.voz.domain.GrabadorDeNotas
@@ -429,28 +431,26 @@ fun BorradorIA(
             title = {
                 Text(
                     text = "¿Descartar este borrador?",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextoMarron
+                    style = TextoValor,
+                    color = Texto
                 )
             },
             text = {
                 Text(
                     text = "La nota quedará descartada y no se creará ninguna labor. " +
                         "No se puede deshacer.",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron
+                    style = TextoCuerpo,
+                    color = Texto
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmarDescartar(alDescartar) }) {
-                    Text(text = "Descartar", fontSize = 20.sp, color = TextoError)
+                    Text(text = "Descartar", style = TextoBoton, color = Error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::cancelarDescartar) {
-                    Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+                    Text(text = "Cancelar", style = TextoBoton, color = Primario)
                 }
             }
         )
@@ -461,9 +461,8 @@ fun BorradorIA(
         Text(
             text = "No se ha reconocido la categoría de la labor. Solo hay tres: " +
                 "tratamiento fitosanitario, riego y cosecha. Vuelve a dictar la nota.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoError
+            style = TextoCuerpo,
+            color = Error
         )
         Spacer(modifier = Modifier.height(8.dp))
         BotonPeligro(texto = "Descartar", alPulsar = viewModel::pedirDescartar)
@@ -513,22 +512,20 @@ fun BorradorIA(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+            .border(2.dp, Primario, RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
         Text(
             text = "Borrador IA",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = VerdeOliva
+            style = TextoValor,
+            color = Primario
         )
         Spacer(modifier = Modifier.height(8.dp))
         for ((etiqueta, valor) in lineasDeBorrador(borrador)) {
             Text(
                 text = "$etiqueta: $valor",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron
+                style = TextoCuerpo,
+                color = Texto
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -537,26 +534,23 @@ fun BorradorIA(
             // socio elige una de su lista antes de poder confirmar.
             Text(
                 text = "Elige la parcela de esta labor:",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                style = TextoCuerpo,
                 fontWeight = FontWeight.Bold,
-                color = TextoError
+                color = Error
             )
             Spacer(modifier = Modifier.height(8.dp))
             if (estado.cargandoParcelas) {
                 Text(
                     text = "Cargando tus parcelas…",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoMarron
+                    style = TextoCuerpo,
+                    color = Texto
                 )
             } else if (estado.parcelas.isEmpty()) {
                 Text(
                     text = "Todavía no has creado ninguna parcela. Crea una parcela " +
                         "para poder apuntar esta labor.",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoError
+                    style = TextoCuerpo,
+                    color = Error
                 )
             } else {
                 Desplegable(
@@ -576,10 +570,9 @@ fun BorradorIA(
         if (fechaResuelta.isEmpty()) {
             Text(
                 text = "Elige la fecha de esta labor:",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                style = TextoCuerpo,
                 fontWeight = FontWeight.Bold,
-                color = TextoError
+                color = Error
             )
             Spacer(modifier = Modifier.height(8.dp))
             BotonPrincipal(texto = "Elegir fecha", alPulsar = viewModel::abrirCalendario)
@@ -587,10 +580,9 @@ fun BorradorIA(
         } else if (!fechaAdmitida) {
             Text(
                 text = avisoDeFecha,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                style = TextoCuerpo,
                 fontWeight = FontWeight.Bold,
-                color = TextoError
+                color = Error
             )
             Spacer(modifier = Modifier.height(8.dp))
             BotonSecundario(texto = "Cambiar la fecha", alPulsar = viewModel::abrirCalendario)
@@ -607,9 +599,8 @@ fun BorradorIA(
         if (completo) {
             Text(
                 text = "Borrador completo. Ya se puede confirmar.",
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = VerdeOliva
+                style = TextoCuerpo,
+                color = Primario
             )
             Spacer(modifier = Modifier.height(8.dp))
             BotonPrincipal(
@@ -621,9 +612,8 @@ fun BorradorIA(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = it,
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
-                    color = TextoError
+                    style = TextoCuerpo,
+                    color = Error
                 )
             }
         } else {
@@ -631,35 +621,31 @@ fun BorradorIA(
                 Text(
                     text = "Faltan datos por responder: " +
                         faltantes.joinToString(", ") { etiquetaDeCampo(it) } + ".",
-                    fontSize = 18.sp,
-                    lineHeight = 26.sp,
+                    style = TextoCuerpo,
                     fontWeight = FontWeight.Bold,
-                    color = TextoError
+                    color = Error
                 )
                 val pregunta = borrador.optString("pregunta")
                 if (pregunta.isNotBlank()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "El asistente te pregunta:",
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
+                        style = TextoCuerpo,
                         fontWeight = FontWeight.Bold,
-                        color = VerdeOliva
+                        color = Primario
                     )
                     Text(
                         text = pregunta,
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = TextoMarron
+                        style = TextoCuerpo,
+                        color = Texto
                     )
                 }
                 estado.ultimaRespuesta?.let {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Tu respuesta: $it",
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = TextoMarron
+                        style = TextoCuerpo,
+                        color = Texto
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -667,9 +653,8 @@ fun BorradorIA(
                     Text(
                         text = "Grabando tu respuesta… ${estado.segundos} de " +
                             "$LIMITE_SEGUNDOS_RESPUESTA segundos",
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = TextoError
+                        style = TextoCuerpo,
+                        color = Error
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     BotonPeligro(
@@ -679,9 +664,8 @@ fun BorradorIA(
                 } else if (estado.enviando) {
                     Text(
                         text = "Enviando tu respuesta…",
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = VerdeOliva
+                        style = TextoCuerpo,
+                        color = Primario
                     )
                 } else if (estado.hayRespuestaSinEnviar) {
                     // Respuesta ya grabada que aún no se ha podido enviar.
@@ -714,9 +698,8 @@ fun BorradorIA(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = it,
-                        fontSize = 18.sp,
-                        lineHeight = 26.sp,
-                        color = TextoError
+                        style = TextoCuerpo,
+                        color = Error
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -756,9 +739,8 @@ fun BorradorIA(
                     else ->
                         "Corrige la fecha de esta labor para poder confirmar."
                 },
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron
+                style = TextoCuerpo,
+                color = Texto
             )
         }
         // El socio puede rechazar el borrador en cualquier momento, con la
@@ -786,12 +768,12 @@ fun CalendarioDeFecha(alElegir: (String) -> Unit, alCerrar: () -> Unit) {
                         .toString()
                 )
             }) {
-                Text(text = "Aceptar", fontSize = 20.sp, color = VerdeOliva)
+                Text(text = "Aceptar", style = TextoBoton, color = Primario)
             }
         },
         dismissButton = {
             TextButton(onClick = alCerrar) {
-                Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+                Text(text = "Cancelar", style = TextoBoton, color = Primario)
             }
         }
     ) {

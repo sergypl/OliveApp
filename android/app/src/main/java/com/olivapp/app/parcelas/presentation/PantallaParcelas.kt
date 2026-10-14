@@ -17,11 +17,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,10 +27,13 @@ import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
-import com.olivapp.app.core.ui.FondoCrema
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoCuerpo
+import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.parcelas.domain.DatosParcela
 import com.olivapp.app.parcelas.domain.ParcelasRepositorio
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -123,23 +124,21 @@ fun PantallaParcelas(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Tus parcelas",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoTitulo1,
+            color = Texto
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Aquí viven tus parcelas.\nLes pondrás labores desde el cuaderno.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
+            style = TextoCuerpo,
+            color = Texto,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -159,9 +158,8 @@ fun PantallaParcelas(
         estado.mensaje?.let {
             Text(
                 text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = if (estado.creada) VerdeOliva else TextoError,
+                style = TextoCuerpo,
+                color = if (estado.creada) Primario else Error,
                 textAlign = TextAlign.Center
             )
         }
@@ -169,15 +167,14 @@ fun PantallaParcelas(
         if (estado.parcelas.isNotEmpty()) {
             Text(
                 text = "Parcelas de este socio",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = VerdeOliva
+                style = TextoValor,
+                color = Primario
             )
             Spacer(modifier = Modifier.height(12.dp))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(2.dp, VerdeOliva, RoundedCornerShape(12.dp))
+                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
                     .padding(16.dp)
             ) {
                 for ((indice, parcela) in estado.parcelas.withIndex()) {
@@ -186,8 +183,8 @@ fun PantallaParcelas(
                     }
                     Text(
                         text = parcela.nombre,
-                        fontSize = 18.sp,
-                        color = TextoMarron
+                        style = TextoCuerpo,
+                        color = Texto
                     )
                 }
             }
@@ -195,9 +192,8 @@ fun PantallaParcelas(
         }
         Text(
             text = "Las parcelas no se borran en esta versión.",
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
+            style = TextoCuerpo,
+            color = Texto,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
