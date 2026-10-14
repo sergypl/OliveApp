@@ -3,6 +3,7 @@ package com.olivapp.app
 import android.content.Context
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
+import com.olivapp.app.core.red.ServicioCuentas
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
