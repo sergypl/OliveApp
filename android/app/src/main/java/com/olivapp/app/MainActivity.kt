@@ -154,6 +154,7 @@ fun OlivApp() {
             onAbrirParcelas = { pantalla = "parcelas" },
             onAbrirCuaderno = { pantalla = "cuaderno" },
             onAbrirNotasVoz = { pantalla = "notas_voz" },
+            onAbrirSimulador = { pantalla = "simulador" },
             onAbrirCampana = { id ->
                 idCampana = id
                 pantalla = "campana"
@@ -161,6 +162,7 @@ fun OlivApp() {
         )
         "parcelas" -> PantallaParcelas(onVolver = { pantalla = "sesion" })
         "notas_voz" -> PantallaNotasVoz(onVolver = { pantalla = "sesion" })
+        "simulador" -> PantallaSimulador(onVolver = { pantalla = "sesion" })
         "cuaderno" -> PantallaCuaderno(
             onVolver = { pantalla = "sesion" },
             onApuntarLabor = {
@@ -404,7 +406,7 @@ fun PantallaInicioSesion(
  *
  * Muestra los datos oficiales de la cooperativa en su propio bloque,
  * separados de las labores (que vivirán en el cuaderno de campo), y el
- * acceso al cuaderno y al simulador de liquidación.
+ * acceso al cuaderno y al simulador de liquidación en limpio.
  */
 @Composable
 fun PantallaPanel(
@@ -412,6 +414,7 @@ fun PantallaPanel(
     onAbrirParcelas: () -> Unit,
     onAbrirCuaderno: () -> Unit,
     onAbrirNotasVoz: () -> Unit,
+    onAbrirSimulador: () -> Unit,
     onAbrirCampana: (String) -> Unit
 ) {
     val contexto = LocalContext.current
@@ -557,8 +560,8 @@ fun PantallaPanel(
         BotonSecundario(texto = "Cuaderno de campo", alPulsar = onAbrirCuaderno)
         Spacer(modifier = Modifier.height(12.dp))
         BotonSecundario(
-            texto = "Simulador de liquidación",
-            alPulsar = { aviso = "El simulador de liquidación estará disponible próximamente." }
+            texto = "Simulador de liquidación en limpio",
+            alPulsar = onAbrirSimulador
         )
         aviso?.let {
             Spacer(modifier = Modifier.height(16.dp))
@@ -2877,6 +2880,177 @@ fun FilaCampoLabor(etiqueta: String, valor: String) {
             color = TextoMarron
         )
     }
+}
+
+/**
+ * Simulador de liquidación en limpio (feature calculo-de-liquidacion-en-limpio):
+ * el socio introduce kilos de aceituna y rendimiento graso y ve el aceite neto
+ * estimado (kilos × rendimiento − ajuste industrial), claramente etiquetado
+ * como estimación orientativa. La simulación es bajo demanda y no se guarda:
+ * no compite con las cifras oficiales de la cooperativa (CONTEXT.md).
+ *
+ * El ajuste industrial está fijo al 10 % por defecto (ADR 0007); hacerlo
+ * editable con recálculo al instante es la feature
+ * `ajuste-industrial-configurable`.
+ */
+@Composable
+fun PantallaSimulador(onVolver: () -> Unit) {
+    var kilos by remember { mutableStateOf("") }
+    var rendimiento by remember { mutableStateOf("") }
+    var resultado by remember { mutableStateOf<ResultadoSimulacion?>(null) }
+    var error by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FondoCrema)
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Liquidación en limpio",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoMarron
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Simula tu liquidación en limpio con los kilos de aceituna " +
+                "y el rendimiento graso.\nEs una estimación orientativa, no la " +
+                "liquidación oficial de la cooperativa.",
+            fontSize = 18.sp,
+            lineHeight = 26.sp,
+            color = TextoMarron,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        CampoDeTexto(
+            etiqueta = "Kilos de aceituna",
+            valor = kilos,
+            alCambiar = {
+                kilos = it
+                resultado = null
+            },
+            tipo = KeyboardType.Decimal
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        CampoDeTexto(
+            etiqueta = "Rendimiento graso (%)",
+            valor = rendimiento,
+            alCambiar = {
+                rendimiento = it
+                resultado = null
+            },
+            tipo = KeyboardType.Decimal
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonPrincipal(
+            texto = "Simular",
+            alPulsar = {
+                error = ""
+                val kilosSimulados = numeroDeCampo(kilos)
+                val rendimientoSimulado = numeroDeCampo(rendimiento)
+                when {
+                    kilosSimulados == null || kilosSimulados <= 0.0 -> {
+                        resultado = null
+                        error = "Introduce los kilos de aceituna, mayores que cero."
+                    }
+                    rendimientoSimulado == null ||
+                        rendimientoSimulado <= 0.0 || rendimientoSimulado > 100.0 -> {
+                        resultado = null
+                        error = "Introduce el rendimiento graso como porcentaje " +
+                            "entre 0 y 100 (por ejemplo, 20)."
+                    }
+                    else -> resultado =
+                        simularLiquidacion(kilosSimulados, rendimientoSimulado)
+                }
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        if (error.isNotEmpty()) {
+            Text(
+                text = error,
+                fontSize = 20.sp,
+                color = TextoError,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        resultado?.let {
+            Text(
+                text = "Aceite neto estimado",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoMarron
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = formatearCantidad(it.aceiteNeto) + " kg",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = VerdeOliva
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            FilaDato(
+                etiqueta = "Aceite según el rendimiento",
+                valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg"
+            )
+            FilaDato(
+                etiqueta = "Ajuste industrial (10 %)",
+                valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg"
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Estimación orientativa: la liquidación oficial es la " +
+                    "de la cooperativa.",
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                color = TextoMarron,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
+    }
+}
+
+/** Resultado de una simulación de liquidación en limpio (en kilos de aceite). */
+class ResultadoSimulacion(
+    val aceiteSegunRendimiento: Double,
+    val ajusteIndustrial: Double,
+    val aceiteNeto: Double
+)
+
+/**
+ * Liquidación en limpio: kilos × rendimiento graso − ajuste industrial (única
+ * deducción del MVP; 10 % por defecto, ADR 0007). No se guarda en ningún sitio.
+ */
+fun simularLiquidacion(kilos: Double, rendimiento: Double, ajuste: Double = 0.10):
+    ResultadoSimulacion {
+    val aceite = kilos * rendimiento / 100.0
+    val merma = aceite * ajuste
+    return ResultadoSimulacion(aceite, merma, aceite - merma)
+}
+
+/**
+ * Número tecleado por el socio: acepta coma o punto decimal ("20,5" o "20.5")
+ * y los puntos de millar ("10.958"). Vacío o ilegible devuelve null.
+ */
+fun numeroDeCampo(texto: String): Double? {
+    val limpio = texto.trim().replace(" ", "")
+    if (limpio.isEmpty()) return null
+    val normalizado = if (limpio.contains(',')) {
+        limpio.replace(".", "").replace(',', '.')
+    } else {
+        val partes = limpio.split('.')
+        if (partes.size > 1 && partes.last().length == 3) {
+            limpio.replace(".", "")
+        } else {
+            limpio
+        }
+    }
+    return normalizado.toDoubleOrNull()
 }
 
 /** Una fila del bloque de datos oficiales: etiqueta grande y valor destacado. */
