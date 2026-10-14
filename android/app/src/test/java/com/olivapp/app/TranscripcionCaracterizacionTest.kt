@@ -2,6 +2,8 @@ package com.olivapp.app
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.olivapp.app.voz.data.AlmacenNotasVoz
+import com.olivapp.app.voz.domain.aplicarTranscripcion
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Before

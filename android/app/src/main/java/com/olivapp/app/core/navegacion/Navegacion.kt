@@ -17,7 +17,7 @@ import com.olivapp.app.acceso.presentation.PantallaInicioSesion
 import com.olivapp.app.acceso.presentation.PantallaRegistro
 import com.olivapp.app.PantallaNotasVoz
 import com.olivapp.app.PantallaSimulador
-import com.olivapp.app.SincronizadorNotas
+import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.campana.presentation.PantallaCampana
 import com.olivapp.app.campana.presentation.PantallaPanel
 import com.olivapp.app.cuaderno.domain.LaborEditable

@@ -5,6 +5,7 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.olivapp.app.campana.domain.DatosPanel
 import com.olivapp.app.core.red.ServicioCuentas
+import com.olivapp.app.voz.data.AlmacenNotasVoz
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader

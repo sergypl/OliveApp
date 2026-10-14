@@ -1,5 +1,11 @@
 package com.olivapp.app
 
+import com.olivapp.app.voz.domain.camposFaltantesDeBorrador
+import com.olivapp.app.voz.domain.cantidadVisible
+import com.olivapp.app.voz.domain.etiquetaDeCampo
+import com.olivapp.app.voz.domain.fechaIsoDeBorrador
+import com.olivapp.app.voz.domain.lineasDeBorrador
+import com.olivapp.app.voz.domain.numeroVisible
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
