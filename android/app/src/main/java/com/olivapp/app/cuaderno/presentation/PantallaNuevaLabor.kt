@@ -14,11 +14,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,11 +26,13 @@ import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.Desplegable
-import com.olivapp.app.core.ui.FondoCrema
+import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.OpcionCategoria
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoCuerpo
+import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import com.olivapp.app.cuaderno.domain.fechaDeHoy
@@ -268,16 +268,15 @@ fun PantallaNuevaLabor(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FondoCrema)
+            .background(Fondo)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = if (estado.esEdicion) "Editar labor" else "Apuntar una labor",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            style = TextoTitulo1,
+            color = Texto
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -286,9 +285,8 @@ fun PantallaNuevaLabor(
             } else {
                 "Va a Mi cuaderno, en la campaña de su fecha."
             },
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
-            color = TextoMarron,
+            style = TextoCuerpo,
+            color = Texto,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -308,8 +306,8 @@ fun PantallaNuevaLabor(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "¿Qué labor es?",
-            fontSize = 18.sp,
-            color = TextoMarron
+            style = TextoCuerpo,
+            color = Texto
         )
         Spacer(modifier = Modifier.height(8.dp))
         OpcionCategoria(
@@ -417,9 +415,8 @@ fun PantallaNuevaLabor(
         estado.mensaje?.let {
             Text(
                 text = it,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = if (estado.guardada) VerdeOliva else TextoError,
+                style = TextoCuerpo,
+                color = if (estado.guardada) Primario else Error,
                 textAlign = TextAlign.Center
             )
         }

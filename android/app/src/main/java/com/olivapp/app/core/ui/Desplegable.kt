@@ -3,7 +3,6 @@ package com.olivapp.app.core.ui
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -19,11 +18,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
-/** Botón de categoría: relleno verde cuando está elegida. */
+/** Botón de categoría: relleno verde cuando está elegida (64dp, regla sénior). */
 @Composable
 fun OpcionCategoria(texto: String, elegida: Boolean, alPulsar: () -> Unit) {
     if (elegida) {
@@ -31,24 +28,25 @@ fun OpcionCategoria(texto: String, elegida: Boolean, alPulsar: () -> Unit) {
             onClick = alPulsar,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
+                .height(64.dp),
+            shape = FormasOlivApp.medium,
             colors = ButtonDefaults.buttonColors(
-                containerColor = VerdeOliva,
-                contentColor = Color.White
+                containerColor = Primario,
+                contentColor = SobrePrimario
             )
         ) {
-            Text(text = texto, fontSize = 18.sp)
+            Text(text = texto, style = TextoCuerpo)
         }
     } else {
         OutlinedButton(
             onClick = alPulsar,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp)
+                .height(64.dp),
+            shape = FormasOlivApp.medium,
+            border = androidx.compose.foundation.BorderStroke(2.dp, Primario)
         ) {
-            Text(text = texto, fontSize = 18.sp, color = VerdeOliva)
+            Text(text = texto, style = TextoCuerpo, color = Primario)
         }
     }
 }
@@ -71,12 +69,10 @@ fun Desplegable(
             value = valor,
             onValueChange = {},
             readOnly = true,
-            label = { Text(etiqueta, fontSize = 18.sp) },
+            label = { Text(etiqueta, style = TextoCuerpo) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
-            textStyle = androidx.compose.ui.text.TextStyle(
-                fontSize = 18.sp,
-                color = TextoMarron
-            ),
+            textStyle = TextoCuerpo.copy(color = Texto),
+            shape = FormasOlivApp.medium,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp)
@@ -88,7 +84,7 @@ fun Desplegable(
         ) {
             for (opcion in opciones) {
                 DropdownMenuItem(
-                    text = { Text(opcion, fontSize = 18.sp) },
+                    text = { Text(opcion, style = TextoCuerpo) },
                     onClick = {
                         alElegir(opcion)
                         expandido = false

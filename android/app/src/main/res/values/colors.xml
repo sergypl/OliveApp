@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colores de recursos: fondo de la ventana y del splash (DESIGN.md). -->
+    <color name="fondo_app">#FAF8FF</color>
+</resources>
