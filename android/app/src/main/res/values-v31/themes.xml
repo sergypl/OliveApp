@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+: splash del sistema con el fondo de marca y el icono de
+         lanzamiento (olivapp_logo) como icono animado. -->
+    <style name="Theme.OlivApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fondo_app</item>
+        <item name="android:windowSplashScreenBackground">@color/fondo_app</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

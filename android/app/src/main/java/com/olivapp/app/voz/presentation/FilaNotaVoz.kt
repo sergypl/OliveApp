@@ -9,11 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.olivapp.app.core.ui.BotonSecundario
-import com.olivapp.app.core.ui.TextoError
-import com.olivapp.app.core.ui.TextoMarron
-import com.olivapp.app.core.ui.VerdeOliva
+import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.voz.data.AlmacenNotasVoz
 
 /** Una nota de voz de la cola local: cuándo se grabó, cuánto dura, su estado y su texto. */
@@ -29,28 +29,26 @@ fun FilaNotaVoz(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = nota.cuando + " · " + nota.segundos + " s",
-            fontSize = 18.sp,
+            style = TextoCuerpo,
             fontWeight = FontWeight.Bold,
-            color = TextoMarron
+            color = Texto
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = nota.estadoVisible,
-            fontSize = 18.sp,
-            lineHeight = 26.sp,
+            style = TextoCuerpo,
             color = if (nota.estado == "error" || nota.estado == "audio_invalido") {
-                TextoError
+                Error
             } else {
-                VerdeOliva
+                Primario
             }
         )
         if (nota.texto.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = nota.texto,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
-                color = TextoMarron
+                style = TextoCuerpo,
+                color = Texto
             )
         }
         if (nota.estado == "transcrita" && nota.borrador.isNotBlank()) {

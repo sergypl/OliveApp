@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Bootstrap: tema mínimo sin ActionBar. La UI define sus colores (DESIGN.md). -->
-    <style name="Theme.OlivApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Tema mínimo sin ActionBar: la UI define sus colores (DESIGN.md). -->
+    <style name="Theme.OlivApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fondo_app</item>
+    </style>
 </resources>

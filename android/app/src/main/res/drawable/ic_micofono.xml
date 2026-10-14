@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono de micrófono dibujado para OlivApp (sin librerías de iconos).
+     Se tiñe con el color de contenido del botón (marrón #663500). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,2.5 C10.07,2.5 8.5,4.07 8.5,6 L8.5,11 C8.5,12.93 10.07,14.5 12,14.5 C13.93,14.5 15.5,12.93 15.5,11 L15.5,6 C15.5,4.07 13.93,2.5 12,2.5 Z"
+        android:fillColor="#FF000000" />
+    <path
+        android:pathData="M5.5,11 A6.5,6.5 0 0 0 18.5,11"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M12,17.5 L12,21"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M8,21 L16,21"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>
