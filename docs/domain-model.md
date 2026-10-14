@@ -32,7 +32,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 **Nota de voz:** `pendiente → transcrita → confirmada | descartada`
 - *pendiente:* grabada sin conexión. La nota y su audio se guardan en la cola local del teléfono (Room) con aviso visible y no se pierden al cerrar la app. Transiciones: el socio reintentar el envío desde la cola (o se reenvía al abrir la cola) → transcrita; al volver la cobertura la cola se reenvía sola, en orden de grabación, una nota detrás de otra y sin duplicados (`sincronizacion-pendientes-al-reconectar`); si la respuesta se pierde en el camino, la nota vuelve a pendiente y se reenvía en la siguiente oportunidad.
 - *transcrita:* borrador IA visible esperando confirmación. Si la IA no reconoce la categoría de la labor, el borrador se rechaza con un mensaje claro y la nota queda transcrita sin ficha. Transiciones: confirmar → labor creada; rechazar → descartada.
-- *confirmada:* labor en el cuaderno.
+- *confirmada:* labor en el cuaderno, en la campaña que corresponde a su fecha. La confirmación es idempotente: confirmar dos veces no crea dos labores, porque la labor guarda la nota de voz que la originó.
 - *descartada:* el socio rechaza el borrador.
 - Si el envío falla por falta de conexión, la nota vuelve a la cola en estado pendiente; si la transcripción falla por un fallo del servicio, la nota queda con error visible y se reintenta a mano; si el audio no se puede usar (ilegible, demasiado corto o con formato/tamaño inválido), la nota queda con error visible que pide repetir el dictado.
 

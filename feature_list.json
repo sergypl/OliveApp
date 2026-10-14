@@ -455,14 +455,20 @@
       "borrador-ia-desde-transcripcion",
       "alta-manual-labor"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "./init.sh",
       "Confirmar un borrador y comprobar la labor en el cuaderno y el estado 'confirmada' de la nota",
       "Repetir la confirmación y comprobar que no se crea una segunda labor"
     ],
-    "evidence": [],
-    "notes": "Una Nota de voz produce como mucho una Labor (docs/domain-model.md). Idempotencia al confirmar."
+    "evidence": [
+      "./init.sh completo el 2026-10-13 (pytest 119/119 — 7 tests nuevos en backend/tests/test_confirmacion_borrador.py —, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en los dos dispositivos).",
+      "Verificación real en el móvil físico (Xiaomi Redmi Note 10 Pro): sobre una nota transcrita con la ficha completa (frase 1 del set: 10/10/2026, Cañada Honda, tratamiento fitosanitario, cobre contra la mosca del olivo, 2 L), un doble toque rápido en 'Confirmar' la pasó a 'Confirmada. La labor ya está en Mi cuaderno.' y la labor apareció en 'Mi cuaderno', en 'Campaña 2025/2026 · Campaña actual', con todos sus datos (Parcela Cañada Honda, Producto cobre, Plaga a controlar mosca del olivo, Cantidad 2 L). Capturas en sesión (no versionadas).",
+      "Sin duplicados aunque se confirme dos veces: el doble toque creó una sola labor (la labor guarda la nota de voz que la originó) y tres reintentos de la misma confirmación por API, con la misma nota, devolvieron siempre esa misma labor, con una sola labor en el cuaderno (comprobado en la base de desarrollo).",
+      "La nota queda 'confirmada' en el teléfono (Room) con su borrador intacto: el botón 'Confirmar' desaparece y la nota ya no se puede confirmar otra vez. El borrador incompleto sigue sin poder confirmarse (botón deshabilitado con 'Faltan datos por responder para poder confirmar.', verificado en la feature anterior y sin cambios).",
+      "Cobertura de casos por tests (backend/tests/test_confirmacion_borrador.py): confirmar dos veces la misma nota devuelve la misma labor y crea una sola; confirmar otra vez tras editar la labor a mano devuelve la labor editada sin duplicarla; el alta manual sin nota no se vuelve idempotente; la nota de un socio no afecta a las labores de otro; la fecha de campaña cerrada da error claro y no consume la nota (al corregir la fecha queda una sola labor); 401 sin token."
+    ],
+    "notes": "Regla del dominio: una Nota de voz produce como mucho una Labor (docs/domain-model.md). La confirmación reutiliza POST /api/v1/mis-labores con el nuevo campo opcional `nota_id` (el id de la nota de voz que originó el borrador): si esa nota ya creó su labor, el backend devuelve la labor existente en lugar de duplicarla, así el reintento (respuesta perdida, doble toque) no crea segundas labores. El alta manual no lleva nota y sigue creando labores sueltas. La app resuelve el nombre de la parcela del borrador a su id con la lista de parcelas del socio y, si no coincide con ninguna, avisa de que hay que elegirla antes de confirmar (el selector de parcela es de `borrador-sin-parcela`). Fuera de alcance (feature propia): los borradores con fecha relativa ('hoy', 'ayer') siguen sin poder confirmarse hasta `fecha-relativa-en-borrador`, que dará una fecha concreta editable antes de confirmar. Estado de demo: las dos notas de la verificación quedaron confirmadas con su labor (dos tratamientos del 10/10/2026 en Cañada Honda, uno por nota dictada; se puede eliminar una desde 'Mi cuaderno' si se quiere una sola)."
   },
   {
     "id": "descarte-de-borrador",
