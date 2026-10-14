@@ -112,8 +112,7 @@ class ParcelasViewModel @Inject constructor(
 @Composable
 fun PantallaParcelas(
     onVolver: () -> Unit,
-    visita: Int = 0,
-    viewModel: ParcelasViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: ParcelasViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 

@@ -75,8 +75,7 @@ class CampanaViewModel @Inject constructor(
 fun PantallaCampana(
     campanaId: String,
     onVolver: () -> Unit,
-    visita: Int = 0,
-    viewModel: CampanaViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: CampanaViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
