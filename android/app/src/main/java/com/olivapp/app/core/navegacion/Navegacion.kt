@@ -10,17 +10,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import com.olivapp.app.AlmacenSesiones
+import com.olivapp.app.acceso.data.AlmacenSesiones
+import com.olivapp.app.acceso.presentation.PantallaBienvenida
+import com.olivapp.app.acceso.presentation.PantallaInicioSesion
+import com.olivapp.app.acceso.presentation.PantallaRegistro
 import com.olivapp.app.LaborEditable
-import com.olivapp.app.PantallaBienvenida
 import com.olivapp.app.PantallaCampana
 import com.olivapp.app.PantallaCuaderno
-import com.olivapp.app.PantallaInicioSesion
 import com.olivapp.app.PantallaNotasVoz
 import com.olivapp.app.PantallaNuevaLabor
 import com.olivapp.app.PantallaPanel
 import com.olivapp.app.PantallaParcelas
-import com.olivapp.app.PantallaRegistro
 import com.olivapp.app.PantallaSimulador
 import com.olivapp.app.SincronizadorNotas
 
