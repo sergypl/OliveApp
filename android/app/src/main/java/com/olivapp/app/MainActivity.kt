@@ -1382,6 +1382,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                             alGuardarBorrador = { borradorNuevo ->
                                 almacen.actualizarBorrador(nota.id, borradorNuevo)
                                 notas = almacen.notas()
+                            },
+                            alConfirmarBorrador = {
+                                // La nota queda confirmada: su borrador ya se ha
+                                // convertido en labor de Mi cuaderno.
+                                almacen.marcar(
+                                    nota.id, "confirmada", nota.texto, nota.borrador
+                                )
+                                notas = almacen.notas()
                             }
                         )
                     }
@@ -1408,6 +1416,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                             alRepetir = { empezarGrabacion() },
                             alGuardarBorrador = { borradorNuevo ->
                                 almacen.actualizarBorrador(nota.id, borradorNuevo)
+                                notas = almacen.notas()
+                            },
+                            alConfirmarBorrador = {
+                                // La nota queda confirmada: su borrador ya se ha
+                                // convertido en labor de Mi cuaderno.
+                                almacen.marcar(
+                                    nota.id, "confirmada", nota.texto, nota.borrador
+                                )
                                 notas = almacen.notas()
                             }
                         )
@@ -1439,7 +1455,8 @@ fun FilaNotaVoz(
     nota: AlmacenNotasVoz.NotaDeVoz,
     alReintentar: () -> Unit,
     alRepetir: () -> Unit,
-    alGuardarBorrador: (String) -> Unit
+    alGuardarBorrador: (String) -> Unit,
+    alConfirmarBorrador: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -1470,7 +1487,7 @@ fun FilaNotaVoz(
         }
         if (nota.estado == "transcrita" && nota.borrador.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
-            BorradorIA(nota.borrador, alGuardarBorrador)
+            BorradorIA(nota.borrador, nota.id, alGuardarBorrador, alConfirmarBorrador)
         }
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1484,8 +1501,8 @@ fun FilaNotaVoz(
 }
 
 /**
- * Borrador IA de una nota transcrita (features borrador-ia-desde-transcripcion
- * y completar-borrador-por-preguntas).
+ * Borrador IA de una nota transcrita (features borrador-ia-desde-transcripcion,
+ * completar-borrador-por-preguntas y confirmacion-de-borrador).
  *
  * Muestra la ficha que propone la IA (fecha, parcela, categoría y campos de
  * la categoría) esperando la confirmación del socio. Si la IA no reconoció la
@@ -1495,9 +1512,19 @@ fun FilaNotaVoz(
  * socio responde por voz: cada respuesta completa la ficha y trae la
  * siguiente pregunta. Mientras falte algún campo, el borrador no se puede
  * confirmar (el botón "Confirmar" está deshabilitado).
+ *
+ * Con la ficha completa, "Confirmar" crea la labor en Mi cuaderno y la nota
+ * queda confirmada. La confirmación lleva el id de la nota y el backend la
+ * hace idempotente: confirmar dos veces no crea dos labores (una Nota de voz
+ * produce como máximo una Labor).
  */
 @Composable
-fun BorradorIA(json: String, alGuardar: (String) -> Unit) {
+fun BorradorIA(
+    json: String,
+    notaId: String,
+    alGuardar: (String) -> Unit,
+    alConfirmar: () -> Unit
+) {
     val contexto = LocalContext.current
     val borrador = try {
         JSONObject(json)
@@ -1521,9 +1548,10 @@ fun BorradorIA(json: String, alGuardar: (String) -> Unit) {
     var segundos by remember { mutableStateOf(0) }
     var ficheroRespuesta by remember { mutableStateOf<File?>(null) }
     var enviando by remember { mutableStateOf(false) }
+    var confirmando by remember { mutableStateOf(false) }
     var aviso by remember { mutableStateOf<String?>(null) }
+    var avisoConfirmar by remember { mutableStateOf<String?>(null) }
     var ultimaRespuesta by remember { mutableStateOf<String?>(null) }
-    var marcadoListo by remember { mutableStateOf(false) }
 
     fun enviarRespuesta() {
         val fichero = ficheroRespuesta ?: return
@@ -1552,6 +1580,46 @@ fun BorradorIA(json: String, alGuardar: (String) -> Unit) {
                 // Sin conexión o fallo del servicio: la respuesta grabada se
                 // conserva y se reintenta sin tener que dictarla otra vez.
                 aviso = error
+            }
+        }
+    }
+
+    fun confirmar() {
+        val token = AlmacenSesiones(contexto).token()
+        if (token == null) {
+            avisoConfirmar = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+            return
+        }
+        confirmando = true
+        avisoConfirmar = null
+        val nombreParcela = borrador.optString("parcela")
+        ServicioCuentas.cargarParcelas(token) { parcelas, _ ->
+            // La ficha guarda el nombre de la parcela; la labor se crea con su id.
+            val parcela = parcelas?.firstOrNull {
+                it.nombre.equals(nombreParcela, ignoreCase = true)
+            }
+            if (parcela == null) {
+                confirmando = false
+                avisoConfirmar = "No se ha encontrado la parcela del borrador en " +
+                    "tu lista de parcelas. Elígela antes de confirmar."
+                return@cargarParcelas
+            }
+            val cuerpo = JSONObject()
+                .put("fecha", borrador.optString("fecha"))
+                .put("parcela_id", parcela.id)
+                .put("categoria", borrador.optString("categoria"))
+                .put("campos", borrador.optJSONObject("campos") ?: JSONObject())
+                .put("observaciones", borrador.optString("observaciones"))
+                // Una Nota de voz produce como máximo una Labor: el id de la
+                // nota hace la creación idempotente en el backend.
+                .put("nota_id", notaId)
+            ServicioCuentas.guardarLabor(token, cuerpo) { campana, texto ->
+                confirmando = false
+                if (campana != null) {
+                    alConfirmar()
+                } else {
+                    avisoConfirmar = texto
+                }
             }
         }
     }
@@ -1648,18 +1716,17 @@ fun BorradorIA(json: String, alGuardar: (String) -> Unit) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             BotonPrincipal(
-                texto = "Confirmar",
-                habilitado = !grabando && !enviando,
-                alPulsar = { marcadoListo = true }
+                texto = if (confirmando) "Confirmando…" else "Confirmar",
+                habilitado = !grabando && !enviando && !confirmando,
+                alPulsar = { confirmar() }
             )
-            if (marcadoListo) {
+            avisoConfirmar?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Borrador listo para confirmar. La creación de la labor " +
-                        "con este botón llegará en la próxima función.",
+                    text = it,
                     fontSize = 18.sp,
                     lineHeight = 26.sp,
-                    color = TextoMarron
+                    color = TextoError
                 )
             }
         } else {
@@ -1943,6 +2010,7 @@ class AlmacenNotasVoz(private val contexto: Context) {
                 "pendiente" -> "Pendiente de enviar. Está en la cola del teléfono."
                 "transcribiendo" -> "Transcribiendo…"
                 "transcrita" -> "Transcrita"
+                "confirmada" -> "Confirmada. La labor ya está en Mi cuaderno."
                 "error" -> "No se ha podido transcribir. Toca para reintentar."
                 "audio_invalido" -> "Este audio no se puede transcribir. Vuelve a grabar la nota."
                 else -> "Pendiente de transcripción"

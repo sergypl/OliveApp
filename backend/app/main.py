@@ -95,6 +95,7 @@ class LaborEntrada(BaseModel):
     categoria: str
     campos: dict = {}
     observaciones: str = ""
+    nota_id: str = ""
 
 
 @app.post("/api/v1/registro", status_code=201)
@@ -273,11 +274,15 @@ def crear_labor(
     conn: sqlite3.Connection = Depends(conexion),
     sesion=Depends(sesion_actual),
 ):
-    """El socio registra una labor con el formulario manual.
+    """El socio registra una labor con el formulario manual o confirmando.
 
     La labor se guarda en la campaña que corresponde a su fecha (campaña
     oleícola del 1 de noviembre al 31 de octubre) y solo en la campaña
-    actual: las cerradas son de solo consulta.
+    actual: las cerradas son de solo consulta. Si el socio confirma el
+    borrador IA de una nota de voz, el cuerpo lleva su `nota_id` y la
+    creación es idempotente (feature `confirmacion-de-borrador`): confirmar
+    dos veces devuelve la labor ya creada y no crea una segunda (una Nota de
+    voz produce como mucho una Labor).
     """
     cuenta = _cuenta_del_socio(conn, sesion)
     try:
@@ -289,6 +294,7 @@ def crear_labor(
             entrada.categoria,
             entrada.campos,
             entrada.observaciones,
+            entrada.nota_id,
         )
     except labores.ParcelaAjena:
         raise HTTPException(status_code=404, detail="No existe esa parcela.")
