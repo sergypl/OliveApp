@@ -1390,6 +1390,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                                     nota.id, "confirmada", nota.texto, nota.borrador
                                 )
                                 notas = almacen.notas()
+                            },
+                            alDescartarBorrador = {
+                                // La nota queda descartada: el socio rechaza el
+                                // borrador y no se crea ninguna labor.
+                                almacen.marcar(
+                                    nota.id, "descartada", nota.texto, nota.borrador
+                                )
+                                notas = almacen.notas()
                             }
                         )
                     }
@@ -1425,6 +1433,14 @@ fun PantallaNotasVoz(onVolver: () -> Unit) {
                                     nota.id, "confirmada", nota.texto, nota.borrador
                                 )
                                 notas = almacen.notas()
+                            },
+                            alDescartarBorrador = {
+                                // La nota queda descartada: el socio rechaza el
+                                // borrador y no se crea ninguna labor.
+                                almacen.marcar(
+                                    nota.id, "descartada", nota.texto, nota.borrador
+                                )
+                                notas = almacen.notas()
                             }
                         )
                     }
@@ -1456,7 +1472,8 @@ fun FilaNotaVoz(
     alReintentar: () -> Unit,
     alRepetir: () -> Unit,
     alGuardarBorrador: (String) -> Unit,
-    alConfirmarBorrador: () -> Unit
+    alConfirmarBorrador: () -> Unit,
+    alDescartarBorrador: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -1487,7 +1504,10 @@ fun FilaNotaVoz(
         }
         if (nota.estado == "transcrita" && nota.borrador.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
-            BorradorIA(nota.borrador, nota.id, alGuardarBorrador, alConfirmarBorrador)
+            BorradorIA(
+                nota.borrador, nota.id, alGuardarBorrador, alConfirmarBorrador,
+                alDescartarBorrador
+            )
         }
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
@@ -1517,13 +1537,18 @@ fun FilaNotaVoz(
  * queda confirmada. La confirmación lleva el id de la nota y el backend la
  * hace idempotente: confirmar dos veces no crea dos labores (una Nota de voz
  * produce como máximo una Labor).
+ *
+ * "Descartar" rechaza el borrador (features descarte-de-borrador): con
+ * confirmación previa, porque no hay papelera que lo recupere, la nota queda
+ * descartada y no se crea ninguna labor.
  */
 @Composable
 fun BorradorIA(
     json: String,
     notaId: String,
     alGuardar: (String) -> Unit,
-    alConfirmar: () -> Unit
+    alConfirmar: () -> Unit,
+    alDescartar: () -> Unit
 ) {
     val contexto = LocalContext.current
     val borrador = try {
@@ -1531,6 +1556,45 @@ fun BorradorIA(
     } catch (e: Exception) {
         null
     }
+    var preguntarDescarte by remember { mutableStateOf(false) }
+
+    // Confirmación antes del descarte (no hay papelera que lo recupere).
+    if (preguntarDescarte) {
+        AlertDialog(
+            onDismissRequest = { preguntarDescarte = false },
+            title = {
+                Text(
+                    text = "¿Descartar este borrador?",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextoMarron
+                )
+            },
+            text = {
+                Text(
+                    text = "La nota quedará descartada y no se creará ninguna labor. " +
+                        "No se puede deshacer.",
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp,
+                    color = TextoMarron
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    preguntarDescarte = false
+                    alDescartar()
+                }) {
+                    Text(text = "Descartar", fontSize = 20.sp, color = TextoError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { preguntarDescarte = false }) {
+                    Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+                }
+            }
+        )
+    }
+
     if (borrador == null) return
     if (borrador.optBoolean("rechazado")) {
         Text(
@@ -1540,6 +1604,8 @@ fun BorradorIA(
             lineHeight = 26.sp,
             color = TextoError
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        BotonPeligro(texto = "Descartar", alPulsar = { preguntarDescarte = true })
         return
     }
     val faltantes = camposFaltantesDeBorrador(borrador)
@@ -1829,6 +1895,11 @@ fun BorradorIA(
                 color = TextoMarron
             )
         }
+        // El socio puede rechazar el borrador en cualquier momento, con la
+        // ficha completa o incompleta: la nota queda descartada y no se crea
+        // ninguna labor.
+        Spacer(modifier = Modifier.height(12.dp))
+        BotonPeligro(texto = "Descartar", alPulsar = { preguntarDescarte = true })
     }
 }
 
@@ -2011,6 +2082,7 @@ class AlmacenNotasVoz(private val contexto: Context) {
                 "transcribiendo" -> "Transcribiendo…"
                 "transcrita" -> "Transcrita"
                 "confirmada" -> "Confirmada. La labor ya está en Mi cuaderno."
+                "descartada" -> "Descartada. No se ha creado ninguna labor."
                 "error" -> "No se ha podido transcribir. Toca para reintentar."
                 "audio_invalido" -> "Este audio no se puede transcribir. Vuelve a grabar la nota."
                 else -> "Pendiente de transcripción"
