@@ -126,8 +126,7 @@ fun PantallaCuaderno(
     onVolver: () -> Unit,
     onApuntarLabor: () -> Unit,
     onEditarLabor: (LaborEditable) -> Unit,
-    visita: Int = 0,
-    viewModel: CuadernoViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: CuadernoViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 

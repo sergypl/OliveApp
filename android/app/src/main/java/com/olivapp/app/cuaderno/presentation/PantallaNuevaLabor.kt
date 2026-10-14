@@ -257,8 +257,7 @@ fun PantallaNuevaLabor(
     onVolver: () -> Unit,
     onVerCampana: (String) -> Unit,
     labor: LaborEditable? = null,
-    visita: Int = 0,
-    viewModel: NuevaLaborViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: NuevaLaborViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 

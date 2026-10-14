@@ -83,8 +83,7 @@ fun PantallaInicioSesion(
     onVolver: () -> Unit,
     onCrearCuenta: () -> Unit,
     onSesionAbierta: () -> Unit,
-    visita: Int = 0,
-    viewModel: InicioSesionViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: InicioSesionViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 

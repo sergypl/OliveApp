@@ -107,8 +107,7 @@ fun PantallaPanel(
     onAbrirNotasVoz: () -> Unit,
     onAbrirSimulador: () -> Unit,
     onAbrirCampana: (String) -> Unit,
-    visita: Int = 0,
-    viewModel: PanelViewModel = hiltViewModel(key = "visita-$visita")
+    viewModel: PanelViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
