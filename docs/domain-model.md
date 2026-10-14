@@ -8,7 +8,7 @@
 - **Parcela:** unidad de terreno con nombre; pertenece a un socio.
 - **Labor:** registro cronológico de una tarea (tratamiento, riego o cosecha) en una parcela y fecha, dentro de una campaña. Puede originarse por voz o por formulario manual.
 - **Nota de voz:** audio grabado + transcripción + borrador IA. Es el origen más común de una labor. Grabación de hasta 60 segundos en MPEG-4/AAC (`.m4a`), guardada en el dispositivo y registrada en una cola local con su estado hasta que se transcribe.
-- **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación. Cuando faltan campos obligatorios lleva la pregunta del asistente por el siguiente campo y no se puede confirmar hasta completar la ficha. Si la IA no identifica la parcela, la ficha la deja vacía y el socio elige una de su lista antes de poder confirmar.
+- **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación. Cuando faltan campos obligatorios lleva la pregunta del asistente por el siguiente campo y no se puede confirmar hasta completar la ficha. Si la IA no identifica la parcela, la ficha la deja vacía y el socio elige una de su lista antes de poder confirmar. La fecha se muestra como día concreto (con las expresiones relativas ya resueltas) y el socio la puede corregir en el calendario antes de confirmar.
 - **Simulación:** cálculo bajo demanda de liquidación en limpio (kilos × rendimiento graso − ajuste industrial). No se persiste como entidad en el MVP ni se compara con el dato oficial.
 
 Campos por categoría de labor (alineados con SIEX según ADR 0005):
@@ -53,8 +53,8 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 ## Edge Cases
 - La IA no identifica la parcela: el borrador deja la parcela vacía y pide elegirla de la lista antes de confirmar.
 - La IA no reconoce la categoría: mensaje claro de rechazo (solo hay 3 categorías en el MVP).
-- Fechas relativas ("ayer", "hoy"): resolver a fecha concreta en el borrador antes de confirmar.
-- Fecha dictada fuera de la campaña actual: el borrador propone la campaña que corresponde a la fecha (actual o anterior) y el socio confirma.
+- Fechas relativas sencillas ("hoy", "ayer", "anteayer"): se resuelven a fecha concreta en el borrador contra la fecha de hoy, y el socio la puede corregir en el calendario antes de confirmar. Las fechas ambiguas ("el 5 de diciembre", "la semana pasada") y los dictados sin fecha quedan sin resolver y el socio elige la fecha en el calendario antes de poder confirmar.
+- Fecha dictada fuera de la campaña actual: el borrador avisa de la campaña que corresponde a la fecha ("Esta fecha es de la Campaña X (cerrada: solo consulta)") y no deja confirmar hasta que el socio corrige la fecha en el calendario. Las campañas cerradas siguen siendo de solo consulta.
 - Dos dictados del mismo día y parcela: dos labores separadas (no se fusionan).
 - La respuesta por voz no aporta el dato que se pide: el asistente vuelve a preguntar por el campo que sigue faltando (el borrador nunca se queda sin pregunta mientras falte algo).
 - Audio demasiado corto o ilegible: pedir repetir el dictado.

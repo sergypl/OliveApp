@@ -33,6 +33,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -41,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -1523,7 +1526,7 @@ fun FilaNotaVoz(
 /**
  * Borrador IA de una nota transcrita (features borrador-ia-desde-transcripcion,
  * completar-borrador-por-preguntas, confirmacion-de-borrador y
- * borrador-sin-parcela).
+ * borrador-sin-parcela y fecha-relativa-en-borrador).
  *
  * Muestra la ficha que propone la IA (fecha, parcela, categoría y campos de
  * la categoría) esperando la confirmación del socio. Si la IA no reconoció la
@@ -1618,6 +1621,43 @@ fun BorradorIA(
     // borrador-sin-parcela): si la IA no la identificó, queda vacía y hay que
     // elegirla antes de poder confirmar.
     val parcelaResuelta = borrador.optString("parcela").isNotBlank()
+
+    // fecha-relativa-en-borrador: la fecha concreta del borrador se puede
+    // corregir en el calendario y solo se puede confirmar si cae en la campaña
+    // actual: las campañas cerradas son de solo consulta.
+    var eligiendoFecha by remember { mutableStateOf(false) }
+    var campanasDeLaCuenta by remember { mutableStateOf<List<DatosCampanaResumen>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        val token = AlmacenSesiones(contexto).token()
+        if (token != null) {
+            ServicioCuentas.cargarCampanas(token) { lista, _ ->
+                if (lista != null) {
+                    campanasDeLaCuenta = lista
+                }
+            }
+        }
+    }
+    val fechaResuelta = fechaIsoDeBorrador(borrador)
+    val campanaDeLaFecha = if (fechaResuelta.isEmpty()) {
+        null
+    } else {
+        campanasDeLaCuenta.firstOrNull { it.id == idCampanaDeLaFecha(fechaResuelta) }
+    }
+    val campanaActual = campanasDeLaCuenta.firstOrNull { it.estado == "actual" }
+    val fechaAdmitida = fechaResuelta.isEmpty() || campanasDeLaCuenta.isEmpty() ||
+        (campanaDeLaFecha != null && campanaDeLaFecha.estado == "actual")
+    val avisoDeFecha = when {
+        campanaDeLaFecha == null ->
+            "Esta fecha no corresponde a ninguna campaña conocida. " +
+                "Corrige la fecha para poder confirmar."
+        campanaActual == null ->
+            "Esta fecha es de la Campaña ${campanaDeLaFecha.nombre} " +
+                "(cerrada: solo consulta). Corrige la fecha para poder confirmar."
+        else ->
+            "Esta fecha es de la Campaña ${campanaDeLaFecha.nombre} " +
+                "(cerrada: solo consulta). Las labores se apuntan en la " +
+                "Campaña ${campanaActual.nombre}. Corrige la fecha para poder confirmar."
+    }
     var parcelasDeLaCuenta by remember { mutableStateOf<List<String>>(emptyList()) }
     var cargandoParcelas by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -1837,7 +1877,41 @@ fun BorradorIA(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
-        if (faltantes.isEmpty() && parcelaResuelta) {
+        // fecha-relativa-en-borrador: sin fecha concreta hay que elegirla en el
+        // calendario, y una fecha de otra campaña se corrige antes de confirmar.
+        if (fechaResuelta.isEmpty()) {
+            Text(
+                text = "Elige la fecha de esta labor:",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoError
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonPrincipal(texto = "Elegir fecha", alPulsar = { eligiendoFecha = true })
+            Spacer(modifier = Modifier.height(12.dp))
+        } else if (!fechaAdmitida) {
+            Text(
+                text = avisoDeFecha,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextoError
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            BotonSecundario(texto = "Cambiar la fecha", alPulsar = { eligiendoFecha = true })
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        if (eligiendoFecha) {
+            CalendarioDeFecha(
+                alElegir = { elegida ->
+                    eligiendoFecha = false
+                    alGuardar(borrador.put("fecha", elegida).toString())
+                },
+                alCerrar = { eligiendoFecha = false }
+            )
+        }
+        val completo = faltantes.isEmpty() && parcelaResuelta &&
+            fechaResuelta.isNotEmpty() && fechaAdmitida
+        if (completo) {
             Text(
                 text = "Borrador completo. Ya se puede confirmar.",
                 fontSize = 18.sp,
@@ -1958,13 +2032,34 @@ fun BorradorIA(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = when {
+                    faltantes.isNotEmpty() && !parcelaResuelta && fechaResuelta.isEmpty() ->
+                        "Faltan datos por responder y hay que elegir la parcela y la fecha " +
+                            "para poder confirmar."
+                    faltantes.isNotEmpty() && !parcelaResuelta && !fechaAdmitida ->
+                        "Faltan datos por responder y hay que elegir la parcela y corregir " +
+                            "la fecha para poder confirmar."
                     faltantes.isNotEmpty() && !parcelaResuelta ->
                         "Faltan datos por responder y hay que elegir la parcela " +
                             "para poder confirmar."
+                    faltantes.isNotEmpty() && fechaResuelta.isEmpty() ->
+                        "Faltan datos por responder y hay que elegir la fecha " +
+                            "para poder confirmar."
+                    faltantes.isNotEmpty() && !fechaAdmitida ->
+                        "Faltan datos por responder y hay que corregir la fecha " +
+                            "para poder confirmar."
                     faltantes.isNotEmpty() ->
                         "Faltan datos por responder para poder confirmar."
-                    else ->
+                    !parcelaResuelta && fechaResuelta.isEmpty() ->
+                        "Elige la parcela y la fecha de esta labor para poder confirmar."
+                    !parcelaResuelta && !fechaAdmitida ->
+                        "Elige la parcela y corrige la fecha de esta labor " +
+                            "para poder confirmar."
+                    !parcelaResuelta ->
                         "Elige la parcela de esta labor para poder confirmar."
+                    fechaResuelta.isEmpty() ->
+                        "Elige la fecha de esta labor para poder confirmar."
+                    else ->
+                        "Corrige la fecha de esta labor para poder confirmar."
                 },
                 fontSize = 18.sp,
                 lineHeight = 26.sp,
@@ -1983,6 +2078,52 @@ fun BorradorIA(
 private const val LIMITE_SEGUNDOS_RESPUESTA = 20
 
 /** Campos obligatorios de la categoría que aún faltan en el borrador IA. */
+/** Fecha concreta del borrador (AAAA-MM-DD), o vacía si todavía no la tiene. */
+fun fechaIsoDeBorrador(borrador: JSONObject): String {
+    val fecha = borrador.optString("fecha").trim()
+    return if (Regex("\\d{4}-\\d{2}-\\d{2}").matches(fecha)) fecha else ""
+}
+
+/**
+ * Campaña oleícola de una fecha ISO (AAAA-MM-DD): del 1 de noviembre al 31 de
+ * octubre (misma regla que el backend en `labores.campana_de_la_fecha`).
+ */
+fun idCampanaDeLaFecha(fechaIso: String): String {
+    val fecha = java.time.LocalDate.parse(fechaIso)
+    val inicio = if (fecha.monthValue >= 11) fecha.year else fecha.year - 1
+    return "$inicio-${inicio + 1}"
+}
+
+/** Calendario para elegir la fecha concreta de una labor (AAAA-MM-DD). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarioDeFecha(alElegir: (String) -> Unit, alCerrar: () -> Unit) {
+    val estado = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
+    DatePickerDialog(
+        onDismissRequest = alCerrar,
+        confirmButton = {
+            TextButton(onClick = {
+                val elegida = estado.selectedDateMillis ?: System.currentTimeMillis()
+                alElegir(
+                    java.time.Instant.ofEpochMilli(elegida)
+                        .atZone(java.time.ZoneOffset.UTC)
+                        .toLocalDate()
+                        .toString()
+                )
+            }) {
+                Text(text = "Aceptar", fontSize = 20.sp, color = VerdeOliva)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = alCerrar) {
+                Text(text = "Cancelar", fontSize = 20.sp, color = VerdeOliva)
+            }
+        }
+    ) {
+        DatePicker(state = estado)
+    }
+}
+
 fun camposFaltantesDeBorrador(borrador: JSONObject): List<String> {
     val categoria = borrador.optString("categoria")
     val campos = borrador.optJSONObject("campos") ?: JSONObject()
