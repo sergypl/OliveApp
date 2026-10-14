@@ -1,15 +1,16 @@
 package com.olivapp.app.voz.data
 
 import android.media.MediaRecorder
+import com.olivapp.app.voz.domain.GrabadorDeNotas
 import java.io.File
 
 /** Grabadora de una nota de voz: MPEG-4 con audio AAC. */
-class GrabadorNotas {
+class GrabadorNotas : GrabadorDeNotas {
     private var grabador: MediaRecorder? = null
     private var empezadoEn = 0L
 
     @Suppress("DEPRECATION")
-    fun empezar(fichero: File) {
+    override fun empezar(fichero: File) {
         val r = MediaRecorder()
         r.setAudioSource(MediaRecorder.AudioSource.MIC)
         r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -23,7 +24,7 @@ class GrabadorNotas {
     }
 
     /** Para la grabación y devuelve los segundos grabados. */
-    fun parar(): Int {
+    override fun parar(): Int {
         val r = grabador ?: return 0
         grabador = null
         val segundos = ((android.os.SystemClock.elapsedRealtime() - empezadoEn) / 1000).toInt()

@@ -1,14 +1,12 @@
 package com.olivapp.app.voz.domain
 
-import com.olivapp.app.voz.data.AlmacenNotasVoz
-
 /**
  * Aplica el resultado de una transcripción a la nota de la cola y devuelve el
  * aviso para el socio (features cola-offline-de-notas,
  * reintento-de-transcripcion-fallida y borrador-ia-desde-transcripcion).
  */
 fun aplicarTranscripcion(
-    almacen: AlmacenNotasVoz,
+    almacen: ColaDeNotas,
     id: String,
     texto: String?,
     borrador: String,

@@ -19,7 +19,7 @@ import com.olivapp.app.acceso.data.AlmacenSesiones
 import com.olivapp.app.acceso.presentation.PantallaBienvenida
 import com.olivapp.app.acceso.presentation.PantallaInicioSesion
 import com.olivapp.app.acceso.presentation.PantallaRegistro
-import com.olivapp.app.PantallaNotasVoz
+import com.olivapp.app.voz.presentation.PantallaNotasVoz
 import com.olivapp.app.PantallaSimulador
 import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.campana.presentation.PantallaCampana

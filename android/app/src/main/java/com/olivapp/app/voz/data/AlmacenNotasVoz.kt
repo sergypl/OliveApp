@@ -1,12 +1,14 @@
 package com.olivapp.app.voz.data
 
 import android.content.Context
+import com.olivapp.app.voz.domain.ColaDeNotas
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.json.JSONArray
 
-class AlmacenNotasVoz(private val contexto: Context) {
+/** La cola de notas de voz en el teléfono (Room y ficheros de audio). */
+class AlmacenNotasVoz(private val contexto: Context) : ColaDeNotas {
 
     class NotaDeVoz(
         val id: String,
@@ -43,13 +45,13 @@ class AlmacenNotasVoz(private val contexto: Context) {
         importarIndiceAntiguo()
     }
 
-    fun nuevaRutaDeAudio(): File {
+    override fun nuevaRutaDeAudio(): File {
         carpeta.mkdirs()
         return File(carpeta, "nota-" + System.currentTimeMillis() + ".m4a")
     }
 
     /** Registra una nota grabada en la cola (la más reciente la primera). */
-    fun guardar(fichero: File, segundos: Int): NotaDeVoz {
+    override fun guardar(fichero: File, segundos: Int): NotaDeVoz {
         val ahora = LocalDateTime.now()
         dao.insertar(
             NotaVozFila(
@@ -73,16 +75,16 @@ class AlmacenNotasVoz(private val contexto: Context) {
     }
 
     /** Cambia el estado de una nota (y guarda texto y borrador cuando llegan). */
-    fun marcar(id: String, estado: String, texto: String, borrador: String = "") {
+    override fun marcar(id: String, estado: String, texto: String, borrador: String) {
         dao.marcar(id, estado, texto, borrador)
     }
 
     /** Guarda el borrador IA de una nota sin tocar su estado ni su texto. */
-    fun actualizarBorrador(id: String, borrador: String) {
+    override fun actualizarBorrador(id: String, borrador: String) {
         dao.actualizarBorrador(id, borrador)
     }
 
-    fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
+    override fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
 
     /** Notas pendientes de enviar, de la más antigua a la más reciente. */
     fun pendientesEnOrdenDeGrabacion(): List<NotaDeVoz> =
