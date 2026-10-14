@@ -8,7 +8,7 @@
 - **Parcela:** unidad de terreno con nombre; pertenece a un socio.
 - **Labor:** registro cronológico de una tarea (tratamiento, riego o cosecha) en una parcela y fecha, dentro de una campaña. Puede originarse por voz o por formulario manual.
 - **Nota de voz:** audio grabado + transcripción + borrador IA. Es el origen más común de una labor. Grabación de hasta 60 segundos en MPEG-4/AAC (`.m4a`), guardada en el dispositivo y registrada en una cola local con su estado hasta que se transcribe.
-- **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación. Cuando faltan campos obligatorios lleva la pregunta del asistente por el siguiente campo y no se puede confirmar hasta completar la ficha.
+- **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación. Cuando faltan campos obligatorios lleva la pregunta del asistente por el siguiente campo y no se puede confirmar hasta completar la ficha. Si la IA no identifica la parcela, la ficha la deja vacía y el socio elige una de su lista antes de poder confirmar.
 - **Simulación:** cálculo bajo demanda de liquidación en limpio (kilos × rendimiento graso − ajuste industrial). No se persiste como entidad en el MVP ni se compara con el dato oficial.
 
 Campos por categoría de labor (alineados con SIEX según ADR 0005):
