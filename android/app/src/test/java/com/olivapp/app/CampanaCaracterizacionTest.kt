@@ -1,5 +1,6 @@
 package com.olivapp.app
 
+import com.olivapp.app.campana.domain.idCampanaDeLaFecha
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

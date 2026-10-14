@@ -3,12 +3,12 @@ package com.olivapp.app.core.red
 import android.os.Handler
 import android.os.Looper
 import com.olivapp.app.AlmacenNotasVoz
-import com.olivapp.app.DatosCampana
 import com.olivapp.app.DatosCampanaDeLabores
-import com.olivapp.app.DatosCampanaResumen
 import com.olivapp.app.DatosLabor
-import com.olivapp.app.DatosPanel
 import com.olivapp.app.DatosParcela
+import com.olivapp.app.campana.domain.DatosCampana
+import com.olivapp.app.campana.domain.DatosCampanaResumen
+import com.olivapp.app.campana.domain.DatosPanel
 import com.olivapp.app.core.formatos.formatearLabor
 import com.olivapp.app.core.formatos.formatearNumero
 import java.io.IOException

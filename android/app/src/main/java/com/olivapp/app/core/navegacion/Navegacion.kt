@@ -15,14 +15,14 @@ import com.olivapp.app.acceso.presentation.PantallaBienvenida
 import com.olivapp.app.acceso.presentation.PantallaInicioSesion
 import com.olivapp.app.acceso.presentation.PantallaRegistro
 import com.olivapp.app.LaborEditable
-import com.olivapp.app.PantallaCampana
 import com.olivapp.app.PantallaCuaderno
 import com.olivapp.app.PantallaNotasVoz
 import com.olivapp.app.PantallaNuevaLabor
-import com.olivapp.app.PantallaPanel
 import com.olivapp.app.PantallaParcelas
 import com.olivapp.app.PantallaSimulador
 import com.olivapp.app.SincronizadorNotas
+import com.olivapp.app.campana.presentation.PantallaCampana
+import com.olivapp.app.campana.presentation.PantallaPanel
 
 /**
  * Navegación de la app: un router propio sobre los nombres de pantalla (sin
