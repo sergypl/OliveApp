@@ -1,28 +1,38 @@
 package com.olivapp.app.voz.domain
 
-import com.olivapp.app.voz.data.AlmacenNotasVoz
 import java.io.File
 
 /**
- * Cola de notas de voz del teléfono: grabar, consultar y cambiar el estado de
- * cada nota. El modelo de nota (`AlmacenNotasVoz.NotaDeVoz`) se conserva tal
- * cual del código original (wrinkle declarado: el modelo vive junto al almacén
- * para no reescribir el código durante el refactor).
+ * La feature de notas de voz: la cola local del teléfono más la transcripción
+ * de cada nota en el backend (el servidor no conserva el audio). Responde
+ * siempre en el hilo principal (vía el gateway HTTP).
  */
-interface NotasRepositorio {
+interface NotasRepositorio : ColaDeNotas {
 
-    /** Ruta del fichero donde grabar la próxima nota. */
-    fun nuevaRutaDeAudio(): File
+    /** Transcribe el audio de una nota y devuelve su ficha borrador IA. */
+    fun transcribirNota(
+        token: String,
+        fichero: File,
+        alTerminar: (
+            texto: String?,
+            borrador: String,
+            error: String,
+            sinConexion: Boolean,
+            audioInvalido: Boolean
+        ) -> Unit
+    )
 
-    /** Registra una nota grabada en la cola (la más reciente la primera). */
-    fun guardar(fichero: File, segundos: Int): AlmacenNotasVoz.NotaDeVoz
-
-    /** La cola completa, de la más reciente a la más antigua. */
-    fun notas(): List<AlmacenNotasVoz.NotaDeVoz>
-
-    /** Cambia el estado de una nota (y guarda texto y borrador cuando llegan). */
-    fun marcar(id: String, estado: String, texto: String, borrador: String = "")
-
-    /** Guarda el borrador IA de una nota sin tocar su estado ni su texto. */
-    fun actualizarBorrador(id: String, borrador: String)
+    /** Responde por voz a la pregunta del asistente y completa la ficha. */
+    fun completarBorrador(
+        token: String,
+        fichero: File,
+        borrador: String,
+        alTerminar: (
+            texto: String?,
+            borrador: String,
+            error: String,
+            sinConexion: Boolean,
+            audioInvalido: Boolean
+        ) -> Unit
+    )
 }
