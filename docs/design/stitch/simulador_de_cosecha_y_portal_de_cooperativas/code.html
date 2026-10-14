@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-primary": "#a1d494", "on-secondary-fixed": "#2f1500", "surface-container-low": "#f2f3ff", "primary-fixed": "#bcf0ae", "on-primary-fixed-variant": "#23501e", "on-tertiary": "#ffffff", "error": "#ba1a1a", "secondary": "#904d00", "primary-fixed-dim": "#a1d494", "on-secondary": "#ffffff", "inverse-on-surface": "#eef0ff", "surface-container": "#eaedff", "on-primary": "#ffffff", "background": "#faf8ff", "primary-container": "#2d5a27", "on-primary-container": "#9dd090", "surface-variant": "#dae2fd", "secondary-container": "#fe932c", "outline": "#72796e", "on-secondary-fixed-variant": "#6e3900", "tertiary-fixed": "#7ffc97", "on-tertiary-fixed": "#002109", "error-container": "#ffdad6", "on-background": "#131b2e", "tertiary-fixed-dim": "#62df7d", "surface-tint": "#3b6934", "on-tertiary-fixed-variant": "#005320", "secondary-fixed": "#ffdcc3", "surface-container-high": "#e2e7ff", "secondary-fixed-dim": "#ffb77d", "on-primary-fixed": "#002201", "on-surface-variant": "#42493e", "on-error": "#ffffff", "tertiary-container": "#005d25", "on-tertiary-container": "#5dda7a", "surface": "#faf8ff", "tertiary": "#004319", "surface-dim": "#d2d9f4", "surface-container-highest": "#dae2fd", "on-secondary-container": "#663500", "inverse-surface": "#283044", "on-error-container": "#93000a", "surface-bright": "#faf8ff", "outline-variant": "#c2c9bb", "surface-container-lowest": "#ffffff", "primary": "#154212", "on-surface": "#131b2e" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-md": "1rem", "space-sm": "0.5rem", "gutter-mobile": "1rem", "space-lg": "1.5rem", "margin-mobile": "1rem", "space-2xl": "3rem", "space-xs": "0.25rem", "space-xl": "2rem", "gutter": "1.5rem", "margin": "2rem" }, "fontFamily": { "display-lg-mobile": ["Montserrat"], "headline-sm": ["Montserrat"], "metric-val": ["Montserrat"], "body-lg": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "headline-lg": ["Montserrat"], "display-lg": ["Montserrat"], "label-lg": ["Inter"], "headline-md": ["Montserrat"] }, "fontSize": { "display-lg-mobile": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "metric-val": ["32px", { "lineHeight": "36px", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "600" }] } } } };</script><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Montserrat:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 w-full px-gutter flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-sm"><img alt="OlivApp Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XAyqy_xFNENzXMy3vPVCivDQkwmAJauJ3nOLrsBOwt61B8MNj0q0T5fz3k33Wd__VqkhLWmQfnL-ODqPMC5sEPmw09LmUuBbYG24eYPs8HdHEHB398D2e1KepYV1kPrO-Mq17Eafhfio4meqo3BmHu-dEWOJkbg85KBKu0qMWqpxAwibBjdjbBskkOCd9zGNTDTFzmrxa-8VtlbCz6IEdKOCwaN7FJ809WMk_P5yw"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight">OlivApp</span></div><div class="hidden xl:flex flex-col border-l border-surface-container-high pl-space-md"><span class="font-label-lg text-label-lg text-on-surface leading-tight">Cooperativa Agrícola Ntra. Sra. del Rosario</span><span class="font-label-sm text-label-sm text-on-surface-variant">Almazara Nº 2341 · Jaén</span></div><div class="hidden md:flex items-center gap-space-xs bg-surface-container px-space-sm py-1.5 rounded-full"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span></span><span class="font-label-sm text-label-sm text-on-surface">Patio: Abierto · Espera <15 min</span></div></div><div class="flex items-center gap-space-md"><div class="hidden lg:flex items-center bg-surface-container p-1 rounded-lg"><button class="px-space-md py-1.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md transition-colors">Panel Gestor Cooperativa (B2B)</button><button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">Simulador & Portal Móvil Socio (B2C)</button></div><div class="hidden sm:flex items-center gap-1.5 bg-surface-container-low px-space-md py-1.5 rounded-lg border border-outline-variant"><span class="material-symbols-outlined text-primary text-[18px]">calendar_today</span><span class="font-label-md text-label-md text-on-surface">Campaña 2024/2025 Activa</span></div><div class="flex items-center gap-space-sm pl-space-sm border-l border-surface-container-high"><div class="hidden sm:flex flex-col text-right"><span class="font-label-md text-label-md text-on-surface leading-tight">Ing. Elena Morales</span><span class="font-label-sm text-label-sm text-on-surface-variant">Directora Técnica</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-fixed" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeogy-_2XTBSQj_rCiT6Msb6N5tZQ146PiCfZrnv0Ch6J1CPMalTeOJGcv_WkeESWjCJjhUGPMf6qjebagTS5bsnbI91leJAAYeoeB8k7p7o9dcWa8M9WGylTuQ-EFp6zfKl1pq94tmKdUawoK-ILahAdPUHmT2euAi_c1d57euOMFmRtcr1bMgixg4RnKimreTvIZkj4dbNsM8nW6UnxQoiMe-eD6XtwOLxWav5g"/></div></div></div></header><aside class="fixed left-0 top-20 bottom-0 w-64 bg-surface-container-low flex flex-col justify-between p-space-md z-40 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col gap-space-md"><div class="px-space-sm"><span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Operaciones Almazara</span></div><nav class="flex flex-col gap-1" data-active-classes="bg-primary text-on-primary font-semibold rounded-lg"><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="recepcion-tolvas" href="#"><span class="material-symbols-outlined text-[20px]">scale</span>Recepción y Báscula</a><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="control-molienda" href="#"><span class="material-symbols-outlined text-[20px]">precision_manufacturing</span>Líneas de Molturación</a><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="bodega-depositos" href="#"><span class="material-symbols-outlined text-[20px]">propane_tank</span>Bodega e Inventario</a><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="calidad-laboratorio" href="#"><span class="material-symbols-outlined text-[20px]">biotech</span>Laboratorio y Acidez</a><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="liquidacion-socios" href="#"><span class="material-symbols-outlined text-[20px]">payments</span>Liquidación de Socios</a><a class="flex items-center gap-space-sm px-space-md py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md" data-path="cuaderno-campo" href="#"><span class="material-symbols-outlined text-[20px]">potted_plant</span>Cuaderno de Campo</a></nav></div><div class="p-space-sm bg-surface-container rounded-xl flex items-center justify-between"><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface-variant">Rendimiento Medio</span><span class="font-headline-sm text-headline-sm text-primary">21.84%</span></div><span class="material-symbols-outlined text-tertiary text-[24px]">oil_barrel</span></div></aside><div class="pl-64"><main class="w-full pt-20 px-gutter min-h-screen bg-background"><div class="flex flex-col w-full space-y-space-lg pb-space-2xl">
+<!-- 1. HEADER CONTEXTUAL & SUB-NAVIGATION -->
+<div class="flex flex-col space-y-space-md">
+<!-- Sub-navigation Tabs -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm bg-surface-container-lowest p-1.5 rounded-xl shadow-sm">
+<div class="flex flex-wrap items-center gap-1.5">
+<button class="flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">calculate</span>
+<span>Simulador de Cosecha y Liquidación en Limpio (€/kg)</span>
+<span class="bg-primary-fixed-dim text-on-primary-fixed text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Socio / Asistido</span>
+</button>
+<button class="flex items-center gap-2 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">traffic</span>
+<span>Semáforo de Recepción & Colas de Patio</span>
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+</button>
+<button class="flex items-center gap-2 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">mic</span>
+<span>Cuaderno Digital SIEX/CUE (Boz & IA)</span>
+<span class="bg-secondary-fixed text-on-secondary-fixed font-bold text-[10px] px-1.5 py-0.2 rounded-full">1 nuevo</span>
+</button>
+<button class="flex items-center gap-2 px-space-md py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span>Aforo Agregado & Balanza</span>
+</button>
+</div>
+<div class="flex items-center gap-space-sm px-space-sm py-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Socio Activo:</span>
+<div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg">
+<span class="font-label-md text-label-md font-semibold text-primary">#482 - Hnos. Serrano Morales</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Ticker de Mercado POOLred Oficial -->
+<div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-space-sm bg-surface-container-high/60 px-space-lg py-2.5 rounded-xl shadow-sm text-on-surface">
+<div class="flex items-center gap-2">
+<span class="flex h-2.5 w-2.5 rounded-full bg-secondary-container"></span>
+<span class="font-label-md text-label-md font-bold uppercase tracking-wider text-secondary">Aviso Mercado Oficial POOLred</span>
+<span class="hidden md:inline-block text-on-surface-variant text-label-sm">| Actualizado hoy 08:30h (Sesión Jaén/Córdoba)</span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-lg gap-y-1 font-body-sm text-body-sm">
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-primary">AOVE:</span>
+<span class="font-mono font-bold text-on-surface">7,42 €/kg</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-on-surface-variant">Virgen:</span>
+<span class="font-mono font-bold text-on-surface">6,85 €/kg</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-on-surface-variant">Lampante:</span>
+<span class="font-mono font-bold text-on-surface">6,10 €/kg</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant bg-surface-container-lowest px-2 py-0.5 rounded shadow-sm">
+<span>Corrector Almazara:</span>
+<span class="font-bold text-error">-3,20 pts</span>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. SECCIÓN PRINCIPAL: SIMULADOR ESTIMADOR (GRID 7 / 5) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- COLUMNA IZQUIERDA: FORMULARIO PARAMÉTRICO DE ENTRADA (COL 7) -->
+<div class="lg:col-span-7 flex flex-col space-y-space-md">
+<!-- CABECERA DE LA CALCULADORA -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary-container font-bold">Algoritmo Agronómico de Rendimientos</span>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mt-0.5">Calculadora de Cosecha & Liquidación</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Cálculo transparente en limpio sin costes ocultos. Parámetros ajustados a Campaña 2024/25.</p>
+</div>
+<button class="self-start md:self-auto flex items-center gap-1.5 px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">restore</span>
+<span>Restablecer</span>
+</button>
+</div>
+<!-- A. Dimensión de la Explotación -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary font-label-md text-label-md">1</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Dimensión de la Explotación</h2>
+</div>
+<!-- Switch de Unidad -->
+<div class="flex bg-surface-container p-1 rounded-xl">
+<button class="px-space-md py-1.5 rounded-lg bg-surface-container-lowest shadow-sm text-primary font-label-md text-label-md transition-all" id="unit-olivos">Olivos Totales</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all" id="unit-fanegas">Fanegas</button>
+<button class="px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all" id="unit-ha">Hectáreas (ha)</button>
+</div>
+</div>
+<!-- Contador Táctil Gigante -->
+<div class="flex items-center justify-between bg-surface-container-low p-space-md rounded-2xl">
+<button class="w-16 h-16 rounded-xl bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary flex items-center justify-center shadow-sm active:scale-95 transition-all" id="btn-dec-trees">
+<span class="material-symbols-outlined text-[32px]">remove</span>
+</button>
+<div class="flex flex-col items-center">
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg font-bold text-on-surface tracking-tight" id="display-trees">1.250</span>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-medium">árboles</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Equivale a 14,5 Fanegas de Jaén · Marco tradicional 3 pies (10×10m)</span>
+</div>
+<button class="w-16 h-16 rounded-xl bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary flex items-center justify-center shadow-sm active:scale-95 transition-all" id="btn-inc-trees">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+</div>
+<!-- B. Variedad Principal de Aceituna -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm space-y-space-md">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary font-label-md text-label-md">2</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Variedad Principal del Olivar</h2>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<!-- Picual (Seleccionada) -->
+<div class="relative p-space-md rounded-xl bg-surface-container-lowest ring-2 ring-primary bg-primary-fixed-dim/10 cursor-pointer transition-all flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-headline-sm text-headline-sm text-primary flex items-center gap-1.5">
+                  Picual
+                  <span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Reina del Valle del Guadalquivir</span>
+</div>
+<span class="bg-primary-container text-on-primary text-[11px] font-bold px-2 py-0.5 rounded">Rdto 22-26%</span>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Fruto: 3,2 g</span>
+<span class="font-medium text-tertiary">Alta Estabilidad</span>
+</div>
+</div>
+<!-- Hojiblanca -->
+<div class="p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container cursor-pointer transition-all flex flex-col justify-between opacity-80 hover:opacity-100">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface">Hojiblanca</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Subbética y Campiña Sur</span>
+</div>
+<span class="bg-surface-container-highest text-on-surface text-[11px] font-bold px-2 py-0.5 rounded">Rdto 19-21%</span>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Fruto: 4,3 g</span>
+<span>Doble Aptitud</span>
+</div>
+</div>
+<!-- Arbequina -->
+<div class="p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container cursor-pointer transition-all flex flex-col justify-between opacity-80 hover:opacity-100">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface">Arbequina</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Superintensivo / Seto</span>
+</div>
+<span class="bg-surface-container-highest text-on-surface text-[11px] font-bold px-2 py-0.5 rounded">Rdto 18-20%</span>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Fruto: 1,9 g</span>
+<span>Recolección Temprana</span>
+</div>
+</div>
+<!-- Cornicabra / Manzanilla -->
+<div class="p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container cursor-pointer transition-all flex flex-col justify-between opacity-80 hover:opacity-100">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface">Cornicabra / Otras</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Montes y Tradicional</span>
+</div>
+<span class="bg-surface-container-highest text-on-surface text-[11px] font-bold px-2 py-0.5 rounded">Rdto 21-24%</span>
+</div>
+<div class="mt-space-md pt-space-sm flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Fruto: 3,5 g</span>
+<span>Maduración Tardía</span>
+</div>
+</div>
+</div>
+</div>
+<!-- C. Histórico y Efecto Vecería -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary font-label-md text-label-md">3</span>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Efecto Vecería de la Parcela</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Comportamiento bianual de la carga frutal</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+<button class="flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center">
+<span class="font-label-lg text-label-lg text-on-surface">Descarga</span>
+<span class="text-error font-bold text-label-md mt-1">-40% kgs</span>
+<span class="text-[11px] text-on-surface-variant mt-0.5">Cosecha baja precedente</span>
+</button>
+<button class="flex flex-col items-center justify-center p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-all text-center">
+<span class="font-label-lg text-label-lg text-on-surface">Media / Estándar</span>
+<span class="text-secondary font-bold text-label-md mt-1">±0% Estándar</span>
+<span class="text-[11px] text-on-surface-variant mt-0.5">Producción equilibrada</span>
+</button>
+<button class="flex flex-col items-center justify-center p-space-md rounded-xl bg-primary text-on-primary shadow-sm transition-all text-center">
+<span class="font-label-lg text-label-lg font-bold">Año de Carga (Activo)</span>
+<span class="text-primary-fixed font-bold text-label-md mt-1">+45% kgs aceituna</span>
+<span class="text-[11px] text-primary-fixed-dim mt-0.5">Árbol con cuajado óptimo</span>
+</button>
+</div>
+</div>
+<!-- D. Régimen Hídrico y Pluviometría Reciente -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm space-y-space-md">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary font-label-md text-label-md">4</span>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Régimen Hídrico y Humedad en Muestra</h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ajusta la relación entre peso en báscula y rendimiento graso seco ($R_s$)</span>
+</div>
+</div>
+<div class="space-y-space-md">
+<!-- Régimen Hídrico -->
+<div class="flex flex-col sm:flex-row gap-space-sm">
+<button class="flex-1 flex items-center justify-center gap-2 p-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface transition-all">
+<span class="material-symbols-outlined text-secondary">wb_sunny</span>
+<div class="text-left">
+<span class="block font-label-md text-label-md font-bold">Secano Tradicional</span>
+<span class="block text-[11px] text-on-surface-variant">Mayor concentración grasa</span>
+</div>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 p-space-md rounded-xl bg-primary text-on-primary shadow-sm transition-all">
+<span class="material-symbols-outlined text-primary-fixed">water_drop</span>
+<div class="text-left">
+<span class="block font-label-md text-label-md font-bold">Regadío / Goteo (Activo)</span>
+<span class="block text-[11px] text-primary-fixed-dim">Fruto +25% volumen (350 m³/ha)</span>
+</div>
+</button>
+</div>
+<!-- Pluvio previa -->
+<div class="bg-surface-container-low p-space-md rounded-xl space-y-space-sm">
+<span class="font-label-md text-label-md text-on-surface font-semibold block">Lluvias previas a recolección (últimos 15 días):</span>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<label class="flex items-start gap-2.5 p-space-sm bg-surface-container-lowest rounded-lg cursor-pointer">
+<input class="mt-1 accent-primary" name="pluvio" type="radio"/>
+<div>
+<span class="font-label-md text-label-md text-on-surface block">Sin lluvia relevante (<10 mm)</span>
+<span class="text-[11px] text-on-surface-variant">Fruto concentrado, humedad media 48%</span>
+</div>
+</label>
+<label class="flex items-start gap-2.5 p-space-sm bg-surface-container-lowest rounded-lg cursor-pointer ring-1 ring-primary/30">
+<input checked="" class="mt-1 accent-primary" name="pluvio" type="radio"/>
+<div>
+<span class="font-label-md text-label-md text-on-surface font-semibold block">Lluvias copiosas (>45 mm)</span>
+<span class="text-[11px] text-on-surface-variant">Hinchamiento: +4% agua. El aceite es idéntico pero diluido en masa</span>
+</div>
+</label>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-secondary bg-secondary-fixed/30 p-2 rounded-lg mt-1">
+<span class="material-symbols-outlined text-[18px]">info</span>
+<span><strong>Nota Técnica de Laboratorio:</strong> Almazara calcula sobre Materia Seca ($R_s$). El agua de lluvia no penaliza tu liquidación final en euros.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- E. Estado y Calidad de la Partida -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm space-y-space-md">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center font-bold text-primary font-label-md text-label-md">5</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Proporción Vuelo vs. Suelo & Sanidad</h2>
+</div>
+<div class="space-y-space-md">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface">Aceituna de Vuelo (Árbol)</span>
+<span class="font-mono font-bold text-primary text-headline-sm" id="slider-label">85% Vuelo / 15% Suelo</span>
+</div>
+<!-- Slider Simulado -->
+<div class="relative w-full">
+<input class="w-full h-3 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary" max="100" min="0" type="range" value="85"/>
+<div class="flex justify-between text-[11px] text-on-surface-variant mt-1 font-mono">
+<span>0% (Todo Suelo - Lampante)</span>
+<span>50/50 Mixto</span>
+<span class="text-primary font-bold">100% Vuelo Virgen Extra</span>
+</div>
+</div>
+<div class="flex items-center gap-3 p-space-sm bg-surface-container-low rounded-xl">
+<input checked="" class="w-5 h-5 rounded accent-primary cursor-pointer" id="sanidad" type="checkbox"/>
+<label class="cursor-pointer text-body-sm text-on-surface font-medium" for="sanidad">
+              Partida sana sin picada de mosca (Bactrocera oleae <1%) ni hongos de suelo · Calificación estimada: <strong>AOVE</strong>
+</label>
+</div>
+</div>
+</div>
+<!-- BOTÓN GIGANTE DE ACCIÓN PRIMARIA -->
+<button class="w-full h-[60px] bg-primary hover:bg-primary-container text-on-primary rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-headline-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.99]">
+<span class="material-symbols-outlined text-[28px]">calculate</span>
+<span>CALCULAR ESTIMACIÓN DE LIQUIDACIÓN Y LITROS</span>
+</button>
+</div>
+<!-- COLUMNA DERECHA: RESULTADOS DEL ALGORITMO Y DESGLOSE EN LIMPIO (COL 5) -->
+<div class="lg:col-span-5 flex flex-col space-y-space-md sticky top-24">
+<!-- CARD PRINCIPAL DE RESULTADOS -->
+<div class="bg-surface-container-lowest p-space-xl rounded-2xl shadow-md space-y-space-lg relative overflow-hidden">
+<!-- Decoración sutil de fondo -->
+<div class="absolute -top-12 -right-12 w-48 h-48 bg-primary-fixed/20 rounded-full blur-2xl pointer-events-none"></div>
+<!-- Banner de Certidumbre -->
+<div class="flex items-center justify-between">
+<span class="bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
+            Simulación Oficial Verificada
+          </span>
+<span class="text-[12px] text-on-surface-variant font-mono">ID Sim: #SIM-24-9042</span>
+</div>
+<!-- MÉTRICA ESTRELLA -->
+<div class="bg-surface-container-low p-space-lg rounded-2xl space-y-space-sm">
+<div class="space-y-1">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-semibold">Valor Neto Estimado por Kilo</span>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg font-bold text-primary tracking-tight">0,985 €</span>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-normal">/ kg aceituna</span>
+</div>
+<p class="text-[12px] text-tertiary font-medium">Líquido neto a percibir (deducidos costes de molturación y merma)</p>
+</div>
+<div class="pt-space-md border-t border-surface-container flex items-baseline justify-between">
+<span class="font-label-md text-label-md text-on-surface font-medium">Liquidación Total Socio:</span>
+<span class="font-metric-val text-metric-val font-bold text-on-surface tracking-tight">43.340,00 €</span>
+</div>
+</div>
+<!-- DESGLOSE TRANSPARENTE PASO A PASO -->
+<div class="space-y-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Desglose Técnico & Transparencia Cooperativa</span>
+<div class="space-y-2 text-body-sm text-body-sm">
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">1. Cosecha Estimada en Báscula:</span>
+<span class="font-mono font-bold text-on-surface">44.000 kg aceituna</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">2. Rendimiento Graso Total ($R_h$):</span>
+<span class="font-mono font-bold text-primary">22,80 %</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">3. Corrector Físico Pérdidas Almazara:</span>
+<span class="font-mono font-bold text-error">-3,20 puntos</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-primary-fixed-dim/20">
+<span class="font-semibold text-primary">4. Rendimiento Industrial Neto:</span>
+<span class="font-mono font-bold text-primary">19,60 %</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">5. Aceite Puro Producido:</span>
+<div class="text-right font-mono">
+<span class="font-bold text-on-surface">8.624 kg</span>
+<span class="text-on-surface-variant text-[11px] block">(9.125 Litros AOVE)</span>
+</div>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">6. Cotización Base Asignada:</span>
+<span class="font-mono font-bold text-primary">7,42 €/kg aceite (AOVE)</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-error-container/40">
+<span class="text-on-error-container">7. Molturación, Limpieza & Gestión:</span>
+<span class="font-mono font-bold text-error">-0,042 €/kg aceituna</span>
+</div>
+<div class="flex justify-between items-center py-1.5 px-2 rounded-lg bg-surface-container-low/50">
+<span class="text-on-surface">8. Valor por Punto de Rendimiento:</span>
+<span class="font-mono font-bold text-secondary">0,0502 € / punto</span>
+</div>
+</div>
+</div>
+<!-- GRÁFICO VISUAL COMPARATIVO DE HUMEDAD (TRANSPARENCIA) -->
+<div class="bg-surface-container-low p-space-md rounded-xl space-y-2">
+<div class="flex items-center justify-between text-label-sm font-semibold">
+<span class="text-on-surface">Composición de la Fruta Entrada en Tolva</span>
+<span class="text-primary">100% Masa</span>
+</div>
+<div class="w-full h-4 bg-surface-container rounded-full overflow-hidden flex">
+<!-- Aceite puro -->
+<div class="bg-primary h-full" style="width: 22.8%;" title="22.8% Aceite"></div>
+<!-- Agua de vegetación + Lluvia -->
+<div class="bg-secondary-container h-full" style="width: 51.2%;" title="51.2% Agua de vegetación"></div>
+<!-- Orujo / Hueso / Piel -->
+<div class="bg-surface-variant h-full" style="width: 26.0%;" title="26% Materia leñosa"></div>
+</div>
+<div class="flex flex-wrap items-center justify-between text-[11px] text-on-surface-variant pt-1 font-mono">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-primary"></span> Aceite (22.8%)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-secondary-container"></span> Agua (51.2%)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-surface-variant"></span> Orujo/Sólidos (26%)</span>
+</div>
+</div>
+<!-- ACCIONES DE EXPORTACIÓN Y ASISTENCIA -->
+<div class="space-y-space-sm pt-space-xs">
+<button class="w-full py-3 px-space-md rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[20px] text-primary">save</span>
+<span>Guardar en Ficha del Socio #482</span>
+</button>
+<div class="grid grid-cols-2 gap-space-sm">
+<button class="py-2.5 px-space-sm rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-secondary">picture_as_pdf</span>
+<span>Informe PDF</span>
+</button>
+<button class="py-2.5 px-space-sm rounded-xl bg-tertiary-container text-on-tertiary hover:opacity-95 font-label-md text-label-md flex items-center justify-center gap-1.5 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">share</span>
+<span>Enviar WhatsApp</span>
+</button>
+</div>
+<button class="w-full py-2.5 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-primary font-label-md text-label-md flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">mic</span>
+<span>Ajustar Parámetros por Dictado de Voz</span>
+</button>
+</div>
+</div>
+<!-- FOTO/TARJETA DE CAMPO: SEGUIMIENTO EN PARCELA -->
+<div class="bg-surface-container-lowest p-space-md rounded-2xl shadow-sm flex items-center gap-space-md">
+<img class="w-20 h-20 rounded-xl object-cover" data-alt="Orchard olive trees laden with green and purple picual olives during autumn harvest in Andalusia Spain with golden hour sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNuP8K4ra3NUHRFPf8f3peG4Zbbp5PlKSE02hbZp47vDa89ARcalPokutZw27pfsRmVx-TTuM05lbrmQflW_Nw3OE9TJqB0bMoh8_YIRlYThvKR9GgwHOGC1SjdJtCTlsgTEwD61_NLmzx8ZPHXen6rqlaiuy05DQ5pLnfnmTytlvMsV7hEKxQqGBsk-pW9Zz0eNU9k_NeVhO7Em73SYq5zlLNK1GDH0S1HWl-3sY"/>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-bold">Finca Los Badenes (Jaén)</span>
+<span class="font-label-md text-label-md font-semibold text-on-surface">Último muestreo rápido NIRS</span>
+<span class="text-[12px] text-on-surface-variant">Rdto Graso Laboratorio: <strong>23,1%</strong> (±0,3 error)</span>
+<span class="text-[11px] text-tertiary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">verified</span> Validado por Estación Enológica
+          </span>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. SECCIÓN INFERIOR: VINCULACIÓN CON LA COOPERATIVA (3 MÓDULOS B2B2C) -->
+<div class="mt-space-xl space-y-space-md">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Centro Operativo de la Cooperativa en Vivo</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Datos sincronizados con tolvas de recepción, básculas y el cuaderno autonómico SIEX</p>
+</div>
+<span class="hidden sm:flex items-center gap-2 text-label-sm font-semibold text-primary bg-primary-fixed-dim/30 px-3 py-1.5 rounded-lg">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+        Sincronización MQTT Activa
+      </span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-lg">
+<!-- MÓDULO A: SEMÁFORO Y CONTROL DE TOLVAS EN TIEMPO REAL -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col justify-between space-y-space-md">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Patio de Descarga</span>
+<span class="flex items-center gap-1.5 bg-tertiary text-on-tertiary px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-on-tertiary animate-pulse"></span>
+              VERDE · FLUIDO
+            </span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Básculas 1 y 2 en Servicio</h3>
+<div class="mt-space-md space-y-2 text-body-sm text-body-sm">
+<div class="flex justify-between py-1 bg-surface-container-low px-2.5 rounded-lg">
+<span class="text-on-surface-variant">Remolques en espera:</span>
+<span class="font-bold text-on-surface">3 vehículos</span>
+</div>
+<div class="flex justify-between py-1 bg-surface-container-low px-2.5 rounded-lg">
+<span class="text-on-surface-variant">Tiempo medio pesaje:</span>
+<span class="font-bold text-primary">11 minutos</span>
+</div>
+<div class="flex justify-between py-1 bg-surface-container-low px-2.5 rounded-lg">
+<span class="text-on-surface-variant">Tolvas Vuelo:</span>
+<span class="font-bold text-primary">Tolva 1 & 3 (Libres)</span>
+</div>
+</div>
+</div>
+<!-- Alerta de Atrojado -->
+<div class="bg-surface-container-high/60 p-space-sm rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[24px]">thermostat</span>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm font-bold text-on-surface">Temperatura Tolva: 19,4 ºC</span>
+<span class="text-[11px] text-tertiary">Óptima <22ºC · Previene fermentación acética</span>
+</div>
+</div>
+</div>
+<!-- MÓDULO B: BANDEJA DE VALIDACIÓN RÁPIDA CUADERNO DIGITAL (SIEX / CUE) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col justify-between space-y-space-md">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Cuaderno SIEX / CUE</span>
+<span class="bg-secondary-fixed text-on-secondary-fixed text-[11px] font-bold px-2 py-0.5 rounded">Voz Asistida</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Nota Dictada por WhatsApp</h3>
+<!-- Transcripción de Audio -->
+<div class="mt-space-md p-space-md bg-surface-container-low rounded-xl space-y-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-bold text-primary">Socio: Antonio Ruiz (Socio #109)</span>
+<span class="text-[10px] text-on-surface-variant">Ayer 19:14h</span>
+</div>
+<p class="font-body-sm text-body-sm italic text-on-surface">
+              "Ayer traté la parcela Los Olivos (SIGPAC 23:045:002) con cobre al 0,3% para repilo antes de las lluvias."
+            </p>
+</div>
+<div class="mt-space-sm flex items-center justify-between text-[11px] text-on-surface-variant">
+<span>Validación requerida: <strong>Elena Morales</strong></span>
+<span class="text-secondary font-semibold">1 clic para enviar al MAPA</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-2 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-bold hover:bg-primary-container transition-colors">
+            Aprobar en SIEX
+          </button>
+<button class="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md transition-colors">
+            Revisar Dosis
+          </button>
+</div>
+</div>
+<!-- MÓDULO C: AFORO AGREGADO COOPERATIVA 2024/2025 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col justify-between space-y-space-md">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold">Balanza de Campaña</span>
+<span class="bg-surface-container-highest text-on-surface text-[11px] font-bold px-2 py-0.5 rounded">Campaña 24/25</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Aforo y Capacidad en Bodega</h3>
+<div class="mt-space-md space-y-space-sm">
+<div>
+<div class="flex justify-between text-body-sm font-medium mb-1">
+<span class="text-on-surface">Aceituna Comprometida:</span>
+<span class="font-mono font-bold text-primary">3.840.000 kg (78%)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 78.3%;"></div>
+</div>
+<span class="text-[11px] text-on-surface-variant mt-0.5 block">Aforo total previsto: 4,90 M kg</span>
+</div>
+<div class="pt-2">
+<div class="flex justify-between text-body-sm font-medium mb-1">
+<span class="text-on-surface">Bodega Inox Disponible:</span>
+<span class="font-mono font-bold text-secondary">62% de capacidad</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full rounded-full" style="width: 38%;"></div>
+</div>
+<span class="text-[11px] text-on-surface-variant mt-0.5 block">1.250.000 Litros de almacenaje libre</span>
+</div>
+</div>
+</div>
+<div class="pt-space-xs flex items-center justify-between">
+<a class="font-label-md text-label-md text-primary font-bold hover:underline flex items-center gap-1" href="#">
+<span>Ver Libro de Registro de Entradas</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+<span class="material-symbols-outlined text-surface-tint">propane_tank</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Micro-interacciones JavaScript integradas para la calculadora -->
+<script>
+    (function() {
+      let trees = 1250;
+      const displayTrees = document.getElementById('display-trees');
+      const btnInc = document.getElementById('btn-inc-trees');
+      const btnDec = document.getElementById('btn-dec-trees');
+
+      if (btnInc && btnDec && displayTrees) {
+        btnInc.addEventListener('click', function() {
+          trees += 50;
+          displayTrees.textContent = trees.toLocaleString('es-ES');
+        });
+
+        btnDec.addEventListener('click', function() {
+          if (trees > 50) {
+            trees -= 50;
+            displayTrees.textContent = trees.toLocaleString('es-ES');
+          }
+        });
+      }
+
+      // Unit Switcher Visual Toggle
+      const units = ['unit-olivos', 'unit-fanegas', 'unit-ha'];
+      units.forEach(function(unitId) {
+        const el = document.getElementById(unitId);
+        if (el) {
+          el.addEventListener('click', function() {
+            units.forEach(id => {
+              const other = document.getElementById(id);
+              if (other) {
+                other.className = 'px-space-md py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all';
+              }
+            });
+            el.className = 'px-space-md py-1.5 rounded-lg bg-surface-container-lowest shadow-sm text-primary font-label-md text-label-md transition-all font-semibold';
+          });
+        }
+      });
+    })();
+  </script>
+</div></main></div></body></html>
