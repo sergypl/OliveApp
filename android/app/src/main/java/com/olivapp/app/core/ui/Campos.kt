@@ -12,14 +12,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
-/** Campo de formulario grande: etiqueta encima (18sp), 64dp mínimo de alto. */
+/**
+ * Campo de formulario grande: etiqueta encima (18sp), 64dp mínimo de alto y
+ * unidad opcional dentro del campo ("kg", "%") a la derecha del valor.
+ */
 @Composable
 fun CampoDeTexto(
     etiqueta: String,
     valor: String,
     alCambiar: (String) -> Unit,
     tipo: KeyboardType,
-    oculto: Boolean = false
+    oculto: Boolean = false,
+    sufijo: String? = null
 ) {
     OutlinedTextField(
         value = valor,
@@ -32,6 +36,11 @@ fun CampoDeTexto(
         keyboardOptions = KeyboardOptions(keyboardType = tipo),
         textStyle = TextoCuerpo.copy(color = Texto),
         shape = FormasOlivApp.medium,
+        suffix = if (sufijo == null) {
+            null
+        } else {
+            { Text(text = sufijo, style = TextoCuerpo, color = TextoSecundario) }
+        },
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)

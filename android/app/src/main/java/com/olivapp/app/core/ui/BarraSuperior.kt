@@ -1,9 +1,11 @@
 package com.olivapp.app.core.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
@@ -25,24 +27,37 @@ import com.olivapp.app.R
 
 /**
  * Pantalla con barra superior grande (Material 3) que se encoge al hacer
- * scroll y lleva botón de volver, siempre con icono Y texto accesible.
+ * scroll y lleva botón de volver (solo si se pasa `onVolver`: las pestañas de
+ * primer nivel no lo llevan), siempre con icono Y texto accesible.
  *
  * El contenido se dibuja dentro del scroll que anima la barra; quien llama no
  * tiene que preocuparse de las barras del sistema (van incluidas en el
- * padding del Scaffold) ni del hueco de la futura barra inferior.
+ * padding del Scaffold) ni del hueco de la futura barra inferior. El hueco se
+ * retira con el teclado abierto para no desperdiciar espacio.
+ *
+ * El hueco `fijo` (opcional) queda FUERA del scroll, entre la barra y el
+ * contenido: sirve para lo que no se debe ir de pantalla, como la tarjeta de
+ * resultado del simulador.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PantallaConBarraSuperiorGrande(
     titulo: String,
-    onVolver: () -> Unit,
+    onVolver: (() -> Unit)? = null,
     reservaBarraInferior: Boolean = true,
     comportamientoBarra: TopAppBarScrollBehavior? = null,
+    fijo: (@Composable () -> Unit)? = null,
     contenido: @Composable (PaddingValues) -> Unit
 ) {
     val estadoBarra = rememberTopAppBarState()
     val comportamiento = comportamientoBarra
         ?: TopAppBarDefaults.enterAlwaysScrollBehavior(estadoBarra)
+    val huecoInferior =
+        if (reservaBarraInferior && LocalBarraInferiorVisible.current && !WindowInsets.isImeVisible) {
+            AlturaBarraInferior
+        } else {
+            24.dp
+        }
     Scaffold(
         containerColor = Fondo,
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -50,12 +65,15 @@ fun PantallaConBarraSuperiorGrande(
             LargeTopAppBar(
                 title = { Text(text = titulo, style = TextoTitulo1, color = Texto) },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_volver),
-                            contentDescription = "Volver",
-                            tint = Primario
-                        )
+                    // Las pestañas de primer nivel no llevan flecha de volver.
+                    if (onVolver != null) {
+                        IconButton(onClick = onVolver) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_volver),
+                                contentDescription = "Volver",
+                                tint = Primario
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -71,20 +89,22 @@ fun PantallaConBarraSuperiorGrande(
         Column(
             modifier = Modifier
                 .padding(margenes)
-                .padding(
-                    start = 24.dp,
-                    end = 24.dp,
-                    top = 8.dp,
-                    bottom = if (reservaBarraInferior && LocalBarraInferiorVisible.current) {
-                        AlturaBarraInferior
-                    } else {
-                        24.dp
-                    }
-                )
+                .padding(horizontal = 24.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
         ) {
-            contenido(PaddingValues(0.dp))
+            if (fijo != null) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    fijo()
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .padding(top = 8.dp, bottom = huecoInferior)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                contenido(PaddingValues(0.dp))
+            }
         }
     }
 }
