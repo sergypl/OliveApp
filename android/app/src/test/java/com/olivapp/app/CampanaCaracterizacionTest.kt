@@ -3,6 +3,7 @@ package com.olivapp.app
 import com.olivapp.app.campana.domain.idCampanaDeLaFecha
 import com.olivapp.app.voz.domain.fechaVisible
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -27,6 +28,16 @@ class CampanaCaracterizacionTest {
     @Test
     fun `el 31 de octubre cierra la campana anterior`() {
         assertEquals("2024-2025", idCampanaDeLaFecha("2025-10-31"))
+    }
+
+    @Test
+    fun `una fecha imposible no da campana en vez de reventar`() {
+        // La fecha viene del borrador IA y solo está validada de forma:
+        // "2026-02-30" pasa ese filtro pero no existe como fecha.
+        assertNull(idCampanaDeLaFecha("2026-02-30"))
+        assertNull(idCampanaDeLaFecha("2026-13-01"))
+        assertNull(idCampanaDeLaFecha("no-es-una-fecha"))
+        assertNull(idCampanaDeLaFecha(""))
     }
 
     @Test

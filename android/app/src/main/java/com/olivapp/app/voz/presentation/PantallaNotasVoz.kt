@@ -118,6 +118,7 @@ class NotasVozViewModel @Inject constructor(
     }
 
     fun empezarGrabacion() {
+        if (_uiState.value.grabando) return
         try {
             val fichero = notasRepo.nuevaRutaDeAudio()
             grabador.empezar(fichero)
@@ -174,8 +175,11 @@ class NotasVozViewModel @Inject constructor(
         }
     }
 
-    /** Envía el audio de una nota a transcribir (también al reintentar). */
+    /** Envía el audio de una nota a transcribir (también al reintentar). Si ya
+     * hay una transcripción de esa nota en vuelo, la segunda pulsación no
+     * lanza otra. */
     fun transcribir(nota: AlmacenNotasVoz.NotaDeVoz) {
+        if (notasRepo.notas().firstOrNull { it.id == nota.id }?.estado == "transcribiendo") return
         val token = sesion.token()
         if (token == null) {
             notasRepo.marcar(nota.id, "error", "")
