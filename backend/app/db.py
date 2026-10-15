@@ -79,6 +79,12 @@ def conectar():
     conn = sqlite3.connect(str(ruta_base_datos()), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # Concurrencia: con el pool de hilos pueden coincidir escrituras; sin
+    # `busy_timeout` y con el journal por defecto, SQLite responde enseguida
+    # con "database is locked" y la petición cae con 500. WAL permite leer
+    # mientras se escribe y el timeout da margen a la escritura en curso.
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
