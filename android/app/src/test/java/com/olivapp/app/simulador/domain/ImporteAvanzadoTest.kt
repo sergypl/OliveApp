@@ -89,6 +89,34 @@ class ImporteAvanzadoTest {
     }
 
     @Test
+    fun `ejemplo a mano con el precio real de la media nacional del 28 de septiembre de 2026`() {
+        // 12.000 kg al 20 % = 2.400 kg; ajuste industrial del 10 % = 2.160 kg de aceite neto.
+        val neto = simularLiquidacion(12000.0, 20.0).aceiteNeto
+        assertEquals(2160.0, neto, delta)
+
+        // AOVE, media nacional: 343,19 €/100 kg = 3,4319 €/kg.
+        val resultado = calcularImporteAvanzado(neto, 12000.0, 3.4319, GASTOS_POR_DEFECTO)!!
+        assertEquals(7412.904, resultado.importeBruto, 1e-6) // 2.160 · 3,4319
+        assertEquals(432.0, resultado.gastos, 1e-6) // 2.160 · 0,20
+        assertEquals(6980.904, resultado.importeNeto, 1e-6)
+        assertEquals(0.58174, resultado.netoPorKiloDeAceituna, 1e-5)
+        assertEquals("7.412,90 €", formatearEuros(resultado.importeBruto))
+        assertEquals("6.980,90 €", formatearEuros(resultado.importeNeto))
+        assertEquals("0,582 €/kg", formatearEurosPorKilo(resultado.netoPorKiloDeAceituna, 3))
+
+        // Con reparto 60/30/10 y los precios de esa misma semana (3,4319 / 3,1757 / 3,0229).
+        val ponderado = precioPonderado(
+            mapOf(
+                CategoriaAceite.AOVE to 3.4319,
+                CategoriaAceite.VIRGEN to 3.1757,
+                CategoriaAceite.LAMPANTE to 3.0229
+            ),
+            RepartoCalidad(60.0, 30.0, 10.0)
+        )!!
+        assertEquals(3.31414, ponderado, 1e-9)
+    }
+
+    @Test
     fun `gastos a cero no restan nada`() {
         val resultado = calcularImporteAvanzado(180.0, 1000.0, 4.0, 0.0)!!
 
