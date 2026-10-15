@@ -32,6 +32,7 @@ import com.olivapp.app.core.ui.CabeceraSeccion
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EsqueletoDeCarga
 import com.olivapp.app.core.ui.FilaDato
+import com.olivapp.app.core.ui.FilaDatoApilada
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.SobrePrimario
 import com.olivapp.app.core.ui.Tarjeta
@@ -137,7 +138,7 @@ private fun ContenidoPerfil(perfil: DatosPerfil) {
     Tarjeta {
         FilaDato(etiqueta = "Código de socio", valor = perfil.codigoSocio, icono = R.drawable.ic_perfil)
         Spacer(modifier = Modifier.height(12.dp))
-        FilaDato(etiqueta = "Cooperativa", valor = perfil.cooperativa, icono = R.drawable.ic_cooperativa)
+        FilaDatoApilada(etiqueta = "Cooperativa", valor = perfil.cooperativa, icono = R.drawable.ic_cooperativa)
         Spacer(modifier = Modifier.height(12.dp))
         FilaDato(
             etiqueta = "Parcelas",
