@@ -164,6 +164,35 @@ class PanelViewModelTest {
     }
 
     @Test
+    fun `una respuesta ilegible no deja el panel cargando para siempre`() {
+        // Un cuerpo que no se puede leer llega como un fallo normal: el panel
+        // termina de cargar con el aviso, no se queda en el esqueleto.
+        campanas.resultadoMiPanel = null to "No se pudo leer la respuesta del servidor."
+        val viewModel = viewModel()
+
+        viewModel.cargar()
+
+        val estado = viewModel.uiState.value
+        assertFalse(estado.cargando)
+        assertNull(estado.datos)
+        assertEquals("No se pudo leer la respuesta del servidor.", estado.mensaje)
+    }
+
+    @Test
+    fun `aunque una respuesta sea ilegible, las demas se cargan y el panel termina`() {
+        campanas.resultadoMiPanel = null to "No se pudo leer la respuesta del servidor."
+        val viewModel = viewModel()
+
+        viewModel.cargar()
+
+        val estado = viewModel.uiState.value
+        assertFalse(estado.cargando)
+        assertFalse(estado.refrescando)
+        assertEquals(listOf("c-2024"), estado.campanas.map { it.id })
+        assertNotNull(estado.perfil)
+    }
+
+    @Test
     fun `la comparativa sale de las campanas con su aceite`() {
         campanas.resultadoCampanas = listOf(
             DatosCampanaResumen("2025-2026", "2025/2026", "actual", 1774.0),

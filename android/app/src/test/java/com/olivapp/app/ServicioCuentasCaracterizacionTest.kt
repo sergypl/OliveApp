@@ -301,6 +301,81 @@ class ServicioCuentasCaracterizacionTest {
         assertEquals("true", sinConexion)
         assertEquals("false", audioInvalido)
     }
+
+    @Test
+    fun `un cuerpo que no es JSON en iniciar sesion avisa en vez de reventar`() {
+        servidor.responderA("/api/v1/login", RespuestaDePrueba(200, "<html>Portal cautivo</html>"))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.iniciarSesion("ana@example.com", "12345678") { token, texto ->
+            resultado.set(arrayOf(token ?: "", texto))
+        }
+
+        val (token, texto) = esperar { resultado.get() }
+        assertEquals("", token)
+        assertEquals("No se pudo leer la respuesta del servidor.", texto)
+    }
+
+    @Test
+    fun `un 200 sin cuerpo en el panel avisa en vez de reventar`() {
+        servidor.responderA("/api/v1/mi-panel", RespuestaDePrueba(200, ""))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.cargarMiPanel("t") { datos, mensaje ->
+            resultado.set(arrayOf(datos?.campana ?: "", mensaje))
+        }
+
+        val (campana, mensaje) = esperar { resultado.get() }
+        assertEquals("", campana)
+        assertEquals("No se pudo leer la respuesta del servidor.", mensaje)
+    }
+
+    @Test
+    fun `un cuerpo que no es JSON en las parcelas avisa en vez de reventar`() {
+        servidor.responderA("/api/v1/mis-parcelas", RespuestaDePrueba(200, "portal cautivo"))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.cargarParcelas("t") { lista, mensaje ->
+            resultado.set(arrayOf((lista?.size ?: -1).toString(), mensaje))
+        }
+
+        val (tamano, mensaje) = esperar { resultado.get() }
+        assertEquals("-1", tamano)
+        assertEquals("No se pudo leer la respuesta del servidor.", mensaje)
+    }
+
+    @Test
+    fun `un JSON malformado en el cuaderno avisa en vez de reventar`() {
+        servidor.responderA("/api/v1/mis-labores", RespuestaDePrueba(200, """{"campanas": ["""))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.cargarMisLabores("t") { lista, mensaje ->
+            resultado.set(arrayOf((lista?.size ?: -1).toString(), mensaje))
+        }
+
+        val (tamano, mensaje) = esperar { resultado.get() }
+        assertEquals("-1", tamano)
+        assertEquals("No se pudo leer la respuesta del servidor.", mensaje)
+    }
+
+    @Test
+    fun `un cuerpo ilegible en la transcripcion deja error reintentable`() {
+        servidor.responderA("/api/v1/mis-notas-voz/transcripcion", RespuestaDePrueba(200, "[]"))
+        val resultado = AtomicReference<Array<String>?>()
+
+        ServicioCuentas.transcribirNota("t", audioDePrueba()) { texto, _, error, sinConexion, audioInvalido ->
+            resultado.set(
+                arrayOf(texto ?: "", error, sinConexion.toString(), audioInvalido.toString())
+            )
+        }
+
+        val (texto, error, sinConexion, audioInvalido) = esperar { resultado.get() }
+        assertEquals("", texto)
+        assertEquals("No se pudo leer la respuesta del servidor.", error)
+        // Ni es un problema de conexión (la nota vuelve a la cola) ni de audio.
+        assertEquals("false", sinConexion)
+        assertEquals("false", audioInvalido)
+    }
 }
 
 /** Respuesta fija del servidor de prueba. */
