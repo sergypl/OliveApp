@@ -880,5 +880,28 @@
       "2026-10-15 R8 medido y revertido, para decidir con datos: 2.037.640 bytes (2,04 MB) con proguard-android-optimize.txt y la regla -dontwarn com.google.errorprone.annotations.** (sin ella R8 no arranca: anotaciones de Tink vía security-crypto). Ver docs/evidencia/apk-ligero-sin-r8/NOTAS.md"
     ],
     "notes": "Encargo del usuario: 'una versión lo más optimizada a nivel de espacio, compilada, pero sin pasar el R8 ni firmarla', manteniendo el debug como build de cada día; backend solo en local, así que la URL no se toca. Decisiones tomadas sin consultar (reversibles, TTF originales en el historial de git): (1) podar los cuatro TTF al subconjunto latin+latin-ext de Google Fonts conservando hinting y las features de composición (kern, liga, calt, ccmp, locl, rlig, clig), que era donde más se recortaba sin tocar la calidad de render; (2) compilar solo los recursos en español, que mejora además la coherencia (la interfaz entera es en español); (3) no tocar el resto (R8, firma, versionName, allowBackup) porque exigen decisiones del usuario y siguen pendientes en docs/risks-and-open-questions.md. Dato registrado ahí mismo: sin firma, el APK release no se puede instalar en el móvil, y R8 es la palanca grande (8,53 MB → 2,04 MB)."
+  },
+  {
+    "id": "r8-minify",
+    "area": "release",
+    "title": "La release se compila con R8 y pesa 2,04 MB sin romper la app",
+    "user_visible_behavior": "La app se ve y se comporta exactamente igual (misma sesión, mismos datos, mismos cálculos), pero el APK release pasa de 8,53 MB a 2,04 MB porque R8 poda el código que no se usa y ofusca los nombres.",
+    "depends_on": [
+      "apk-ligero-sin-r8"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleRelease (con isMinifyEnabled=true y las reglas de proguard-rules.pro)",
+      "Smoke test de la release en el Xiaomi Redmi Note 10 Pro: arranque con la sesión cifrada intacta, cuaderno con datos del backend, cálculo del simulador idéntico y logcat sin crashes ni clases faltantes",
+      "cd android && ./gradlew testDebugUnitTest lint (con el puerto 8000 libre)",
+      "./init.sh completo (el camino estándar de arranque sigue en verde)"
+    ],
+    "evidence": [
+      "2026-10-15 medida: release/app-release-unsigned.apk 8.525.975 → 2.037.640 bytes (2,04 MB, 4,2 veces más ligero)",
+      "2026-10-15 R8 no compila sin la regla -dontwarn com.google.errorprone.annotations.** (anotaciones de errorprone que usa Tink vía androidx.security:security-crypto, la sesión cifrada del socio); con ella, BUILD SUCCESSFUL y mapping.txt/usage.txt generados",
+      "2026-10-15 smoke test en el Xiaomi con la release (copia temporal firmada con la clave de depuración solo para poder instalarla, fuera del repo): la sesión del socio se conserva tras el arranque (el almacén cifrado con Tink funciona ofuscado), panel con datos reales (10.958 kg, 17,93 %), Mi cuaderno con 9 labores y filtros por categoría y parcela, y simulador 10.000 kg x 18 % → 1.620 kg netos idéntico a sin R8; logcat sin FATAL EXCEPTION, ClassNotFound, NoSuchMethod ni NoSuchField",
+      "2026-10-15 testDebugUnitTest 285 tests, 0 fallos, 0 omitidos y lint en verde; ./init.sh completo (pytest 166/166, healthcheck 200, datos sembrados, APK instalado y abierto). Evidencia completa en docs/evidencia/r8-minify/"
+    ],
+    "notes": "Decidida por el usuario tras medir el ahorro (8,53 → 2,04 MB). El build de desarrollo no cambia. Solo dos reglas en proguard-rules.pro: la de errorprone (obligatoria para que R8 compile) y -keepattributes SourceFile,LineNumberTable + -renamesourcefileattribute SourceFile para que los crashes sigan siendo legibles; Hilt, Room y OkHttp traen sus reglas de consumidor. Consecuencias declaradas (ADR 0013): los stack traces quedan ofuscados y hay que conservar el mapping.txt de cada release, y una librería nueva con reflexión y sin reglas puede romperse solo en la release (por eso el smoke test de release es parte de la verificación). Queda pendiente la firma del APK release: sin firma, Android no deja instalar el APK release (el smoke test usó una copia temporal firmada con la clave de depuración)."
   }
 ]

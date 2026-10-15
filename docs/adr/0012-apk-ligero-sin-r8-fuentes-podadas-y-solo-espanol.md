@@ -55,3 +55,7 @@
 - Si se añade un peso de fuente nuevo (ADR 0009), hay que podarlo igual y registrarlo aquí.
 - Queda fuera de esta decisión la palanca grande (R8: 2,04 MB) y la firma del APK, ambas
   pendientes en `docs/risks-and-open-questions.md`.
+
+> **Actualización (2026-10-15):** R8 se activó después, con el OK del usuario y sus
+> reglas mínimas, en el [ADR 0013](0013-r8-activado-en-la-release.md). Sigue pendiente la
+> firma del APK release.
