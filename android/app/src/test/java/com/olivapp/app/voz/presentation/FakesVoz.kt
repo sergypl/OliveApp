@@ -41,6 +41,7 @@ class FakeNotasRepositorio(
     var actualizarBorradorLlamado: Pair<String, String>? = null
     var transcripcionLlamada: Pair<String, File>? = null
     var completarLlamado: Triple<String, File, String>? = null
+    var transcribirLlamadas = 0
 
     // Respuestas retenidas cuando no se responde al momento.
     var pendienteTranscribir: ((String?, String, String, Boolean, Boolean) -> Unit)? = null
@@ -92,6 +93,7 @@ class FakeNotasRepositorio(
         fichero: File,
         alTerminar: (String?, String, String, Boolean, Boolean) -> Unit
     ) {
+        transcribirLlamadas += 1
         transcripcionLlamada = token to fichero
         if (responderAlMomento) {
             val resultado = resultadoTranscribir
@@ -129,10 +131,12 @@ class FakeGrabadorDeNotas : GrabadorDeNotas {
     var segundosGrabados = 3
     var grabando = false
     var amplitudActual = 0
+    var empezarLlamadas = 0
 
     override fun amplitud(): Int = amplitudActual
 
     override fun empezar(fichero: File) {
+        empezarLlamadas += 1
         grabando = true
     }
 

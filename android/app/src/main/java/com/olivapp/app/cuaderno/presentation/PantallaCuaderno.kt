@@ -56,6 +56,8 @@ import com.olivapp.app.cuaderno.domain.FiltroDeCuaderno
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import com.olivapp.app.cuaderno.domain.agruparPorMes
+import com.olivapp.app.cuaderno.domain.claveUnicaDeCampana
+import com.olivapp.app.cuaderno.domain.claveUnicaDeMes
 import com.olivapp.app.cuaderno.domain.filtrarCampanas
 import com.olivapp.app.cuaderno.domain.opcionesDeFiltro
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -436,8 +438,8 @@ fun PantallaCuaderno(
                             alFiltrarParcela = viewModel::filtrarPorParcela
                         )
                     }
-                    for (campana in grupos) {
-                        item(key = "campana-" + campana.nombre) {
+                    for ((indiceDeCampana, campana) in grupos.withIndex()) {
+                        item(key = claveUnicaDeCampana(indiceDeCampana, campana.nombre)) {
                             Spacer(modifier = Modifier.height(24.dp))
                             CabeceraSeccion(
                                 titulo = "Campaña " + campana.nombre +
@@ -445,8 +447,10 @@ fun PantallaCuaderno(
                                 icono = R.drawable.ic_campana
                             )
                         }
-                        for (mes in campana.meses) {
-                            stickyHeader(key = "mes-" + mes.clave) {
+                        for ((indiceDeMes, mes) in campana.meses.withIndex()) {
+                            stickyHeader(
+                                key = claveUnicaDeMes(indiceDeCampana, indiceDeMes, mes.clave)
+                            ) {
                                 // Cabecera fija: fondo opaco para que la lista
                                 // pase por debajo sin transparentarse.
                                 Column(

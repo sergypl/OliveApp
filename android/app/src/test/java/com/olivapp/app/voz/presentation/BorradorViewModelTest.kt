@@ -312,4 +312,18 @@ class BorradorViewModelTest {
         assertTrue(viewModel.uiState.value.preguntarDescarte)
         assertNotNull(JSONObject(viewModel.uiState.value.fichaJson))
     }
+
+    @Test
+    fun `doble pulsacion de responder solo empieza una grabacion`() {
+        val grabador = FakeGrabadorDeNotas()
+        val viewModel = crear(grabador = grabador)
+        viewModel.preparar("nota-1", fichaConPregunta)
+
+        viewModel.empezarRespuesta { }
+        viewModel.empezarRespuesta { }
+
+        // La segunda pulsación no abre un micrófono que ya está grabando.
+        assertEquals(1, grabador.empezarLlamadas)
+        assertTrue(viewModel.uiState.value.grabando)
+    }
 }

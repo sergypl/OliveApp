@@ -63,6 +63,29 @@ class LineaDeTiempoTest {
     }
 
     @Test
+    fun `las claves de la lista no se repiten aunque dos campanas tengan el mismo mes`() {
+        val grupos = agruparPorMes(
+            listOf(
+                campanaDeEjemplo(),
+                DatosCampanaDeLabores(
+                    nombre = "2024/2025",
+                    esActual = false,
+                    labores = listOf(labor("lab-vieja", "2025-12-11", "tratamiento", "La Noria"))
+                )
+            )
+        )
+
+        val claves = grupos.withIndex().flatMap { (indiceDeCampana, campana) ->
+            listOf(claveUnicaDeCampana(indiceDeCampana, campana.nombre)) +
+                campana.meses.withIndex().map { (indice, mes) ->
+                    claveUnicaDeMes(indiceDeCampana, indice, mes.clave)
+                }
+        }
+
+        assertEquals(claves.size, claves.distinct().size)
+    }
+
+    @Test
     fun `la cabecera del mes se titula en espanol con su ano`() {
         assertEquals("Diciembre de 2025", tituloDeMes("2025-12"))
         assertEquals("Enero de 2026", tituloDeMes("2026-01"))

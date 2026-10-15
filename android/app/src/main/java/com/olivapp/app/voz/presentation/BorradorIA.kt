@@ -220,6 +220,7 @@ class BorradorViewModel @Inject constructor(
     }
 
     fun empezarRespuesta(alGuardar: (String) -> Unit) {
+        if (_uiState.value.grabando) return
         try {
             val carpeta = File(contexto.filesDir, "respuestas-borrador")
             carpeta.mkdirs()
