@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -19,12 +20,19 @@ import androidx.compose.ui.unit.dp
  * La ventana se dibuja hasta el borde de la pantalla (la barra de estado es
  * transparente con iconos oscuros) y el contenido se aparta de la barra de
  * estado, del recorte de cámara, de la barra de navegación del sistema y del
- * teclado. Además se reserva el hueco de la futura barra de navegación
- * inferior para que, cuando llegue en la oleada 1, no tape nada.
+ * teclado. Además se reserva el hueco de la barra de navegación inferior
+ * (solo en las pantallas que la llevan) para que no tape nada.
  */
 
 /** Altura del hueco reservado para la barra de navegación inferior. */
 val AlturaBarraInferior = 80.dp
+
+/**
+ * Si la pantalla actual lleva la barra de navegación inferior. El router lo
+ * fija por pantalla: las de segundo nivel y las de acceso no la llevan y no
+ * reservan su hueco (feature `navegacion-barra-inferior`).
+ */
+val LocalBarraInferiorVisible = compositionLocalOf { true }
 
 /** Margen de contenido de todas las pantallas (DESIGN.md: ritmo 4/8dp). */
 private val MargenContenido = 24.dp
@@ -37,8 +45,13 @@ private val MargenContenido = 24.dp
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Modifier.pantallaCompleta(reservaBarraInferior: Boolean = true): Modifier {
+    val barraVisible = LocalBarraInferiorVisible.current
     val huecoInferior =
-        if (reservaBarraInferior && !WindowInsets.isImeVisible) AlturaBarraInferior else 0.dp
+        if (reservaBarraInferior && barraVisible && !WindowInsets.isImeVisible) {
+            AlturaBarraInferior
+        } else {
+            0.dp
+        }
     return this
         .background(Fondo)
         .windowInsetsPadding(

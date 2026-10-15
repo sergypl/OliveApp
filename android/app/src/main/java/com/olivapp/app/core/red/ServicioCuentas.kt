@@ -11,6 +11,7 @@ import com.olivapp.app.core.formatos.formatearNumero
 import com.olivapp.app.cuaderno.domain.DatosCampanaDeLabores
 import com.olivapp.app.cuaderno.domain.DatosLabor
 import com.olivapp.app.parcelas.domain.DatosParcela
+import com.olivapp.app.perfil.domain.DatosPerfil
 import java.io.IOException
 import okhttp3.Call
 import okhttp3.Callback
@@ -612,6 +613,43 @@ object ServicioCuentas {
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "Sesión caducada o no válida. Vuelve a iniciar sesión." }
+                        principal.post { alTerminar(null, detalle) }
+                    }
+                }
+            }
+        })
+    }
+
+    /** Consulta el perfil del socio (llamada autenticada, solo lectura). */
+    fun cargarMiPerfil(token: String, alTerminar: (DatosPerfil?, String) -> Unit) {
+        val peticion = Request.Builder()
+            .url("${ClienteRed.URL_BASE}/api/v1/mi-perfil")
+            .header("Authorization", "Bearer $token")
+            .get()
+            .build()
+
+        ClienteRed.cliente.newCall(peticion).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                principal.post {
+                    alTerminar(null, "No hay conexión con el servidor. Inténtalo de nuevo.")
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (it.isSuccessful) {
+                        val cuerpo = JSONObject(it.body?.string() ?: "")
+                        val perfil = DatosPerfil(
+                            codigoSocio = cuerpo.optString("codigo_socio"),
+                            email = cuerpo.optString("email"),
+                            cooperativa = cuerpo.optString("cooperativa"),
+                            numeroParcelas = cuerpo.optInt("numero_parcelas"),
+                            campanaActual = cuerpo.optString("campana_actual")
+                        )
+                        principal.post { alTerminar(perfil, "") }
+                    } else {
+                        val detalle = ClienteRed.detalleDeError(it)
+                            .ifEmpty { "No se pudo cargar tu perfil." }
                         principal.post { alTerminar(null, detalle) }
                     }
                 }

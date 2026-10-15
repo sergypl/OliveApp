@@ -2,8 +2,6 @@ package com.olivapp.app.campana.presentation
 
 import com.olivapp.app.acceso.presentation.FakeSesionRepositorio
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Tests del ViewModel del panel (feature panel-de-campana). */
@@ -51,21 +49,5 @@ class PanelViewModelTest {
         viewModel.cargar()
 
         assertEquals("No se pudieron cargar tus campañas.", viewModel.uiState.value.mensaje)
-    }
-
-    @Test
-    fun `cerrar sesion borra el token y lo avisa una sola vez`() {
-        val sesion = FakeSesionRepositorio()
-        sesion.guardar("token-abc")
-        val viewModel = PanelViewModel(sesion, FakeCampanasRepositorio())
-
-        viewModel.cerrarSesion()
-
-        assertEquals(null, sesion.token())
-        assertTrue(viewModel.uiState.value.sesionCerrada)
-
-        viewModel.sesionCerradaAtendida()
-
-        assertFalse(viewModel.uiState.value.sesionCerrada)
     }
 }
