@@ -31,6 +31,7 @@ import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CabeceraSeccion
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EsqueletoDeCarga
+import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.FilaDatoApilada
 import com.olivapp.app.core.ui.Primario
@@ -171,33 +172,12 @@ private fun Avatar(iniciales: String) {
 
 @Composable
 private fun ErrorDePerfil(mensaje: String, sinConexion: Boolean, alReintentar: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Icon(
-            painter = painterResource(
-                id = if (sinConexion) R.drawable.ic_sin_conexion else R.drawable.ic_error
-            ),
-            contentDescription = null,
-            tint = Error,
-            modifier = Modifier.size(56.dp)
-        )
-        Text(
-            text = if (sinConexion) "Sin conexión" else "No se pudo cargar tu perfil",
-            style = TextoValor,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = mensaje,
-            style = TextoCuerpo,
-            color = Error,
-            textAlign = TextAlign.Center
-        )
-        BotonSecundario(texto = "Reintentar", icono = R.drawable.ic_refrescar, alPulsar = alReintentar)
-    }
+    EstadoDeError(
+        titulo = if (sinConexion) "Sin conexión" else "No se pudo cargar tu perfil",
+        mensaje = mensaje,
+        sinConexion = sinConexion,
+        alReintentar = alReintentar
+    )
 }
 
 /** Aviso de datos de demostración (ADR 0006): los datos de la cooperativa no son reales. */

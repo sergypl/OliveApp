@@ -36,6 +36,7 @@ import com.olivapp.app.core.ui.CabeceraSeccion
 import com.olivapp.app.core.ui.ContenedorRefrescar
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EsqueletoDeCarga
+import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.EstadoVacio
 import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrandeEnLista
@@ -349,6 +350,7 @@ fun PantallaCuaderno(
             alRefrescar = viewModel::alRefrescar,
             modificador = Modifier.fillMaxSize()
         ) {
+            val errorDeCarga = if (estado.campanas.isEmpty()) estado.mensaje else null
             when {
                 !estado.cargado -> EsqueletoDeCarga(
                     filas = 6,
@@ -356,6 +358,18 @@ fun PantallaCuaderno(
                     modificador = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp)
+                )
+                // Falló la carga y no hay nada que enseñar: es un error, no "sin labores".
+                errorDeCarga != null -> EstadoDeError(
+                    titulo = if (errorDeCarga.contains("conexión", ignoreCase = true)) {
+                        "Sin conexión"
+                    } else {
+                        "No se pudo cargar tu cuaderno"
+                    },
+                    mensaje = errorDeCarga,
+                    sinConexion = errorDeCarga.contains("conexión", ignoreCase = true),
+                    alReintentar = viewModel::cargar,
+                    modificador = Modifier.padding(top = 32.dp, start = 24.dp, end = 24.dp)
                 )
                 estado.campanas.all { it.labores.isEmpty() } -> EstadoVacio(
                     titulo = "Apunta tu primera labor",
