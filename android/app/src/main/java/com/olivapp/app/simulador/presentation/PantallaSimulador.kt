@@ -191,15 +191,19 @@ class SimuladorViewModel @Inject constructor() : ViewModel() {
  * con la cifra animada al cambiar. Los campos llevan su unidad dentro, el
  * teclado es numérico y los millares se formatean al escribir. El rendimiento
  * graso se mueve también con botones de 0,1 % y con un deslizador de 10 a 30 %,
- * los tres sincronizados.
+ * los tres sincronizados. Debajo, un interruptor "Simulador avanzado" despliega el
+ * precio del aceite, los gastos de la cooperativa y el reparto por calidad
+ * (feature simulador-avanzado-precio-aceite).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaSimulador(
     onVolver: () -> Unit,
-    viewModel: SimuladorViewModel = hiltViewModel()
+    viewModel: SimuladorViewModel = hiltViewModel(),
+    avanzado: SimuladorAvanzadoViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    val estadoAvanzado by avanzado.uiState.collectAsStateWithLifecycle()
 
     PantallaConBarraSuperiorGrande(
         titulo = "Liquidación en limpio",
@@ -268,6 +272,18 @@ fun PantallaSimulador(
                 alCambiar = viewModel::cambiarAjuste,
                 tipo = KeyboardType.Decimal,
                 sufijo = "%"
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        // Simulador avanzado (simulador-avanzado-precio-aceite): el básico no cambia.
+        InterruptorAvanzado(activado = estadoAvanzado.activado, alCambiar = avanzado::activar)
+        if (estadoAvanzado.activado) {
+            Spacer(modifier = Modifier.height(24.dp))
+            SeccionAvanzada(
+                estado = estadoAvanzado,
+                viewModel = avanzado,
+                aceiteNeto = estado.resultado?.aceiteNeto,
+                kilos = numeroDeCampo(estado.kilos)
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
