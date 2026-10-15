@@ -10,6 +10,8 @@
 - **Nota de voz:** audio grabado + transcripción + borrador IA. Es el origen más común de una labor. Grabación de hasta 60 segundos en MPEG-4/AAC (`.m4a`), guardada en el dispositivo y registrada en una cola local con su estado hasta que se transcribe.
 - **Borrador IA:** ficha propuesta (fecha, parcela, categoría y campos de la categoría) pendiente de confirmación. Cuando faltan campos obligatorios lleva la pregunta del asistente por el siguiente campo y no se puede confirmar hasta completar la ficha. Si la IA no identifica la parcela, la ficha la deja vacía y el socio elige una de su lista antes de poder confirmar. La fecha se muestra como día concreto (con las expresiones relativas ya resueltas) y el socio la puede corregir en el calendario antes de confirmar.
 - **Simulación:** cálculo bajo demanda de liquidación en limpio (kilos × rendimiento graso − ajuste industrial). No se persiste como entidad en el MVP ni se compara con el dato oficial.
+- **Simulador avanzado:** parte opcional de la simulación (interruptor guardado como preferencia del dispositivo, no como dato de campaña) que añade el **precio del aceite** (€/kg), los **gastos de la cooperativa** (€/kg de aceite, 0,20 por defecto) y el **reparto por calidad** (% AOVE / virgen / lampante, suma 100). Produce un **importe estimado**: bruto = aceite neto × precio; gastos = aceite neto × gastos; neto = bruto − gastos; y su equivalente en €/kg de aceituna. No se persiste.
+- **Precio de referencia (semana):** precio semanal de una **categoría de aceite** en un mercado español, en €/kg de aceite (la fuente lo da en €/100 kg), de la Comisión Europea (ADR 0011). Solo existe como caché del backend (tabla `precio_aceite`: categoría, mercado, semana, campaña de la fuente, precio, consultado en); no pertenece a ningún socio ni se mezcla con los datos de campaña. Con precio escrito a mano no se usa y el reparto por calidad no aplica.
 
 Campos por categoría de labor (alineados con SIEX según ADR 0005):
 - Tratamiento fitosanitario: producto, plaga a controlar, cantidad + unidad.
@@ -21,6 +23,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 - Una Cooperativa agrupa N socios (Agricultores) y N Campañas.
 - Un Agricultor pertenece a una Cooperativa (única en el MVP) y tiene N Parcelas, N Labores y N datos de campaña.
 - Una Cuenta identifica a un Agricultor (email + contraseña) y se vincula a exactamente un socio por su código de socio. Cada socio solo accede a sus propios datos (aislamiento por socio): las consultas a los datos de otro socio fallan o devuelven vacío.
+- El Perfil del socio es una vista de solo lectura (no una entidad nueva) compuesta por la Cuenta, su socio (código de socio), la Cooperativa, el número de Parcelas del socio y la Campaña actual. No se edita en el MVP.
 - Una Campaña agrupa las Labores de "Mi cuaderno" y los datos oficiales de cada socio en esa temporada.
 - Una Parcela pertenece a un Agricultor.
 - Una Labor pertenece a exactamente una Parcela (y, a través de ella, a un Agricultor) y se sitúa en una Campaña.
@@ -51,6 +54,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 6. **Relleno conversacional del borrador:** el dictado no trae todos los campos, el asistente pregunta por los que faltan (una pregunta por respuesta) y el socio responde por voz hasta completar la ficha; una respuesta puede completar varios campos. Entonces confirma.
 
 ## Edge Cases
+- Simulador avanzado: un reparto por calidad que no suma 100 avisa y no da precio ponderado; un precio de 0 no es un precio (no hay importe); si los gastos superan al precio el importe neto sale negativo y se avisa; si la fuente de precios falla se sirve la caché con su antigüedad, y sin caché la app lo dice y deja escribir el precio a mano. Las semanas de cambio de campaña de la fuente salen duplicadas y se deduplican.
 - La IA no identifica la parcela: el borrador deja la parcela vacía y pide elegirla de la lista antes de confirmar.
 - La IA no reconoce la categoría: mensaje claro de rechazo (solo hay 3 categorías en el MVP).
 - Fechas relativas sencillas ("hoy", "ayer", "anteayer"): se resuelven a fecha concreta en el borrador contra la fecha de hoy, y el socio la puede corregir en el calendario antes de confirmar. Las fechas ambiguas ("el 5 de diciembre", "la semana pasada") y los dictados sin fecha quedan sin resolver y el socio elige la fecha en el calendario antes de poder confirmar.

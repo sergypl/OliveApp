@@ -24,11 +24,13 @@
 - Gateway de inferencia compatible con OpenAI (`inference.devexpert.io`, clave `DEVEXPERT_API_KEY` solo en servidor; ver ADR 0004 para la elección de aliases):
   - **Transcripción:** audio grabado en Android (formato a confirmar en validación, candidato `m4a`) → texto en español, alias `transcribe` (`/audio/transcriptions`).
   - **Extracción:** alias `chat` (`/chat/completions`) con salida JSON forzada (fecha, parcela, categoría, campos de la categoría), apoyándose en la lista de parcelas conocidas del socio para desambiguar; `chat-pro` como escalón de calidad solo para extracción.
+- **Precios de referencia del aceite** (simulador avanzado, ADR 0011): API pública y sin clave del Agri-food Data Portal de la Comisión Europea (`api.tech.ec.europa.eu/agrifood/api/oliveOil/prices`, precios en €/100 kg). La app no la llama: el backend (`backend/app/precios.py`) hace de proxy en `GET /api/v1/precios-aceite` y `/api/v1/precios-aceite/ultima-semana`, convierte a €/kg, mapea categorías y mercados, deduplica las semanas de cambio de campaña y cachea en la tabla SQLite `precio_aceite`. Si la fuente falla sirve la caché indicando su antigüedad. Tests con respuestas grabadas (`backend/tests/fixtures/`), sin red.
 - Sin más integraciones externas en el MVP (SIEX es solo estructura de campos; la cooperativa no se integra, sus datos se siembran).
 
 ## Authentication and Authorization
 - Registro/login con email + contraseña; el backend emite un token (JWT) que la app guarda en almacenamiento seguro del dispositivo.
 - Stance mínima: contraseñas hasheadas, token con caducidad y cierre de sesión. Fuera del MVP: reset por email, verificación de email, 2FA, baja de cuenta.
+- `GET /api/v1/mi-perfil` (módulo `backend/app/perfil.py`, requiere token): devuelve `{codigo_socio, email, cooperativa, numero_parcelas, campana_actual}` del socio de la cuenta del token (solo lectura; el socio se deduce del token, nunca de la petición, así un socio no ve los datos de otro). Lo consume la pestaña Perfil de la app.
 - Un único rol (socio). No hay rol de cooperativa ni permisos diferenciados.
 
 ## Deployment and Operations

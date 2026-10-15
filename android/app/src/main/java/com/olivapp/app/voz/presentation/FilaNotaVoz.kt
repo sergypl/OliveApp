@@ -15,6 +15,7 @@ import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.voz.data.AlmacenNotasVoz
+import com.olivapp.app.R
 
 /** Una nota de voz de la cola local: cuándo se grabó, cuánto dura, su estado y su texto. */
 @Composable
@@ -60,11 +61,11 @@ fun FilaNotaVoz(
         }
         if (nota.estado == "error" || nota.estado == "pendiente") {
             Spacer(modifier = Modifier.height(8.dp))
-            BotonSecundario(texto = "Reintentar", alPulsar = alReintentar)
+            BotonSecundario(texto = "Reintentar", icono = R.drawable.ic_refrescar, alPulsar = alReintentar)
         }
         if (nota.estado == "audio_invalido") {
             Spacer(modifier = Modifier.height(8.dp))
-            BotonSecundario(texto = "Grabar otra vez", alPulsar = alRepetir)
+            BotonSecundario(texto = "Grabar otra vez", icono = R.drawable.ic_mic, alPulsar = alRepetir)
         }
     }
 }

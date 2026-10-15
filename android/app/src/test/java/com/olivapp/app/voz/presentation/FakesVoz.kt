@@ -128,6 +128,9 @@ class FakeGrabadorDeNotas : GrabadorDeNotas {
 
     var segundosGrabados = 3
     var grabando = false
+    var amplitudActual = 0
+
+    override fun amplitud(): Int = amplitudActual
 
     override fun empezar(fichero: File) {
         grabando = true

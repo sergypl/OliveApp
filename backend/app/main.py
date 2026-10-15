@@ -18,6 +18,8 @@ from app import cuentas
 from app import db as basedatos
 from app import labores
 from app import parcelas
+from app import perfil
+from app import precios
 from app import seed
 from app import sesiones
 from app import transcripcion
@@ -72,6 +74,8 @@ def sesion_actual(authorization: str = Header(default="")):
 
 
 app = FastAPI(title="OlivApp API", lifespan=lifespan)
+app.include_router(perfil.crear_router(conexion, sesion_actual))
+app.include_router(precios.crear_router(conexion, sesion_actual))
 
 
 class RegistroEntrada(BaseModel):
@@ -205,11 +209,13 @@ def mis_campanas(conn: sqlite3.Connection = Depends(conexion), sesion=Depends(se
     """Campañas del socio autenticado, con su estado (`actual` o `cerrada`).
 
     Estados de Campaña (docs/domain-model.md): la actual admite labores;
-    las cerradas son anteriores y de solo consulta.
+    las cerradas son anteriores y de solo consulta. Cada campaña lleva su
+    `aceite_obtenido` (kg, dato oficial) para la comparativa del panel sin
+    pedir el detalle de cada una (campo añadido, el resto no cambia).
     """
     cuenta = _cuenta_del_socio(conn, sesion)
     filas = conn.execute(
-        "SELECT c.id, c.nombre, c.es_actual FROM campana c "
+        "SELECT c.id, c.nombre, c.es_actual, d.aceite_obtenido FROM campana c "
         "JOIN dato_oficial d ON d.campana_id = c.id "
         "WHERE d.socio_id = ? ORDER BY c.es_actual DESC, c.id DESC",
         (cuenta["socio_id"],),
@@ -219,6 +225,7 @@ def mis_campanas(conn: sqlite3.Connection = Depends(conexion), sesion=Depends(se
             "id": f["id"],
             "nombre": f["nombre"],
             "estado": "actual" if f["es_actual"] else "cerrada",
+            "aceite_obtenido": f["aceite_obtenido"],
         }
         for f in filas
     ]
