@@ -23,6 +23,12 @@ class GrabadorNotas : GrabadorDeNotas {
         empezadoEn = android.os.SystemClock.elapsedRealtime()
     }
 
+    override fun amplitud(): Int = try {
+        grabador?.maxAmplitude ?: 0
+    } catch (e: Exception) {
+        0
+    }
+
     /** Para la grabación y devuelve los segundos grabados. */
     override fun parar(): Int {
         val r = grabador ?: return 0
