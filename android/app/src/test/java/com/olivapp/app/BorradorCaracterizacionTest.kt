@@ -31,6 +31,13 @@ class BorradorCaracterizacionTest {
     }
 
     @Test
+    fun `la fecha del borrador se valida solo de forma`() {
+        // "2026-02-30" pasa tal cual el filtro de forma; quien no puede con
+        // ella es idCampanaDeLaFecha, que la rechaza sin reventar.
+        assertEquals("2026-02-30", fechaIsoDeBorrador(JSONObject("""{"fecha": "2026-02-30"}""")))
+    }
+
+    @Test
     fun `el tratamiento completo no tiene campos faltantes`() {
         val borrador = JSONObject(
             """

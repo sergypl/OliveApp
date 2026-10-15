@@ -160,10 +160,18 @@ class BorradorViewModel @Inject constructor(
         }
     }
 
-    /** Al salir de la conversación, una respuesta grabada sin enviar no se
-     * queda en el teléfono: la pregunta sigue ahí y se vuelve a responder. */
+    /**
+     * Al salir de la conversación, una grabación de respuesta en curso se para
+     * y libera el micrófono (si no, la siguiente grabación falla con un aviso
+     * engañoso de permisos) y un audio sin enviar no se queda en el teléfono:
+     * la pregunta sigue ahí y se vuelve a responder.
+     */
     fun alSalir() {
         reloj?.cancel()
+        if (_uiState.value.grabando) {
+            grabador.parar()
+            _uiState.update { it.copy(grabando = false) }
+        }
         if (!_uiState.value.enviando) {
             ficheroRespuesta?.delete()
             ficheroRespuesta = null
@@ -212,6 +220,7 @@ class BorradorViewModel @Inject constructor(
     }
 
     fun empezarRespuesta(alGuardar: (String) -> Unit) {
+        if (_uiState.value.grabando) return
         try {
             val carpeta = File(contexto.filesDir, "respuestas-borrador")
             carpeta.mkdirs()

@@ -188,7 +188,7 @@ def completar(api_key, borrador, texto_respuesta):
     categoria = borrador.get("categoria")
     faltantes = campos_faltantes(borrador)
     actualizado = dict(borrador)
-    actualizado["campos"] = dict(borrador.get("campos") or {})
+    actualizado["campos"] = _campos_como_diccionario(borrador.get("campos"))
     if not faltantes:
         actualizado["pregunta"] = ""
         return actualizado
@@ -227,16 +227,29 @@ def completar(api_key, borrador, texto_respuesta):
 
 def _extraer_json(api_key, mensajes):
     contenido = _llamar_al_gateway(api_key, mensajes)
-    try:
-        return json.loads(contenido)
-    except ValueError:
+    datos = _objeto_json(contenido)
+    if datos is None:
         # Plan B del ADR 0004: se pide JSON válido una vez más antes de fallar.
         mensajes = mensajes + [{"role": "user", "content": "Responde solo con JSON válido."}]
         contenido = _llamar_al_gateway(api_key, mensajes)
-    try:
-        return json.loads(contenido)
-    except ValueError:
+        datos = _objeto_json(contenido)
+    if datos is None:
         raise ExtraccionFallida("El gateway devolvió una respuesta que no es JSON.")
+    return datos
+
+
+def _objeto_json(contenido):
+    """La respuesta del gateway como objeto JSON; None si no lo es.
+
+    La salida del modelo no es de fiar: puede no ser JSON o ser una lista o un
+    texto, y la ficha se construye con `.get()`. En ese caso se devuelve None
+    para reintentar o, si insiste, fallar con un error claro.
+    """
+    try:
+        datos = json.loads(contenido)
+    except (ValueError, TypeError):
+        return None
+    return datos if isinstance(datos, dict) else None
 
 
 def _llamar_al_gateway(api_key, mensajes):
@@ -301,12 +314,22 @@ def _numero(valor):
         return valor
 
 
+def _campos_como_diccionario(campos):
+    """Los `campos` de una ficha o de la IA, siempre como diccionario.
+
+    La ficha que llega del cliente y la salida del modelo no son de fiar: un
+    `campos` que no sea objeto (lista, texto, número) se trata como vacío en
+    vez de reventar.
+    """
+    return dict(campos) if isinstance(campos, dict) else {}
+
+
 def _normalizar_campos(categoria, campos):
     """Normaliza los campos de la IA a las listas cerradas del dominio.
 
     Solo sobreviven los campos de la categoría con algún valor (ADR 0005).
     """
-    campos = dict(campos or {})
+    campos = _campos_como_diccionario(campos)
     if "unidad" in campos:
         campos["unidad"] = SINONIMOS_UNIDAD.get(
             _sin_acentos(campos.get("unidad")), campos.get("unidad")
@@ -331,7 +354,7 @@ def campos_faltantes(borrador):
     Son los que el asistente pregunta por voz hasta completar la ficha
     (feature completar-borrador-por-preguntas).
     """
-    campos = borrador.get("campos") or {}
+    campos = _campos_como_diccionario(borrador.get("campos"))
     return tuple(
         campo
         for campo in CAMPOS_POR_CATEGORIA.get(borrador.get("categoria"), ())

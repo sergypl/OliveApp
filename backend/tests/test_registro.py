@@ -6,6 +6,7 @@ de la cooperativa y vincula la cuenta a ese socio.
 
 from fastapi.testclient import TestClient
 
+from app import cuentas
 from app import db as basedatos
 from app.main import app
 
@@ -218,3 +219,26 @@ def test_codigo_de_socio_vacio_da_error_claro():
         )
         assert respuesta.status_code == 400
         assert "código de socio" in respuesta.json()["detail"].lower()
+
+
+def test_si_dos_registros_coinciden_el_segundo_recibe_error_claro(monkeypatch):
+    """Carrera real: dos altas a la vez con el mismo email.
+
+    La comprobación previa de email duplicado puede no ver la cuenta que la
+    otra petición acaba de crear: el alta debe seguir respondiendo un error
+    claro (409) y no un 500 por la restricción única de la base.
+    """
+    with TestClient(app) as client:
+        datos = {
+            "email": "carrera@ejemplo.com",
+            "contrasena": "segura123",
+            "codigo_socio": "Socio 1",
+        }
+        assert client.post(REGISTRO, json=datos).status_code == 201
+
+        # La otra petición crea la cuenta entre la comprobación y el alta.
+        monkeypatch.setattr(cuentas, "_existe_email", lambda conn, email: False)
+        repetida = client.post(REGISTRO, json=datos)
+
+        assert repetida.status_code == 409
+        assert "registrado" in repetida.json()["detail"].lower()
