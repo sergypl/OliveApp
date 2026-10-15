@@ -699,7 +699,7 @@
     "depends_on": [
       "navegacion-barra-inferior"
     ],
-    "status": "in_progress",
+    "status": "passing",
     "verification": [
       "cd backend && ./.venv/bin/python -m pytest -q en verde con tests de GET /api/v1/mi-perfil en backend/tests/test_perfil.py: con token, sin token (401) y aislamiento (un socio no ve los datos de otro)",
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
@@ -709,7 +709,8 @@
     ],
     "evidence": [
       "2026-10-15 Xiaomi: pestaña Perfil con avatar de iniciales, email, código de socio, cooperativa, parcelas y campaña actual, y estado Sin conexión con Reintentar (docs/evidencia/perfil-del-socio/). pytest 156/156 con tests de token, 401 y aislamiento de mi-perfil",
-      "2026-10-15 Arreglo hallado: la fila Cooperativa estiraba la tarjeta (nueva FilaDatoApilada). PENDIENTE de probar en el móvil: Cerrar sesión desde el Perfil con su confirmación"
+      "2026-10-15 Arreglo hallado: la fila Cooperativa estiraba la tarjeta (nueva FilaDatoApilada). PENDIENTE de probar en el móvil: Cerrar sesión desde el Perfil con su confirmación",
+      "2026-10-15 Xiaomi M2101K6G, tras instalar el build integrado: Perfil completo (avatar, código Socio 1, cooperativa en fila apilada, 6 parcelas, campaña 2025/2026, aviso de demostración y versión 0.1.0-bootstrap); Cerrar sesión lleva a la pantalla de bienvenida y se puede volver a entrar (docs/evidencia/perfil-del-socio/). Sin cambios en tablas de Room ni permisos del manifest (git diff)."
     ],
     "notes": "Fuera de alcance: edición de datos, cambio de contraseña y foto. El backend expone GET /api/v1/mi-perfil en un módulo nuevo backend/app/perfil.py (en main.py solo lo mínimo para registrarlo)."
   },
@@ -746,7 +747,7 @@
     "depends_on": [
       "fundamentos-visuales-modernos"
     ],
-    "status": "in_progress",
+    "status": "passing",
     "verification": [
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
       "Tests unitarios del cálculo en vivo y de numeroDeCampo (coma decimal y puntos de millar) sin depender del botón Simular",
@@ -756,7 +757,8 @@
     ],
     "evidence": [
       "2026-10-15 Xiaomi: 10.958 kg x 17,93 % = 1.964,77 kg; menos 10 % = 1.768,29 kg, recalculado al teclear sin botón Simular; estado neutro con campos vacíos (docs/evidencia/simulador-calculo-en-vivo/)",
-      "2026-10-15 Arreglo hallado: al teclear 10958 el campo mostraba 10.985 (cursor tras el punto de millar); corregido en CampoDeTexto con test PosicionTrasFormatoTest. PENDIENTE de probar en el móvil: botones -/+ y deslizador sincronizados; con el teclado abierto la tarjeta de resultado fija ocupa mucho y tapa el segundo campo (revisar diseño)"
+      "2026-10-15 Arreglo hallado: al teclear 10958 el campo mostraba 10.985 (cursor tras el punto de millar); corregido en CampoDeTexto con test PosicionTrasFormatoTest. PENDIENTE de probar en el móvil: botones -/+ y deslizador sincronizados; con el teclado abierto la tarjeta de resultado fija ocupa mucho y tapa el segundo campo (revisar diseño)",
+      "2026-10-15 Xiaomi: 10.958 kg x 20 % = 2.191,6 kg y, con ajuste del 10 %, 1.972,44 kg al teclear; botones +0,1 x3 y -0,1 x2 dan 20,3 y 20,1 con el neto recalculado; el deslizador llega a 27,4 % (2.702,24 kg) y 13,8 % (1.360,98 kg) y sigue al campo; con campos vacíos se ve 'Escribe los kilos y el rendimiento'. Tras corregir la tarjeta de resultado (ahora compacta, el desglose va en el scroll), con el teclado abierto se ve el campo que se escribe. Deslizador verde, sin barra naranja. Tests Android 257/257 y lint en verde (docs/evidencia/simulador-calculo-en-vivo/)"
     ],
     "notes": "Se mantiene simularLiquidacion/recalcularConAjuste: solo cambia cuándo se calcula y cómo se presenta. La barra superior grande viene de fundamentos-visuales-modernos."
   },
@@ -768,7 +770,7 @@
     "depends_on": [
       "simulador-calculo-en-vivo"
     ],
-    "status": "in_progress",
+    "status": "passing",
     "verification": [
       "cd backend && ./.venv/bin/python -m pytest -q en verde con tests sin red sobre fixtures grabados en backend/tests/fixtures/: parseo de \"€445.00\", conversión a €/kg, deduplicación, mapeo de categorías y mercados, filtros, uso de la caché y fallo o timeout de la API",
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde, con tests de las funciones puras de importe (precio ponderado, gastos, reparto que no suma 100, precio 0, gastos mayores que el precio y campos vacíos)",
@@ -778,7 +780,8 @@
     ],
     "evidence": [
       "2026-10-15 Backend con la API real de la Comisión Europea: GET /api/v1/precios-aceite/ultima-semana?mercado=media-nacional -> AOVE 3,3186 / virgen 3,0699 / lampante 2,9515 EUR/kg (semana 05-11/10/2026); serie AOVE 2024/2025 = 53 semanas (7,3995 a 4,2694 EUR/kg); segundo pedido desde caché en 0,3 s. pytest 156/156 sin red",
-      "2026-10-15 PENDIENTE de probar en el móvil: interruptor Simulador avanzado, consulta de precio pasado, entrada manual, reparto por calidad y error sin conexión"
+      "2026-10-15 PENDIENTE de probar en el móvil: interruptor Simulador avanzado, consulta de precio pasado, entrada manual, reparto por calidad y error sin conexión",
+      "2026-10-15 Xiaomi con el backend real y la API de la Comisión Europea: interruptor Simulador avanzado; 'Última semana disponible' (05/10/2026, AOVE 3,319 EUR/kg); lista de semanas elegible; campañas 2026/2027 a 2018/2019 (2024/2025 muestra 29/09/2025 a 4,269 EUR/kg); gastos 0,20 EUR/kg y reparto por calidad (precio ponderado 3,319). Con 1.360,98 kg netos: bruto 4.516,56 EUR, gastos -272,20 EUR, neto 4.244,36 EUR, 0,387 EUR/kg de aceituna, con el aviso 'Precio de referencia en origen a granel. No es lo que paga tu cooperativa.', la fuente y la semana. Precio escrito a mano 4,5 EUR/kg con 10.958 kg al 20 %: bruto 8.875,98 EUR y neto 8.481,49 EUR. Con el backend parado: 'No hay conexión con el servidor. Puedes escribir el precio a mano.' y la entrada manual sigue funcionando (docs/evidencia/simulador-avanzado-precio-aceite/). pytest 156/156"
     ],
     "notes": "La app no llama directamente a la API europea: el backend hace de proxy en backend/app/precios.py (en main.py solo lo mínimo para registrarlo), cachea en una tabla NUEVA de SQLite y sirve la caché con su antigüedad si la API falla. Precio del aceite = precio de referencia en origen a granel en €/kg; un importe en € es siempre una estimación, nunca la liquidación de la cooperativa."
   },
@@ -790,7 +793,7 @@
     "depends_on": [
       "fundamentos-visuales-modernos"
     ],
-    "status": "in_progress",
+    "status": "passing",
     "verification": [
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
       "Tests de la lógica de agrupación por mes, de los filtros y del Deshacer (funciones puras o ViewModel)",
@@ -800,7 +803,8 @@
     ],
     "evidence": [
       "2026-10-15 Xiaomi: línea de tiempo con filtros por categoría y parcela, cabecera de campaña y de mes (docs/evidencia/cuaderno-linea-de-tiempo/). Arreglos hallados: sin conexión mostraba Apunta tu primera labor (ahora Sin conexión con Reintentar) y lo mismo en Parcelas (ahora Reintentar)",
-      "2026-10-15 PENDIENTE de probar en el móvil: Deshacer al eliminar (salir con el mensaje abierto, fallo de red), refrescar deslizando y el botón flotante Dictar nota"
+      "2026-10-15 PENDIENTE de probar en el móvil: Deshacer al eliminar (salir con el mensaje abierto, fallo de red), refrescar deslizando y el botón flotante Dictar nota",
+      "2026-10-15 Xiaomi: Eliminar pide confirmación y después muestra el aviso 'Labor eliminada de tu cuaderno.' con Deshacer (ahora 10 s); la labor desaparece de la lista (10 a 9 labores) pero sigue en el backend mientras el aviso está abierto; Deshacer la devuelve (backend 1); salir a otra pestaña con el aviso abierto la borra (backend 0); dejar cerrarse el aviso la borra; con el servidor caído la labor vuelve a la lista con 'No se pudo eliminar la labor. Vuelve a estar en tu cuaderno.'; deslizar hacia abajo recarga (una petición más al backend); sin conexión muestra Sin conexión con Reintentar. Corregido el texto del diálogo (decía que no se podía deshacer). Botón flotante Dictar nota abre Notas de voz (docs/evidencia/cuaderno-linea-de-tiempo/)"
     ],
     "notes": "El botón flotante Dictar nota recibe la acción por parámetro: no se toca Navegacion.kt. Si hace falta cablearlo allí, se apunta en NOTAS para la integración."
   },
@@ -812,7 +816,7 @@
     "depends_on": [
       "fundamentos-visuales-modernos"
     ],
-    "status": "in_progress",
+    "status": "passing",
     "verification": [
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
       "Tests de la lógica de cuenta atrás y de normalización de la amplitud",
@@ -821,7 +825,8 @@
       "Sin permiso VIBRATE en el manifest (vibración con LocalHapticFeedback) y sin cambios en la cola de notas, Room, la transcripción, el sincronizador ni el borrador IA"
     ],
     "evidence": [
-      "2026-10-15 Integrada y compilando (tests Android 231/231, lint verde, sin permiso VIBRATE). PENDIENTE de probar en el móvil con micrófono real: onda según amplitud, cuenta atrás de 60 s, vibración y modo de animaciones reducidas"
+      "2026-10-15 Integrada y compilando (tests Android 231/231, lint verde, sin permiso VIBRATE). PENDIENTE de probar en el móvil con micrófono real: onda según amplitud, cuenta atrás de 60 s, vibración y modo de animaciones reducidas",
+      "2026-10-15 Xiaomi con micrófono real: onda de barras que cambia con la voz, anillo de cuenta atrás y texto 'Grabando… quedan N de 60 segundos'; la grabación se detiene sola a los 60 s (nota de 60 s en la lista); con animaciones del sistema desactivadas (animator_duration_scale 0) se ve un punto 'Grabando', el contador y el anillo, sin onda; vibración registrada por el sistema al empezar y al parar (CLICK a las 08:59:39 y 09:00:03). Sin permiso VIBRATE (manifest) y sin cambios en Room, sincronizador ni repositorio de notas. La transcripción falla porque el gateway de DevExpert devuelve 502 (ajeno a esta feature; la nota queda con Reintentar) (docs/evidencia/grabacion-voz-animada/)"
     ],
     "notes": "Si hace falta exponer la amplitud desde voz/data/GrabadorNotas.kt, se hace con el cambio mínimo y sin alterar el resto de su comportamiento."
   }
