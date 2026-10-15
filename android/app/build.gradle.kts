@@ -57,6 +57,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Almacenamiento seguro del token de sesión (Keystore del dispositivo).
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Preferencias del simulador avanzado (simulador-avanzado-precio-aceite).
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     // Cola local de notas de voz (feature cola-offline-de-notas): Room sobre SQLite.
     implementation("androidx.room:room-runtime:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
