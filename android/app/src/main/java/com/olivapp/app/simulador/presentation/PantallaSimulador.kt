@@ -1,19 +1,23 @@
 package com.olivapp.app.simulador.presentation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,24 +25,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.core.formatos.formatearCantidad
-import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
+import com.olivapp.app.core.ui.CifraAnimada
+import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.FilaDato
-import com.olivapp.app.core.ui.Fondo
-import com.olivapp.app.core.ui.PanelDestacado
+import com.olivapp.app.core.ui.FormasOlivApp
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.Tarjeta
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoBoton
-import com.olivapp.app.core.ui.TextoCifra
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.TextoSecundario
-import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
-import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.simulador.domain.ResultadoSimulacion
+import com.olivapp.app.simulador.domain.formatearNumeroDeCampo
 import com.olivapp.app.simulador.domain.numeroDeCampo
 import com.olivapp.app.simulador.domain.recalcularConAjuste
 import com.olivapp.app.simulador.domain.simularLiquidacion
@@ -50,14 +52,20 @@ import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import com.olivapp.app.R
 
-/** Estado visible del simulador: los tres campos y el resultado (o el error). */
+/** Estado visible del simulador: los tres campos y el resultado (o el aviso). */
 data class SimuladorUiState(
     val kilos: String = "",
     val rendimiento: String = "",
     val ajuste: String = "10",
     val resultado: ResultadoSimulacion? = null,
-    val error: String = ""
+    /** Valor fuera de rango: se muestra como error. */
+    val error: String = "",
+    /** Estado neutro (campo vacío o ilegible): no es un error. */
+    val neutro: String = MENSAJE_NEUTRO
 )
+
+/** Estado neutro del simulador mientras faltan datos (no es un error). */
+const val MENSAJE_NEUTRO = "Escribe los kilos y el rendimiento"
 
 @HiltViewModel
 class SimuladorViewModel @Inject constructor() : ViewModel() {
@@ -65,93 +73,127 @@ class SimuladorViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(SimuladorUiState())
     val uiState: StateFlow<SimuladorUiState> = _uiState.asStateFlow()
 
+    /** El resultado se recalcula al teclear: no hay botón "Simular". */
     fun cambiarKilos(texto: String) {
-        // Cambiar kilos o rendimiento borra el resultado: el cálculo va bajo
-        // demanda con "Simular".
-        _uiState.update { it.copy(kilos = texto, resultado = null) }
+        _uiState.update { calcular(it.copy(kilos = formatearNumeroDeCampo(texto))) }
     }
 
+    /** El resultado se recalcula al teclear: no hay botón "Simular". */
     fun cambiarRendimiento(texto: String) {
-        _uiState.update { it.copy(rendimiento = texto, resultado = null) }
+        _uiState.update { calcular(it.copy(rendimiento = formatearNumeroDeCampo(texto))) }
+    }
+
+    /** Rendimiento del deslizador (10 a 30 %): un decimal, sincronizado. */
+    fun cambiarRendimientoConDeslizador(valor: Double) {
+        val redondeado = Math.round(valor * 10.0) / 10.0
+        _uiState.update {
+            calcular(it.copy(rendimiento = formatearNumeroDeCampo(formatearCantidad(redondeado))))
+        }
+    }
+
+    /** Botón "+": sube el rendimiento en 0,1 % (entre 10 y 30 %). */
+    fun subirRendimiento() {
+        cambiarRendimientoConDeslizador(pasoDeRendimiento(+1))
+    }
+
+    /** Botón "−": baja el rendimiento en 0,1 % (entre 10 y 30 %). */
+    fun bajarRendimiento() {
+        cambiarRendimientoConDeslizador(pasoDeRendimiento(-1))
+    }
+
+    private fun pasoDeRendimiento(salto: Int): Double {
+        val tecleado = numeroDeCampo(_uiState.value.rendimiento) ?: MINIMO_RENDIMIENTO
+        val actual = tecleado.coerceIn(MINIMO_RENDIMIENTO, MAXIMO_RENDIMIENTO)
+        val nuevo = Math.round((actual + salto * 0.1) * 10.0) / 10.0
+        return nuevo.coerceIn(MINIMO_RENDIMIENTO, MAXIMO_RENDIMIENTO)
     }
 
     fun cambiarAjuste(texto: String) {
-        val actual = _uiState.value
-        // Recálculo al instante: si ya hay resultado y el nuevo ajuste
-        // es un porcentaje válido, el aceite neto se recalcula con él.
-        val ajusteNuevo = numeroDeCampo(texto)
-        val anterior = actual.resultado
-        val resultado = if (anterior != null && ajusteNuevo != null &&
-            ajusteNuevo >= 0.0 && ajusteNuevo <= 100.0
-        ) {
-            recalcularConAjuste(anterior, ajusteNuevo)
-        } else {
-            anterior
+        _uiState.update { estado ->
+            val ajusteTecleado = numeroDeCampo(formatearNumeroDeCampo(texto))
+            val anterior = estado.resultado
+            if (anterior != null && ajusteTecleado != null &&
+                ajusteTecleado >= 0.0 && ajusteTecleado <= 100.0
+            ) {
+                // Solo cambia la deducción: el aceite según el rendimiento no se toca.
+                estado.copy(
+                    ajuste = formatearNumeroDeCampo(texto),
+                    resultado = recalcularConAjuste(anterior, ajusteTecleado),
+                    error = "",
+                    neutro = ""
+                )
+            } else {
+                calcular(estado.copy(ajuste = formatearNumeroDeCampo(texto)))
+            }
         }
-        _uiState.update { it.copy(ajuste = texto, resultado = resultado) }
     }
 
-    /** El cálculo va bajo demanda: solo con "Simular". */
-    fun simular() {
-        val actual = _uiState.value
-        val kilosSimulados = numeroDeCampo(actual.kilos)
-        val rendimientoSimulado = numeroDeCampo(actual.rendimiento)
-        val ajusteSimulado = numeroDeCampo(actual.ajuste)
-        when {
-            kilosSimulados == null || kilosSimulados <= 0.0 -> {
-                _uiState.update {
-                    it.copy(
-                        resultado = null,
-                        error = "Introduce los kilos de aceituna, mayores que cero."
-                    )
-                }
-            }
-            rendimientoSimulado == null ||
-                rendimientoSimulado <= 0.0 || rendimientoSimulado > 100.0 -> {
-                _uiState.update {
-                    it.copy(
-                        resultado = null,
-                        error = "Introduce el rendimiento graso como porcentaje " +
-                            "entre 0 y 100 (por ejemplo, 20)."
-                    )
-                }
-            }
-            ajusteSimulado == null ||
-                ajusteSimulado < 0.0 || ajusteSimulado > 100.0 -> {
-                _uiState.update {
-                    it.copy(
-                        resultado = null,
-                        error = "Introduce el ajuste industrial como porcentaje " +
-                            "entre 0 y 100 (por ejemplo, 10)."
-                    )
-                }
-            }
-            else -> {
-                _uiState.update {
-                    it.copy(
-                        resultado = simularLiquidacion(
-                            kilosSimulados, rendimientoSimulado, ajusteSimulado
-                        ),
-                        error = ""
-                    )
-                }
-            }
+    /**
+     * Cálculo en vivo de la simulación. Con campos vacíos o ilegibles no hay
+     * error: se muestra el estado neutro. El ajuste vacío o ilegible usa el
+     * 10 % por defecto (ADR 0007).
+     */
+    private fun calcular(estado: SimuladorUiState): SimuladorUiState {
+        val kilos = numeroDeCampo(estado.kilos)
+        val rendimiento = numeroDeCampo(estado.rendimiento)
+        val ajusteTecleado = numeroDeCampo(estado.ajuste)
+        if (kilos == null || rendimiento == null) {
+            return estado.copy(resultado = null, error = "", neutro = MENSAJE_NEUTRO)
         }
+        if (kilos <= 0.0) {
+            return estado.copy(
+                resultado = null,
+                neutro = "",
+                error = "Introduce los kilos de aceituna, mayores que cero."
+            )
+        }
+        if (rendimiento <= 0.0 || rendimiento > 100.0) {
+            return estado.copy(
+                resultado = null,
+                neutro = "",
+                error = "Introduce el rendimiento graso como porcentaje " +
+                    "entre 0 y 100 (por ejemplo, 20)."
+            )
+        }
+        if (ajusteTecleado != null && (ajusteTecleado < 0.0 || ajusteTecleado > 100.0)) {
+            return estado.copy(
+                resultado = null,
+                neutro = "",
+                error = "Introduce el ajuste industrial como porcentaje " +
+                    "entre 0 y 100 (por ejemplo, 10)."
+            )
+        }
+        return estado.copy(
+            resultado = simularLiquidacion(
+                kilos, rendimiento, ajusteTecleado ?: 10.0
+            ),
+            error = "",
+            neutro = ""
+        )
+    }
+
+    private companion object {
+        const val MINIMO_RENDIMIENTO = 10.0
+        const val MAXIMO_RENDIMIENTO = 30.0
     }
 }
 
 /**
- * Simulador de liquidación en limpio (feature calculo-de-liquidacion-en-limpio):
- * el socio introduce kilos de aceituna y rendimiento graso y ve el aceite neto
- * estimado (kilos × rendimiento − ajuste industrial), claramente etiquetado
- * como estimación orientativa. La simulación es bajo demanda y no se guarda:
- * no compite con las cifras oficiales de la cooperativa (CONTEXT.md).
+ * Simulador de liquidación en limpio (features calculo-de-liquidacion-en-limpio,
+ * ajuste-industrial-configurable y simulador-calculo-en-vivo): el socio introduce
+ * kilos de aceituna y rendimiento graso y ve el aceite neto estimado
+ * (kilos × rendimiento − ajuste industrial), claramente etiquetado como
+ * estimación orientativa. El resultado se recalcula al teclear (sin botón
+ * "Simular") y no se guarda: no compite con las cifras oficiales de la
+ * cooperativa (CONTEXT.md).
  *
- * El ajuste industrial es configurable (feature ajuste-industrial-configurable):
- * el campo arranca en el 10 % por defecto (ADR 0007) y, si ya hay un resultado,
- * cambiarlo recalcula el aceite neto al instante. Cambiar kilos o rendimiento
- * sigue borrando el resultado: el cálculo va bajo demanda con "Simular".
+ * La tarjeta de resultado está siempre visible (fijada sobre el formulario),
+ * con la cifra animada al cambiar. Los campos llevan su unidad dentro, el
+ * teclado es numérico y los millares se formatean al escribir. El rendimiento
+ * graso se mueve también con botones de 0,1 % y con un deslizador de 10 a 30 %,
+ * los tres sincronizados.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaSimulador(
     onVolver: () -> Unit,
@@ -159,19 +201,11 @@ fun PantallaSimulador(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+    PantallaConBarraSuperiorGrande(
+        titulo = "Liquidación en limpio",
+        onVolver = onVolver,
+        fijo = { TarjetaDeResultado(estado) }
     ) {
-        Text(
-            text = "Liquidación en limpio",
-            style = TextoTitulo1,
-            color = Texto,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Simula tu liquidación en limpio con los kilos de aceituna " +
                 "y el rendimiento graso.\nEs una estimación orientativa, no la " +
@@ -187,73 +221,115 @@ fun PantallaSimulador(
                 etiqueta = "Kilos de aceituna",
                 valor = estado.kilos,
                 alCambiar = viewModel::cambiarKilos,
-                tipo = KeyboardType.Decimal
+                tipo = KeyboardType.Decimal,
+                sufijo = "kg"
             )
             Spacer(modifier = Modifier.height(16.dp))
             CampoDeTexto(
-                etiqueta = "Rendimiento graso (%)",
+                etiqueta = "Rendimiento graso",
                 valor = estado.rendimiento,
                 alCambiar = viewModel::cambiarRendimiento,
-                tipo = KeyboardType.Decimal
+                tipo = KeyboardType.Decimal,
+                sufijo = "%"
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BotonDePaso(
+                    texto = "−0,1",
+                    descripcion = "Bajar el rendimiento graso 0,1 por ciento",
+                    alPulsar = viewModel::bajarRendimiento
+                )
+                Slider(
+                    value = (numeroDeCampo(estado.rendimiento)?.toFloat() ?: 10f)
+                        .coerceIn(10f, 30f),
+                    onValueChange = { viewModel.cambiarRendimientoConDeslizador(it.toDouble()) },
+                    valueRange = 10f..30f,
+                    steps = 199,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                )
+                BotonDePaso(
+                    texto = "+0,1",
+                    descripcion = "Subir el rendimiento graso 0,1 por ciento",
+                    alPulsar = viewModel::subirRendimiento
+                )
+            }
+            Text(
+                text = "Botones de 0,1 % y deslizador de 10 a 30 %.",
+                style = TextoCuerpo,
+                color = TextoSecundario,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
             CampoDeTexto(
-                etiqueta = "Ajuste industrial (%)",
+                etiqueta = "Ajuste industrial",
                 valor = estado.ajuste,
                 alCambiar = viewModel::cambiarAjuste,
-                tipo = KeyboardType.Decimal
+                tipo = KeyboardType.Decimal,
+                sufijo = "%"
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        BotonPrincipal(
-            texto = "Simular",
-            icono = R.drawable.ic_simulador,
-            alPulsar = viewModel::simular
+        BotonSecundario(
+            texto = "Volver al panel",
+            icono = R.drawable.ic_volver,
+            alPulsar = onVolver
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        if (estado.error.isNotEmpty()) {
+    }
+}
+
+/** Tarjeta de resultado, fijada sobre el formulario: siempre visible. */
+@Composable
+private fun TarjetaDeResultado(estado: SimuladorUiState) {
+    Tarjeta {
+        Text(
+            text = "Aceite neto estimado",
+            style = TextoValor,
+            color = Texto,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        val resultado = estado.resultado
+        if (resultado != null) {
+            CifraAnimada(
+                valor = resultado.aceiteNeto,
+                sufijo = " kg",
+                modificador = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = estado.error,
-                style = TextoBoton,
-                color = Error,
+                text = "Estimación orientativa: la liquidación oficial es la " +
+                    "de la cooperativa.",
+                style = TextoCuerpo,
+                color = TextoSecundario,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
-        }
-        estado.resultado?.let {
-            // Panel de resultado destacado (estilo del desglose del mockup).
-            PanelDestacado {
-                Text(
-                    text = "Aceite neto estimado",
-                    style = TextoValor,
-                    color = Texto,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = formatearCantidad(it.aceiteNeto) + " kg",
-                    style = TextoCifra,
-                    color = Primario,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                FilaDato(
-                    etiqueta = "Aceite según el rendimiento",
-                    valor = formatearCantidad(it.aceiteSegunRendimiento) + " kg",
-                    icono = R.drawable.ic_aceite
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(
-                    etiqueta = "Ajuste industrial (" +
-                        formatearCantidad(it.ajustePorcentaje) + " %)",
-                    valor = "-" + formatearCantidad(it.ajusteIndustrial) + " kg",
-                    icono = R.drawable.ic_kilos
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            FilaDato(
+                etiqueta = "Aceite según el rendimiento",
+                valor = formatearCantidad(resultado.aceiteSegunRendimiento) + " kg",
+                icono = R.drawable.ic_aceite
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FilaDato(
+                etiqueta = "Ajuste industrial (" +
+                    formatearCantidad(resultado.ajustePorcentaje) + " %)",
+                valor = "-" + formatearCantidad(resultado.ajusteIndustrial) + " kg",
+                icono = R.drawable.ic_kilos
+            )
+        } else {
+            // Estado neutro o aviso: la tarjeta sigue visible, sin cifra.
+            Text(
+                text = estado.error.ifEmpty { estado.neutro },
+                style = TextoValor,
+                color = if (estado.error.isEmpty()) TextoSecundario else Error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Estimación orientativa: la liquidación oficial es la " +
                     "de la cooperativa.",
@@ -263,7 +339,22 @@ fun PantallaSimulador(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
+    }
+}
+
+/** Botón grande de paso de 0,1 % (zona táctil de 64dp y texto, no solo símbolo). */
+@Composable
+private fun BotonDePaso(texto: String, descripcion: String, alPulsar: () -> Unit) {
+    OutlinedButton(
+        onClick = alPulsar,
+        modifier = Modifier
+            .height(64.dp)
+            .widthIn(min = 64.dp)
+            .semantics(mergeDescendants = true) { contentDescription = descripcion },
+        shape = FormasOlivApp.medium,
+        border = BorderStroke(2.dp, Primario),
+        contentPadding = PaddingValues(horizontal = 12.dp)
+    ) {
+        Text(text = texto, style = TextoBoton, color = Primario)
     }
 }
