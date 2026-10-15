@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,9 +34,9 @@ fun FilaLabor(
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                painter = painterResource(id = iconoDeCategoria(labor.categoria)),
+                painter = painterResource(id = iconoDeCategoria(labor.editable.categoria)),
                 contentDescription = null,
-                tint = Primario,
+                tint = colorDeCategoria(labor.editable.categoria),
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -94,10 +95,25 @@ fun FilaCampoLabor(etiqueta: String, valor: String) {
 /**
  * Icono de la categoría de la labor. El icono acompaña al texto de la
  * categoría, nunca lo sustituye (regla de usabilidad sénior de DESIGN.md).
+ *
+ * Recibe la clave de la categoría ("tratamiento", "riego", "cosecha"), no su
+ * nombre para enseñar.
  */
-private fun iconoDeCategoria(categoria: String): Int = when (categoria.lowercase()) {
+internal fun iconoDeCategoria(categoria: String): Int = when (categoria.lowercase()) {
     "tratamiento" -> R.drawable.ic_tratamiento
     "riego" -> R.drawable.ic_riego
     "cosecha" -> R.drawable.ic_cosecha
     else -> R.drawable.ic_hoja
+}
+
+/**
+ * Color por categoría de la labor (línea de tiempo de "Mi cuaderno"): va con
+ * el icono y el texto de la categoría, nunca solo (los tres colores pasan
+ * contraste AA sobre superficie clara; ver NOTAS de la feature).
+ */
+internal fun colorDeCategoria(categoria: String): Color = when (categoria.lowercase()) {
+    "tratamiento" -> Color(0xFF92400E) // ámbar oscuro (6,4:1 sobre superficie)
+    "riego" -> Color(0xFF15607A)       // azul de agua (7,4:1)
+    "cosecha" -> Color(0xFF166534)     // verde de cosecha (6,5:1)
+    else -> Primario
 }
