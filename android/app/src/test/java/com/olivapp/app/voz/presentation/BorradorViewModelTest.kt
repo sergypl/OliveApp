@@ -38,7 +38,8 @@ class BorradorViewModelTest {
         campanas: FakeCampanasRepositorio = FakeCampanasRepositorio(),
         parcelas: FakeParcelasRepositorio = FakeParcelasRepositorio(),
         labores: FakeLaboresRepositorio = FakeLaboresRepositorio(),
-        notas: FakeNotasRepositorio = FakeNotasRepositorio()
+        notas: FakeNotasRepositorio = FakeNotasRepositorio(),
+        grabador: FakeGrabadorDeNotas = FakeGrabadorDeNotas()
     ) = BorradorViewModel(
         RuntimeEnvironment.getApplication(),
         sesion,
@@ -46,7 +47,7 @@ class BorradorViewModelTest {
         parcelas,
         labores,
         notas,
-        FakeGrabadorDeNotas()
+        grabador
     )
 
     @Test
@@ -231,6 +232,22 @@ class BorradorViewModelTest {
     }
 
     @Test
+    fun `al salir se para una respuesta en curso y se libera el microfono`() {
+        val grabador = FakeGrabadorDeNotas()
+        val viewModel = crear(grabador = grabador)
+        viewModel.preparar("nota-1", fichaConPregunta)
+        viewModel.empezarRespuesta { }
+        assertTrue(grabador.grabando)
+
+        viewModel.alSalir()
+
+        // El grabador se para y se libera: el micro no queda ocupado.
+        assertFalse(grabador.grabando)
+        assertFalse(viewModel.uiState.value.grabando)
+        assertFalse(viewModel.uiState.value.hayRespuestaSinEnviar)
+    }
+
+    @Test
     fun `al salir no se borra una respuesta que se está enviando`() {
         val notas = FakeNotasRepositorio(responderAlMomento = false)
         val viewModel = crear(notas = notas)
@@ -294,5 +311,19 @@ class BorradorViewModelTest {
 
         assertTrue(viewModel.uiState.value.preguntarDescarte)
         assertNotNull(JSONObject(viewModel.uiState.value.fichaJson))
+    }
+
+    @Test
+    fun `doble pulsacion de responder solo empieza una grabacion`() {
+        val grabador = FakeGrabadorDeNotas()
+        val viewModel = crear(grabador = grabador)
+        viewModel.preparar("nota-1", fichaConPregunta)
+
+        viewModel.empezarRespuesta { }
+        viewModel.empezarRespuesta { }
+
+        // La segunda pulsación no abre un micrófono que ya está grabando.
+        assertEquals(1, grabador.empezarLlamadas)
+        assertTrue(viewModel.uiState.value.grabando)
     }
 }

@@ -111,3 +111,14 @@ fun tituloDeMes(clave: String): String {
     if (mes == null || ano == null || mes < 1 || mes > 12) return "Sin fecha"
     return MESES_DEL_ANO[mes - 1] + " de " + ano
 }
+
+/**
+ * Claves únicas de los elementos de la lista de la línea de tiempo (LazyColumn
+ * no admite claves repetidas). Dos campañas pueden tener labores del mismo
+ * mes, así que cada clave lleva también su sitio en la lista.
+ */
+fun claveUnicaDeCampana(indice: Int, nombre: String): String = "campana-$indice-$nombre"
+
+/** Clave única de una cabecera de mes dentro de su campaña. */
+fun claveUnicaDeMes(indiceDeCampana: Int, indice: Int, clave: String): String =
+    "mes-$indiceDeCampana-$indice-$clave"

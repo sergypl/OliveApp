@@ -308,3 +308,18 @@ def test_exige_token_valido():
         respuesta = _completar(client, {})
 
         assert respuesta.status_code == 401
+
+
+@pytest.mark.parametrize("campos", [["producto"], "producto", 3])
+def test_la_ficha_con_campos_que_no_son_objeto_se_rechaza(campos):
+    """La ficha que llega del cliente no es de fiar: `campos` debe ser objeto.
+
+    Con una lista o un texto el relleno conversacional revienta con un 500;
+    ahora el borrador se rechaza con el error claro de siempre (400).
+    """
+    with TestClient(app) as client:
+        cabeceras = _entrar(client)
+        respuesta = _completar(client, cabeceras, dict(BASICO, campos=campos))
+
+        assert respuesta.status_code == 400
+        assert "Vuelve a dictar la nota" in respuesta.json()["detail"]

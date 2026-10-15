@@ -7,8 +7,18 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.json.JSONArray
 
-/** La cola de notas de voz en el teléfono (Room y ficheros de audio). */
-class AlmacenNotasVoz(private val contexto: Context) : ColaDeNotas {
+/**
+ * La cola de notas de voz en el teléfono (Room y ficheros de audio).
+ *
+ * La cola es del dispositivo, pero cada nota pertenece a la cuenta de su socio
+ * (feature aislamiento-de-cola-por-socio): con dos cuentas en el mismo
+ * teléfono, cada socio ve y envía solo las suyas. La identidad de la cuenta
+ * activa llega por [duenoDeLaCola] (en producción, la de `AlmacenSesiones`).
+ */
+class AlmacenNotasVoz(
+    private val contexto: Context,
+    private val duenoDeLaCola: () -> String? = { null }
+) : ColaDeNotas {
 
     class NotaDeVoz(
         val id: String,
@@ -60,7 +70,8 @@ class AlmacenNotasVoz(private val contexto: Context) : ColaDeNotas {
                 creadaEn = ahora.toString(),
                 segundos = segundos,
                 estado = "pendiente",
-                texto = ""
+                texto = "",
+                dueno = duenoActual()
             )
         )
         return NotaDeVoz(
@@ -84,11 +95,27 @@ class AlmacenNotasVoz(private val contexto: Context) : ColaDeNotas {
         dao.actualizarBorrador(id, borrador)
     }
 
-    override fun notas(): List<NotaDeVoz> = dao.notas().map { aNotaDeVoz(it) }
+    override fun notas(): List<NotaDeVoz> = dao.notas(duenoActual()).map { aNotaDeVoz(it) }
 
     /** Notas pendientes de enviar, de la más antigua a la más reciente. */
     fun pendientesEnOrdenDeGrabacion(): List<NotaDeVoz> =
-        dao.pendientes().map { aNotaDeVoz(it) }
+        dao.pendientes(duenoActual()).map { aNotaDeVoz(it) }
+
+    /**
+     * Reinicio seguro tras un corte del proceso: una nota que se quedó
+     * 'transcribiendo' (sin respuesta del backend) vuelve a la cola como
+     * 'pendiente' para que se reintente. Es idempotente y no toca las notas en
+     * ningún otro estado.
+     */
+    fun reanudarTranscripcionesPendientes() {
+        dao.reanudarTranscripciones()
+    }
+
+    /**
+     * Dueño de la cola en este momento. Sin cuenta identificada (o con una nota
+     * grabada sin sesión) queda vacío: esas notas son de nadie.
+     */
+    private fun duenoActual(): String = duenoDeLaCola() ?: ""
 
     private fun aNotaDeVoz(fila: NotaVozFila): NotaDeVoz {
         val creada = try {

@@ -1,5 +1,8 @@
 package com.olivapp.app.cuaderno.presentation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -22,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,6 +56,8 @@ import com.olivapp.app.cuaderno.domain.FiltroDeCuaderno
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import com.olivapp.app.cuaderno.domain.agruparPorMes
+import com.olivapp.app.cuaderno.domain.claveUnicaDeCampana
+import com.olivapp.app.cuaderno.domain.claveUnicaDeMes
 import com.olivapp.app.cuaderno.domain.filtrarCampanas
 import com.olivapp.app.cuaderno.domain.opcionesDeFiltro
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -218,8 +224,13 @@ class CuadernoViewModel @Inject constructor(
         }
     }
 
-    /** Al salir de la pantalla con el mensaje abierto, la labor se borra. */
-    fun alSalir() {
+    /**
+     * Al salir de la pantalla con el mensaje abierto, la labor se borra. Un
+     * cambio de configuración (la rotación) no es salir de la pantalla: el
+     * borrado diferido sigue pendiente y su "Deshacer" sigue funcionando.
+     */
+    fun alSalir(cambiandoLaConfiguracion: Boolean = false) {
+        if (cambiandoLaConfiguracion) return
         cerrarAvisoDeBorrado()
     }
 
@@ -283,9 +294,17 @@ fun PantallaCuaderno(
     }
 
     // Al salir de la pantalla con el mensaje de "Deshacer" abierto, la labor
-    // se borra igualmente: no queda ningún borrado a medias.
+    // se borra igualmente: no queda ningún borrado a medias. Un cambio de
+    // configuración (la rotación) no cuenta como salida: la labor y su
+    // "Deshacer" siguen ahí al volver a componer.
+    val contexto = LocalContext.current
     DisposableEffect(Unit) {
-        onDispose { viewModel.alSalir() }
+        onDispose {
+            val actividad = contexto.actividadDe()
+            viewModel.alSalir(
+                cambiandoLaConfiguracion = actividad?.isChangingConfigurations == true
+            )
+        }
     }
 
     // El aviso con "Deshacer": si se cierra sin deshacer, la labor se borra.
@@ -419,8 +438,8 @@ fun PantallaCuaderno(
                             alFiltrarParcela = viewModel::filtrarPorParcela
                         )
                     }
-                    for (campana in grupos) {
-                        item(key = "campana-" + campana.nombre) {
+                    for ((indiceDeCampana, campana) in grupos.withIndex()) {
+                        item(key = claveUnicaDeCampana(indiceDeCampana, campana.nombre)) {
                             Spacer(modifier = Modifier.height(24.dp))
                             CabeceraSeccion(
                                 titulo = "Campaña " + campana.nombre +
@@ -428,8 +447,10 @@ fun PantallaCuaderno(
                                 icono = R.drawable.ic_campana
                             )
                         }
-                        for (mes in campana.meses) {
-                            stickyHeader(key = "mes-" + mes.clave) {
+                        for ((indiceDeMes, mes) in campana.meses.withIndex()) {
+                            stickyHeader(
+                                key = claveUnicaDeMes(indiceDeCampana, indiceDeMes, mes.clave)
+                            ) {
                                 // Cabecera fija: fondo opaco para que la lista
                                 // pase por debajo sin transparentarse.
                                 Column(
@@ -470,4 +491,17 @@ fun PantallaCuaderno(
             }
         }
     }
+}
+
+/**
+ * La Activity que aloja la composición, para distinguir un cambio de
+ * configuración (la rotación) de una salida real de la pantalla.
+ */
+private fun Context.actividadDe(): Activity? {
+    var contexto: Context? = this
+    while (contexto is ContextWrapper) {
+        if (contexto is Activity) return contexto
+        contexto = contexto.baseContext
+    }
+    return null
 }

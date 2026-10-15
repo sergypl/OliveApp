@@ -21,6 +21,7 @@ TIEMPO_DE_ESPERA = 60
 
 # 5 MB sobra de sobra para los 60 segundos máximo de una nota de voz.
 LIMITE_BYTES = 5 * 1024 * 1024
+TROZO_LEIDO = 64 * 1024
 FORMATOS_ACEPTADOS = (".m4a", ".mp4", ".aac", ".wav", ".ogg", ".webm")
 
 
@@ -32,13 +33,39 @@ class TranscripcionFallida(RuntimeError):
     """El gateway no pudo transcribir el audio."""
 
 
-def validar_audio(nombre, tamano):
+def validar_formato(nombre):
     extension = os.path.splitext(nombre or "")[1].lower()
     if extension not in FORMATOS_ACEPTADOS:
         raise AudioInvalido("Formato de audio no válido. Graba la nota de nuevo.")
+    return extension
+
+
+def validar_audio(nombre, tamano):
+    extension = validar_formato(nombre)
     if tamano > LIMITE_BYTES:
         raise AudioInvalido("El audio es demasiado grande para transcribirlo.")
     return extension
+
+
+def leer_audio(nombre, archivo):
+    """Lee una subida por trozos y rechaza la que supera el límite de tamaño.
+
+    Nunca se carga un audio entero en memoria: al superar el límite se corta y
+    se responde que es demasiado grande (la validación completa está en
+    `transcribir`).
+    """
+    validar_formato(nombre)
+    trozos = []
+    total = 0
+    while True:
+        trozo = archivo.read(TROZO_LEIDO)
+        if not trozo:
+            break
+        total += len(trozo)
+        if total > LIMITE_BYTES:
+            raise AudioInvalido("El audio es demasiado grande para transcribirlo.")
+        trozos.append(trozo)
+    return b"".join(trozos)
 
 
 def transcribir(api_key, nombre, contenido):
@@ -79,6 +106,11 @@ def _llamar_al_gateway(api_key, ruta, nombre):
             "El gateway devolvió el código {}".format(respuesta.status_code)
         )
     try:
-        return respuesta.json()["text"]
+        texto = respuesta.json()["text"]
     except (ValueError, KeyError, TypeError):
         raise TranscripcionFallida("Respuesta inesperada del gateway.")
+    # La respuesta del gateway no es de fiar: si `text` no es un texto, la
+    # transcripción falla con un error claro en vez de reventar al tratarla.
+    if not isinstance(texto, str):
+        raise TranscripcionFallida("Respuesta inesperada del gateway.")
+    return texto

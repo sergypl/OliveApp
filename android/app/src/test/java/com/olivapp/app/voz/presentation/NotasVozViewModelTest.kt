@@ -273,4 +273,41 @@ class NotasVozViewModelTest {
 
         assertTrue(viewModel.uiState.value.nivelesOnda.all { it == 0f })
     }
+
+    @Test
+    fun `una segunda pulsacion de transcribir no envia el audio otra vez`() {
+        val notas = FakeNotasRepositorio(responderAlMomento = false)
+        val nota = notas.guardar(File("nota-1.m4a"), 3)
+        val viewModel = crear(notas)
+
+        viewModel.transcribir(nota)
+        viewModel.transcribir(nota)
+
+        // La nota ya está en transcripción: la segunda pulsación se ignora.
+        assertEquals(1, notas.transcribirLlamadas)
+    }
+
+    @Test
+    fun `una nota que ya se esta transcribiendo no se vuelve a enviar`() {
+        val notas = FakeNotasRepositorio(responderAlMomento = false)
+        val nota = notas.guardar(File("nota-1.m4a"), 3)
+        notas.marcar(nota.id, "transcribiendo", "")
+        val viewModel = crear(notas)
+
+        viewModel.transcribir(nota)
+
+        assertEquals(0, notas.transcribirLlamadas)
+    }
+
+    @Test
+    fun `doble pulsacion de grabar solo empieza una grabacion`() {
+        val grabador = FakeGrabadorDeNotas()
+        val viewModel = crear(grabador = grabador)
+
+        viewModel.empezarGrabacion()
+        viewModel.empezarGrabacion()
+
+        assertEquals(1, grabador.empezarLlamadas)
+        assertTrue(viewModel.uiState.value.grabando)
+    }
 }
