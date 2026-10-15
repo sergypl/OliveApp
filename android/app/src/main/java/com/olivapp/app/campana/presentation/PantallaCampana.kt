@@ -30,12 +30,11 @@ import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Error
-import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
-import com.olivapp.app.core.ui.pantallaCompleta
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,91 +86,91 @@ fun PantallaCampana(
         viewModel.cargar(campanaId)
     }
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+    PantallaConBarraSuperiorEnLista(
+        titulo = estado.datos?.let { "Campaña ${it.nombre}" } ?: "Campaña",
+        onVolver = onVolver
     ) {
-        estado.datos?.let {
-            Text(
-                text = "Campaña ${it.nombre}",
-                style = TextoTitulo1,
-                color = Texto
-            )
-            if (it.estado == "cerrada") {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Campaña cerrada: solo consulta.\nNo se pueden añadir labores.",
-                    style = TextoCuerpo,
-                    color = Texto,
-                    textAlign = TextAlign.Center
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Datos oficiales de la cooperativa",
-                style = TextoValor,
-                color = Primario
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            ) {
-                FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados, icono = R.drawable.ic_kilos)
-                Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso, icono = R.drawable.ic_rendimiento)
-                Spacer(modifier = Modifier.height(12.dp))
-                FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido, icono = R.drawable.ic_aceite)
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Mi cuaderno",
-                style = TextoValor,
-                color = Primario
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (it.labores.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            estado.datos?.let {
+                if (it.estado == "cerrada") {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Todavía no has apuntado labores en esta campaña.",
+                        text = "Campaña cerrada: solo consulta.\nNo se pueden añadir labores.",
                         style = TextoCuerpo,
                         color = Texto,
                         textAlign = TextAlign.Center
                     )
-                } else {
-                    for ((indice, labor) in it.labores.withIndex()) {
-                        if (indice > 0) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Datos oficiales de la cooperativa",
+                    style = TextoValor,
+                    color = Primario
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, Primario, RoundedCornerShape(12.dp))
+                        .padding(16.dp)
+                ) {
+                    FilaDato(etiqueta = "Kilos entregados", valor = it.kilosEntregados, icono = R.drawable.ic_kilos)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FilaDato(etiqueta = "Rendimiento graso", valor = it.rendimientoGraso, icono = R.drawable.ic_rendimiento)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FilaDato(etiqueta = "Aceite obtenido", valor = it.aceiteObtenido, icono = R.drawable.ic_aceite)
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Mi cuaderno",
+                    style = TextoValor,
+                    color = Primario
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(2.dp, Primario, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (it.labores.isEmpty()) {
+                        Text(
+                            text = "Todavía no has apuntado labores en esta campaña.",
+                            style = TextoCuerpo,
+                            color = Texto,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        for ((indice, labor) in it.labores.withIndex()) {
+                            if (indice > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            FilaLabor(labor)
                         }
-                        FilaLabor(labor)
                     }
                 }
-            }
-        } ?: Text(
-            text = "Cargando los datos de la campaña…",
-            style = TextoCuerpo,
-            color = Texto
-        )
-        estado.mensaje?.let {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = it,
+            } ?: Text(
+                text = "Cargando los datos de la campaña…",
                 style = TextoCuerpo,
-                color = Error,
-                textAlign = TextAlign.Center
+                color = Texto
             )
+            estado.mensaje?.let {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = it,
+                    style = TextoCuerpo,
+                    color = Error,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
         }
-        Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

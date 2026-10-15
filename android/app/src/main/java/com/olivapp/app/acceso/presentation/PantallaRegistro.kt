@@ -3,7 +3,7 @@ package com.olivapp.app.acceso.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -25,12 +25,11 @@ import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Error
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoEtiqueta
-import com.olivapp.app.core.ui.TextoTitulo1
-import com.olivapp.app.core.ui.pantallaCompleta
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -89,79 +88,75 @@ fun PantallaRegistro(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Crear cuenta",
-            style = TextoTitulo1,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Con tu email, una contraseña y tu código de socio.",
-            style = TextoCuerpo,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Email",
-            valor = estado.email,
-            alCambiar = viewModel::cambiarEmail,
-            tipo = KeyboardType.Email
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Contraseña",
-            valor = estado.contrasena,
-            alCambiar = viewModel::cambiarContrasena,
-            tipo = KeyboardType.Password,
-            oculto = true
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Mínimo 8 caracteres.",
-            style = TextoEtiqueta,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CampoDeTexto(
-            etiqueta = "Código de socio",
-            valor = estado.codigoSocio,
-            alCambiar = viewModel::cambiarCodigoSocio,
-            tipo = KeyboardType.Text
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "El que te ha dado tu cooperativa (p. ej. Socio 1).",
-            style = TextoEtiqueta,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonPrincipal(
-            texto = if (estado.trabajando) "Creando la cuenta…" else "Crear cuenta",
-            icono = R.drawable.ic_crear_cuenta,
-            habilitado = !estado.trabajando,
-            alPulsar = viewModel::crearCuenta
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        estado.mensaje?.let {
+    PantallaConBarraSuperiorEnLista(titulo = "Crear cuenta", onVolver = onVolver) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = it,
+                text = "Con tu email, una contraseña y tu código de socio.",
                 style = TextoCuerpo,
-                color = if (estado.registrada) Primario else Error,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
-        }
-        if (estado.registrada) {
             Spacer(modifier = Modifier.height(24.dp))
-            BotonSecundario(texto = "Ir a iniciar sesión", icono = R.drawable.ic_iniciar_sesion, alPulsar = onIniciarSesion)
+            CampoDeTexto(
+                etiqueta = "Email",
+                valor = estado.email,
+                alCambiar = viewModel::cambiarEmail,
+                tipo = KeyboardType.Email
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            CampoDeTexto(
+                etiqueta = "Contraseña",
+                valor = estado.contrasena,
+                alCambiar = viewModel::cambiarContrasena,
+                tipo = KeyboardType.Password,
+                oculto = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Mínimo 8 caracteres.",
+                style = TextoEtiqueta,
+                color = Texto
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            CampoDeTexto(
+                etiqueta = "Código de socio",
+                valor = estado.codigoSocio,
+                alCambiar = viewModel::cambiarCodigoSocio,
+                tipo = KeyboardType.Text
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "El que te ha dado tu cooperativa (p. ej. Socio 1).",
+                style = TextoEtiqueta,
+                color = Texto
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            BotonPrincipal(
+                texto = if (estado.trabajando) "Creando la cuenta…" else "Crear cuenta",
+                icono = R.drawable.ic_crear_cuenta,
+                habilitado = !estado.trabajando,
+                alPulsar = viewModel::crearCuenta
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            estado.mensaje?.let {
+                Text(
+                    text = it,
+                    style = TextoCuerpo,
+                    color = if (estado.registrada) Primario else Error,
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (estado.registrada) {
+                Spacer(modifier = Modifier.height(24.dp))
+                BotonSecundario(texto = "Ir a iniciar sesión", icono = R.drawable.ic_iniciar_sesion, alPulsar = onIniciarSesion)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            BotonSecundario(texto = "Volver al inicio", icono = R.drawable.ic_volver, alPulsar = onVolver)
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al inicio", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

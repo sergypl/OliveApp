@@ -43,12 +43,14 @@ import com.olivapp.app.core.ui.EsqueletoDeCarga
 import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.EstadoVacio
 import com.olivapp.app.core.ui.Fondo
-import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrandeEnLista
+import com.olivapp.app.core.ui.MargenContenido
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoBoton
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoValor
+import com.olivapp.app.core.ui.margenDeContenido
 import com.olivapp.app.core.ui.mostrarConDeshacer
 import com.olivapp.app.cuaderno.domain.DatosCampanaDeLabores
 import com.olivapp.app.cuaderno.domain.DatosLabor
@@ -357,9 +359,12 @@ fun PantallaCuaderno(
         agruparPorMes(filtrarCampanas(estado.campanas, estado.filtro))
     }
 
-    PantallaConBarraSuperiorGrandeEnLista(
+    PantallaConBarraSuperiorEnLista(
         titulo = "Mi cuaderno",
         aviso = avisos,
+        // A todo el ancho: los chips de filtro se deslizan de borde a borde y
+        // cada bloque aplica su propio margen con margenDeContenido().
+        margenLateral = false,
         accionFlotante = {
             BotonMicrofonoFlotante(alPulsar = onDictarNota)
         }
@@ -376,6 +381,7 @@ fun PantallaCuaderno(
                     altoFila = 72.dp,
                     modificador = Modifier
                         .fillMaxWidth()
+                        .margenDeContenido()
                         .padding(top = 24.dp)
                 )
                 // Falló la carga y no hay nada que enseñar: es un error, no "sin labores".
@@ -388,14 +394,18 @@ fun PantallaCuaderno(
                     mensaje = errorDeCarga,
                     sinConexion = errorDeCarga.contains("conexión", ignoreCase = true),
                     alReintentar = viewModel::cargar,
-                    modificador = Modifier.padding(top = 32.dp, start = 24.dp, end = 24.dp)
+                    modificador = Modifier
+                        .margenDeContenido()
+                        .padding(top = 32.dp)
                 )
                 estado.campanas.all { it.labores.isEmpty() } -> EstadoVacio(
                     titulo = "Apunta tu primera labor",
                     descripcion = "Tus labores aparecerán aquí por orden de fecha.",
                     textoAccion = "Apuntar una labor",
                     alPulsarAccion = onApuntarLabor,
-                    modificador = Modifier.padding(top = 32.dp)
+                    modificador = Modifier
+                        .margenDeContenido()
+                        .padding(top = 32.dp)
                 )
                 grupos.isEmpty() -> EstadoVacio(
                     titulo = "No hay labores con estos filtros",
@@ -405,29 +415,32 @@ fun PantallaCuaderno(
                         viewModel.filtrarPorCategoria(null)
                         viewModel.filtrarPorParcela(null)
                     },
-                    modificador = Modifier.padding(top = 32.dp)
+                    modificador = Modifier
+                        .margenDeContenido()
+                        .padding(top = 32.dp)
                 )
                 else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    // Hueco del botón flotante para que no tape la última labor.
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item(key = "entrada") {
-                        Text(
-                            text = "Historial de tus labores por campaña,\nde la más reciente a la más antigua.",
-                            style = TextoCuerpo,
-                            color = Texto,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        BotonPrincipal(
-                            texto = "Apuntar una labor",
-                            icono = R.drawable.ic_anadir,
-                            alPulsar = onApuntarLabor
-                        )
+                        Column(modifier = Modifier.margenDeContenido()) {
+                            Text(
+                                text = "Historial de tus labores por campaña,\nde la más reciente a la más antigua.",
+                                style = TextoCuerpo,
+                                color = Texto,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            BotonPrincipal(
+                                texto = "Apuntar una labor",
+                                icono = R.drawable.ic_anadir,
+                                alPulsar = onApuntarLabor
+                            )
+                        }
                     }
                     item(key = "filtros") {
                         Spacer(modifier = Modifier.height(24.dp))
@@ -444,20 +457,24 @@ fun PantallaCuaderno(
                             CabeceraSeccion(
                                 titulo = "Campaña " + campana.nombre +
                                     if (campana.esActual) " · Campaña actual" else "",
-                                icono = R.drawable.ic_campana
+                                icono = R.drawable.ic_campana,
+                                modificador = Modifier.margenDeContenido()
                             )
                         }
                         for ((indiceDeMes, mes) in campana.meses.withIndex()) {
                             stickyHeader(
                                 key = claveUnicaDeMes(indiceDeCampana, indiceDeMes, mes.clave)
                             ) {
-                                // Cabecera fija: fondo opaco para que la lista
-                                // pase por debajo sin transparentarse.
+                                // Cabecera fija: fondo opaco a todo el ancho para
+                                // que la lista pase por debajo sin transparentarse.
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(Fondo)
-                                        .padding(vertical = 12.dp)
+                                        .padding(
+                                            horizontal = MargenContenido,
+                                            vertical = 12.dp
+                                        )
                                 ) {
                                     CabeceraDeMes(grupo = mes)
                                 }
@@ -469,7 +486,8 @@ fun PantallaCuaderno(
                                 TarjetaDeLabor(
                                     labor = labor,
                                     alEditar = { onEditarLabor(labor.editable) },
-                                    alEliminar = { viewModel.pedirEliminar(labor.editable) }
+                                    alEliminar = { viewModel.pedirEliminar(labor.editable) },
+                                    modificador = Modifier.margenDeContenido()
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -477,14 +495,16 @@ fun PantallaCuaderno(
                     }
                     item(key = "mensaje") {
                         estado.mensaje?.let {
-                            Text(
-                                text = it,
-                                style = TextoCuerpo,
-                                color = Error,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Column(modifier = Modifier.margenDeContenido()) {
+                                Text(
+                                    text = it,
+                                    style = TextoCuerpo,
+                                    color = Error,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
                         }
                     }
                 }

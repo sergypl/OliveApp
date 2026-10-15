@@ -903,5 +903,53 @@
       "2026-10-15 testDebugUnitTest 285 tests, 0 fallos, 0 omitidos y lint en verde; ./init.sh completo (pytest 166/166, healthcheck 200, datos sembrados, APK instalado y abierto). Evidencia completa en docs/evidencia/r8-minify/"
     ],
     "notes": "Decidida por el usuario tras medir el ahorro (8,53 → 2,04 MB). El build de desarrollo no cambia. Solo dos reglas en proguard-rules.pro: la de errorprone (obligatoria para que R8 compile) y -keepattributes SourceFile,LineNumberTable + -renamesourcefileattribute SourceFile para que los crashes sigan siendo legibles; Hilt, Room y OkHttp traen sus reglas de consumidor. Consecuencias declaradas (ADR 0013): los stack traces quedan ofuscados y hay que conservar el mapping.txt de cada release, y una librería nueva con reflexión y sin reglas puede romperse solo en la release (por eso el smoke test de release es parte de la verificación). Queda pendiente la firma del APK release: sin firma, Android no deja instalar el APK release (el smoke test usó una copia temporal firmada con la clave de depuración)."
+  },
+  {
+    "id": "barras-superiores-consistentes",
+    "area": "diseno",
+    "title": "Barra superior igual en todas las pantallas y espaciado vertical equilibrado",
+    "user_visible_behavior": "Todas las pantallas (Panel, Cuaderno, Simulador, Parcelas, Perfil, Campaña, Notas de voz, Nueva labor, Bienvenida, Iniciar sesión y Crear cuenta) muestran su título en la misma barra superior: mismo alto, mismo margen y el título siempre a la misma altura, con flecha de volver en las pantallas de segundo nivel y de acceso. El título ya no tiene un hueco vacío de 70dp encima ni queda pegado al contenido de abajo, el contenido deja de quedar pegado a la barra de navegación inferior y el botón flotante 'Dictar nota' de Mi cuaderno (que estaba completamente tapado por esa barra) se ve y se puede pulsar, igual que el aviso con 'Deshacer'.",
+    "depends_on": [
+      "fundamentos-visuales-modernos",
+      "navegacion-barra-inferior"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew testDebugUnitTest lintDebug (con el puerto 8000 libre)",
+      "cd backend && ./.venv/bin/python -m pytest -q",
+      "./init.sh completo (el camino estándar de arranque sigue en verde)",
+      "Medir en capturas del Xiaomi la primera tinta tras la barra de estado en las 5 pestañas: misma altura de título en todas",
+      "Recorrido en el Xiaomi: 5 pestañas, pantalla de segundo nivel con flecha, botón flotante visible sobre la barra de navegación y eliminar una labor con el aviso 'Deshacer' visible"
+    ],
+    "evidence": [
+      "2026-10-15 medida en capturas (1080x2400): primera tinta tras la barra de estado antes = 32dp (Panel), 30dp (Perfil), 70dp (Cuaderno), 69dp (Simulador), 70dp (Parcelas); después = 25/25/25/24/27dp (las diferencias de 1-3dp son el ascenso/descenso de cada letra)",
+      "2026-10-15 bug encontrado y corregido: el botón flotante 'Dictar nota' de Mi cuaderno no aparece ni un solo píxel en la captura de antes (el Scaffold de Material lo colocaba en el borde inferior y el router dibuja encima la barra de navegación); después se ve sobre la barra, y el aviso 'Labor eliminada de tu cuaderno.' con 'Deshacer' se dibuja sobre el botón (borde inferior medido a 207dp del borde de la pantalla)",
+      "2026-10-15 testDebugUnitTest 285 tests, 0 fallos, 0 omitidos y lint sin errores; backend pytest 166/166; ./init.sh completo en verde. Evidencia completa en docs/evidencia/barras-superiores-consistentes/"
+    ],
+    "notes": "Encargo del usuario: las toolbars no eran consistentes (en algunas pantallas ni había) y había mucho espacio por arriba y poco por abajo. Componente único BarraSuperior (72dp, título TextoTitulo1 centrado verticalmente y alineado con el margen de 24dp, flecha opcional con diana de 48dp) y esqueleto único de pantalla con dos variantes (PantallaConBarraSuperior para contenido que se desplaza con la pantalla y PantallaConBarraSuperiorEnLista para contenido con su propio desplazamiento: línea de tiempos, refresco, formularios o composición centrada). Ritmo vertical fijado en DESIGN.md: 24dp de margen, 8dp entre barra y contenido y 24dp+80dp de hueco inferior con barra de navegación. El saludo del panel pasa a ser el título de su pantalla; la cooperativa y el avatar quedan como primer bloque del contenido. Se eliminó el comportamiento de colapso de las barras (era código muerto: nunca se conectó el nestedScroll) y el wrapper Grande/GrandeEnLista. Sin cambios en el backend, en la API, en los flujos ni en los ViewModels: solo composición de la interfaz y espaciado."
+  },
+  {
+    "id": "filtros-cuaderno-a-todo-ancho",
+    "area": "diseno",
+    "title": "Los filtros de Mi cuaderno se deslizan a todo el ancho, sin cortarse en los márgenes",
+    "user_visible_behavior": "En Mi cuaderno, las filas de chips de filtro (por categoría y por parcela) se deslizan a los lados a todo el ancho de la pantalla: los chips pasan por debajo de los márgenes y del borde sin cortarse el texto, y en reposo el primer y el último chip quedan alineados con el margen de contenido de 24dp como el resto de la pantalla.",
+    "depends_on": [
+      "cuaderno-linea-de-tiempo",
+      "barras-superiores-consistentes"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew testDebugUnitTest lintDebug (con el puerto 8000 libre)",
+      "cd backend && ./.venv/bin/python -m pytest -q",
+      "./init.sh completo (el camino estándar de arranque sigue en verde)",
+      "Medir con uiautomator el ancho de la fila de chips en el Xiaomi: 1080px (pantalla completa) frente a los 948px del contenido con margen",
+      "Recorrido en el Xiaomi: chips alineados al margen en reposo y deslizamiento con los chips pasando por debajo del borde de la pantalla"
+    ],
+    "evidence": [
+      "2026-10-15 medida en el Xiaomi (1080x2400): la fila de chips ocupa [0,474][1080,606] (toda la pantalla) mientras el resto del contenido sigue en [66,1014] (los 24dp de margen); antes la fila vivía dentro del margen y los chips se cortaban en seco a 24dp del borde con el texto partido (captura de antes: 'Tratamiento fitosanitari…' y 'La Nori…' partidos en x=850)",
+      "2026-10-15 recorrido en el Xiaomi: en reposo el primer chip arranca a 24dp (x=66px) como la etiqueta y las tarjetas; deslizando, el chip que sale se corta en el propio borde (x=0), no en el margen, y la cabecera fija de mes mantiene su fondo opaco a todo el ancho para que la lista pase por debajo sin transparentarse",
+      "2026-10-15 testDebugUnitTest 285 tests, 0 fallos, 0 omitidos y lint sin errores; backend pytest 166/166; ./init.sh completo en verde. Evidencia completa en docs/evidencia/filtros-cuaderno-a-todo-ancho/"
+    ],
+    "notes": "Encargo del usuario: los filtros se escondían detrás de los márgenes al hacer scroll horizontal y 'se ve muy feo el corte'. Regla general fijada en DESIGN.md: los desplazamientos horizontales van a todo el ancho de la pantalla, con el margen aplicado dentro del área deslizante (el primer y el último elemento alineados al margen en reposo). Mecanismo en core/ui: Modifier.margenDeContenido() para que cada bloque se dé su margen cuando la pantalla va a todo el ancho, y PantallaConBarraSuperiorEnLista(margenLateral = false) para que el contenido salga de la caja rellenada; la fila de chips del cuaderno usa el margen dentro de su área deslizante y la cabecera fija de mes conserva el fondo opaco a todo el ancho. Solo afecta a la composición de la interfaz: mismos flujos, textos, ViewModels, endpoints y datos."
   }
 ]

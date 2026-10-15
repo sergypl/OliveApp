@@ -9,19 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,7 +49,6 @@ import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.DatosPanel
 import com.olivapp.app.campana.domain.saludoDeCabecera
 import com.olivapp.app.core.formatos.formatearCantidad
-import com.olivapp.app.core.ui.AlturaBarraInferior
 import com.olivapp.app.core.ui.BotonMicrofonoFlotante
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.Borde
@@ -68,7 +62,7 @@ import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.FormasOlivApp
-import com.olivapp.app.core.ui.LocalBarraInferiorVisible
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.SobrePrimario
 import com.olivapp.app.core.ui.Superficie
@@ -78,10 +72,8 @@ import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCifra
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoSecundario
-import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoTitulo2
 import com.olivapp.app.core.ui.TextoValor
-import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.perfil.domain.DatosPerfil
 import com.olivapp.app.perfil.domain.inicialesDe
 
@@ -111,7 +103,15 @@ fun PantallaPanel(
     val hora = remember { java.time.LocalTime.now().hour }
     val datos = estado.datos
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    PantallaConBarraSuperiorEnLista(
+        // El saludo (según la hora y el socio) es el título de la pantalla,
+        // igual que en el resto de la app. Espacio duro en "Socio 1" para que
+        // el número no se quede solo en otra línea.
+        titulo = saludoDeCabecera(hora, estado.perfil?.codigoSocio?.replace(' ', '\u00A0')),
+        // El micrófono es el protagonista del panel: botón flotante naranja
+        // sobre la barra inferior, en la esquina de la mano que pulsa.
+        accionFlotante = { BotonMicrofonoFlotante(alPulsar = onAbrirNotasVoz) }
+    ) {
         ContenedorRefrescar(
             refrescando = estado.refrescando,
             alRefrescar = viewModel::alRefrescar,
@@ -120,12 +120,9 @@ fun PantallaPanel(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pantallaCompleta()
                     .verticalScroll(rememberScrollState())
             ) {
                 CabeceraDelPanel(
-                    // Espacio duro en "Socio 1" para que el número no se quede solo en otra línea.
-                    saludo = saludoDeCabecera(hora, estado.perfil?.codigoSocio?.replace(' ', '\u00A0')),
                     perfil = estado.perfil,
                     alAbrirPerfil = onAbrirPerfil
                 )
@@ -171,30 +168,25 @@ fun PantallaPanel(
                 Spacer(modifier = Modifier.height(HuecoDelBotonFlotante))
             }
         }
-        // El micrófono es el protagonista del panel: botón flotante naranja
-        // sobre la barra inferior, en la esquina de la mano que pulsa.
-        val huecoDeLaBarra = if (LocalBarraInferiorVisible.current) AlturaBarraInferior else 0.dp
-        BotonMicrofonoFlotante(
-            alPulsar = onAbrirNotasVoz,
-            modificador = Modifier
-                .align(Alignment.BottomEnd)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Bottom)
-                )
-                .padding(end = 24.dp, bottom = huecoDeLaBarra + 16.dp)
-        )
     }
 }
 
-/** Saludo según la hora, cooperativa debajo y avatar de iniciales que abre el Perfil. */
+/**
+ * Cooperativa del socio y avatar de iniciales que abre el Perfil. El saludo va
+ * en la barra superior (es el título de la pantalla, como en el resto de la app).
+ */
 @Composable
-private fun CabeceraDelPanel(saludo: String, perfil: DatosPerfil?, alAbrirPerfil: () -> Unit) {
+private fun CabeceraDelPanel(perfil: DatosPerfil?, alAbrirPerfil: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = saludo, style = TextoTitulo1, color = Texto)
-            if (perfil != null && perfil.cooperativa.isNotBlank()) {
-                Text(text = perfil.cooperativa, style = TextoCuerpo, color = TextoSecundario)
-            }
+        if (perfil != null && perfil.cooperativa.isNotBlank()) {
+            Text(
+                text = perfil.cooperativa,
+                style = TextoCuerpo,
+                color = TextoSecundario,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.width(16.dp))
         // Atajo a la pestaña Perfil (que también está en la barra inferior, con texto).

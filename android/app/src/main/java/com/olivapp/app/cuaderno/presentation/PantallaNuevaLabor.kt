@@ -26,7 +26,7 @@ import com.olivapp.app.core.ui.Desplegable
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EsqueletoDeCarga
 import com.olivapp.app.core.ui.OpcionCategoria
-import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
+import com.olivapp.app.core.ui.PantallaConBarraSuperior
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
@@ -274,7 +274,7 @@ fun PantallaNuevaLabor(
         viewModel.preparar(labor)
     }
 
-    PantallaConBarraSuperiorGrande(
+    PantallaConBarraSuperior(
         titulo = if (estado.esEdicion) "Editar labor" else "Apuntar una labor",
         onVolver = onVolver
     ) {
