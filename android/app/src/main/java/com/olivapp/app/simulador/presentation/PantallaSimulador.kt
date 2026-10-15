@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +27,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.core.formatos.formatearCantidad
 import com.olivapp.app.core.ui.CampoDeTexto
+import com.olivapp.app.core.ui.ContenedorMasAlto
 import com.olivapp.app.core.ui.CifraAnimada
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.FilaDato
@@ -208,6 +210,7 @@ fun PantallaSimulador(
         onVolver = null,
         fijo = { TarjetaDeResultado(estado) }
     ) {
+        DetalleDeResultado(estado)
         Text(
             text = "Simula tu liquidación en limpio con los kilos de aceituna " +
                 "y el rendimiento graso.\nEs una estimación orientativa, no la " +
@@ -248,7 +251,14 @@ fun PantallaSimulador(
                         .coerceIn(10f, 30f),
                     onValueChange = { viewModel.cambiarRendimientoConDeslizador(it.toDouble()) },
                     valueRange = 10f..30f,
-                    steps = 199,
+                    // Continuo: el ViewModel redondea a 0,1. Con 199 pasos se dibujaban
+                    // 200 marcas que, con la paleta del tema, formaban una barra naranja
+                    // (el naranja es solo del micrófono).
+                    colors = SliderDefaults.colors(
+                        thumbColor = Primario,
+                        activeTrackColor = Primario,
+                        inactiveTrackColor = ContenedorMasAlto
+                    ),
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp)
@@ -290,7 +300,12 @@ fun PantallaSimulador(
     }
 }
 
-/** Tarjeta de resultado, fijada sobre el formulario: siempre visible. */
+/**
+ * Resultado compacto, fijado sobre el formulario: solo la cifra (o el aviso).
+ * El desglose y el aviso largo van en [DetalleDeResultado], dentro del scroll:
+ * una tarjeta fija alta se comía dos tercios de la pantalla y dejaba un hueco
+ * mínimo para el formulario.
+ */
 @Composable
 private fun TarjetaDeResultado(estado: SimuladorUiState) {
     Tarjeta {
@@ -301,7 +316,6 @@ private fun TarjetaDeResultado(estado: SimuladorUiState) {
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
         val resultado = estado.resultado
         if (resultado != null) {
             CifraAnimada(
@@ -309,48 +323,45 @@ private fun TarjetaDeResultado(estado: SimuladorUiState) {
                 sufijo = " kg",
                 modificador = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Estimación orientativa: la liquidación oficial es la " +
-                    "de la cooperativa.",
+                text = "Estimación orientativa",
                 style = TextoCuerpo,
                 color = TextoSecundario,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            FilaDato(
-                etiqueta = "Aceite según el rendimiento",
-                valor = formatearCantidad(resultado.aceiteSegunRendimiento) + " kg",
-                icono = R.drawable.ic_aceite
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            FilaDato(
-                etiqueta = "Ajuste industrial (" +
-                    formatearCantidad(resultado.ajustePorcentaje) + " %)",
-                valor = "-" + formatearCantidad(resultado.ajusteIndustrial) + " kg",
-                icono = R.drawable.ic_kilos
             )
         } else {
             // Estado neutro o aviso: la tarjeta sigue visible, sin cifra.
             Text(
                 text = estado.error.ifEmpty { estado.neutro },
-                style = TextoValor,
-                color = if (estado.error.isEmpty()) TextoSecundario else Error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Estimación orientativa: la liquidación oficial es la " +
-                    "de la cooperativa.",
                 style = TextoCuerpo,
-                color = TextoSecundario,
+                color = if (estado.error.isEmpty()) TextoSecundario else Error,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
         }
     }
+}
+
+/** Desglose del resultado (aceite según el rendimiento y ajuste industrial), en el scroll. */
+@Composable
+private fun DetalleDeResultado(estado: SimuladorUiState) {
+    val resultado = estado.resultado ?: return
+    Tarjeta {
+        FilaDato(
+            etiqueta = "Aceite según el rendimiento",
+            valor = formatearCantidad(resultado.aceiteSegunRendimiento) + " kg",
+            icono = R.drawable.ic_aceite
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        FilaDato(
+            etiqueta = "Ajuste industrial (" +
+                formatearCantidad(resultado.ajustePorcentaje) + " %)",
+            valor = "-" + formatearCantidad(resultado.ajusteIndustrial) + " kg",
+            icono = R.drawable.ic_kilos
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
 }
 
 /** Botón grande de paso de 0,1 % (zona táctil de 64dp y texto, no solo símbolo). */

@@ -57,7 +57,8 @@ suspend fun SnackbarHostState.mostrarConDeshacer(
         message = texto,
         actionLabel = textoAccion,
         withDismissAction = true,
-        duration = androidx.compose.material3.SnackbarDuration.Short
+        // Largo (10 s): 4 s es poco para que una persona mayor lea y pulse Deshacer.
+        duration = androidx.compose.material3.SnackbarDuration.Long
     )
     return resultado == SnackbarResult.ActionPerformed
 }
