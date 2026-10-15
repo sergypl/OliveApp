@@ -2,6 +2,9 @@ package com.olivapp.app.voz.presentation
 
 import com.olivapp.app.acceso.presentation.FakeSesionRepositorio
 import com.olivapp.app.voz.data.SincronizadorNotas
+import android.os.Looper
+import com.olivapp.app.voz.domain.INTERVALO_AMPLITUD_MS
+import com.olivapp.app.voz.domain.MUESTRAS_DE_ONDA
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -10,6 +13,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import java.time.Duration
 import java.io.File
 
 // Con Robolectric como el resto de la batería: el sincronizador y la cola
@@ -239,5 +244,33 @@ class NotasVozViewModelTest {
 
         assertFalse(viewModel.uiState.value.grabando)
         assertFalse(grabador.grabando)
+    }
+
+    @Test
+    fun `mientras se graba la onda sigue la amplitud del microfono`() {
+        val grabador = FakeGrabadorDeNotas().apply { amplitudActual = 20000 }
+        val viewModel = crear(grabador = grabador)
+
+        viewModel.empezarGrabacion()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(INTERVALO_AMPLITUD_MS * 3))
+
+        val onda = viewModel.uiState.value.nivelesOnda
+        assertEquals(MUESTRAS_DE_ONDA, onda.size)
+        assertTrue(onda.takeLast(3).all { it > 0.5f })
+        assertEquals(0f, onda.first(), 0f)
+    }
+
+    @Test
+    fun `al parar la grabacion la onda vuelve al silencio`() {
+        val notas = FakeNotasRepositorio(responderAlMomento = false)
+        val grabador = FakeGrabadorDeNotas().apply { amplitudActual = 20000 }
+        val viewModel = crear(notas, grabador)
+        viewModel.empezarGrabacion()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(INTERVALO_AMPLITUD_MS * 2))
+
+        viewModel.pararGrabacion()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(INTERVALO_AMPLITUD_MS * 2))
+
+        assertTrue(viewModel.uiState.value.nivelesOnda.all { it == 0f })
     }
 }
