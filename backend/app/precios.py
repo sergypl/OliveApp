@@ -22,6 +22,8 @@ Los precios son de referencia: **no es lo que paga la cooperativa** (CONTEXT.md)
 
 from datetime import date, datetime, timedelta
 
+import sqlite3
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -109,9 +111,15 @@ def fecha_iso(texto):
 
 
 def normalizar_registros(registros):
-    """Registros de la API al formato interno; descarta lo que no interesa."""
+    """Registros de la API al formato interno; descarta lo que no interesa.
+
+    La respuesta de la fuente de precios no es de fiar: los elementos que no
+    son objetos o que no traen semana se descartan en vez de reventar.
+    """
     normalizados = []
     for registro in registros or []:
+        if not isinstance(registro, dict) or registro.get("weekNumber") is None:
+            continue
         categoria = PRODUCTO_DE_CATEGORIA.get(registro.get("product"))
         mercado = NOMBRE_DE_MERCADO.get(registro.get("market"))
         semana = fecha_iso(registro.get("beginDate"))
@@ -175,23 +183,31 @@ def _asegurar_tabla(conn):
 
 
 def _guardar_en_cache(conn, registros):
-    _asegurar_tabla(conn)
-    for registro in registros:
-        conn.execute(
-            "INSERT OR REPLACE INTO precio_aceite "
-            "(categoria, mercado, semana, campana, precio, semana_fin, numero_semana) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                registro["categoria"],
-                registro["mercado"],
-                registro["semana"],
-                registro["campana"],
-                registro["precio"],
-                registro["semana_fin"],
-                registro["numero_semana"],
-            ),
-        )
-    conn.commit()
+    """Guarda en la caché de precios.
+
+    Un fallo de la caché nunca tumba la respuesta buena de la API: se
+    deshace la escritura a medias y se sigue sin caché.
+    """
+    try:
+        _asegurar_tabla(conn)
+        for registro in registros:
+            conn.execute(
+                "INSERT OR REPLACE INTO precio_aceite "
+                "(categoria, mercado, semana, campana, precio, semana_fin, numero_semana) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    registro["categoria"],
+                    registro["mercado"],
+                    registro["semana"],
+                    registro["campana"],
+                    registro["precio"],
+                    registro["semana_fin"],
+                    registro["numero_semana"],
+                ),
+            )
+        conn.commit()
+    except sqlite3.Error:
+        conn.rollback()
 
 
 def _desde_cache(conn, mercado):

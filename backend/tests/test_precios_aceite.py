@@ -6,6 +6,7 @@ memberStateCodes=ES) que se filtra como lo haría la API.
 """
 
 import json
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -341,3 +342,35 @@ def test_la_llamada_real_lleva_espana_timeout_y_filtros(monkeypatch):
     assert recibido["url"] == "https://api.tech.ec.europa.eu/agrifood/api/oliveOil/prices"
     assert recibido["params"] == {"memberStateCodes": "ES", "marketingYears": "2025/2026"}
     assert 0 < recibido["timeout"] <= 15
+
+
+def test_se_descartan_los_registros_que_no_son_objetos_o_sin_semana():
+    """La respuesta de la fuente de precios no es de fiar."""
+    bueno = {
+        "product": "Extra virgin olive oil (up to 0.8%)",
+        "market": "Average national price",
+        "beginDate": "05/10/2026",
+        "endDate": "11/10/2026",
+        "weekNumber": 41,
+        "marketingYear": "2026/2027",
+        "price": "€298.00",
+    }
+    registros = precios.normalizar_registros(
+        [bueno, "basura", None, 3, dict(bueno, weekNumber=None)]
+    )
+
+    assert len(registros) == 1
+    assert registros[0]["numero_semana"] == 41
+
+
+def test_un_fallo_de_la_cache_no_tumba_la_respuesta(api_falsa, conn, monkeypatch):
+    """Un fallo al guardar la caché no puede tumbar los precios buenos."""
+
+    def caida(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(precios, "_asegurar_tabla", caida)
+    resultado = precios.semanas_de_precios(conn, "aove", "jaen", "2025/2026")
+
+    assert resultado["desactualizado"] is False
+    assert resultado["semanas"]
