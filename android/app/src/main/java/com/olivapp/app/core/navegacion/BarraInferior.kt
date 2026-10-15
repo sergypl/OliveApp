@@ -63,10 +63,13 @@ fun BarraInferior(
                         Text(
                             text = pestana.etiqueta,
                             style = TextoEtiqueta,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = if (seleccionada) FontWeight.Bold else FontWeight.Medium,
+                            // Cinco pestañas en 360dp: la etiqueta nunca se corta
+                            // ("Simulador" es la más larga); puede rebasar su hueco.
                             maxLines = 1,
-                            overflow = TextOverflow.Clip
+                            softWrap = false,
+                            overflow = TextOverflow.Visible
                         )
                     },
                     alwaysShowLabel = true,
