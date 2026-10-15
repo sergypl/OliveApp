@@ -46,6 +46,13 @@ interface NotasVozDao {
 
     @Query("UPDATE notas_voz SET borrador = :borrador WHERE id = :id")
     fun actualizarBorrador(id: String, borrador: String)
+
+    /**
+     * Notas que se quedaron a medias en una transcripción (el proceso murió
+     * mientras tanto): vuelven a la cola como 'pendiente'.
+     */
+    @Query("UPDATE notas_voz SET estado = 'pendiente' WHERE estado = 'transcribiendo'")
+    fun reanudarTranscripciones()
 }
 
 /** Base Room de la cola de notas de voz. */

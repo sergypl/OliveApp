@@ -138,6 +138,45 @@ class ColaNotasCaracterizacionTest {
     }
 
     @Test
+    fun `las notas quedadas transcribiendo tras un corte vuelven a la cola pendiente`() {
+        val dao = BaseNotasVoz.de(contexto).dao()
+        val idAtascada = "nota-test-atascada-${System.nanoTime()}.m4a"
+        val idTranscrita = "nota-test-ya-transcrita-${System.nanoTime()}.m4a"
+        dao.insertar(
+            NotaVozFila(
+                id = idAtascada, fichero = "/f/atascada.m4a", creadaEn = "2026-01-01T10:00:00",
+                segundos = 5, estado = "transcribiendo", texto = ""
+            )
+        )
+        dao.insertar(
+            NotaVozFila(
+                id = idTranscrita, fichero = "/f/transcrita.m4a", creadaEn = "2026-01-01T10:01:00",
+                segundos = 6, estado = "transcrita", texto = "He regado."
+            )
+        )
+
+        almacen.reanudarTranscripcionesPendientes()
+
+        assertEquals("pendiente", almacen.notas().first { it.id == idAtascada }.estado)
+        // El resto de estados no se toca.
+        val yaTranscrita = almacen.notas().first { it.id == idTranscrita }
+        assertEquals("transcrita", yaTranscrita.estado)
+        assertEquals("He regado.", yaTranscrita.texto)
+    }
+
+    @Test
+    fun `reanudar las transcripciones atascadas se puede llamar siempre`() {
+        val nota = notaNueva("reanudar-${System.nanoTime()}")
+        almacen.marcar(nota.id, "transcribiendo", "")
+
+        // Idempotente: llamarlo otra vez no cambia nada más.
+        almacen.reanudarTranscripcionesPendientes()
+        almacen.reanudarTranscripcionesPendientes()
+
+        assertEquals("pendiente", almacen.notas().first { it.id == nota.id }.estado)
+    }
+
+    @Test
     fun `el indice JSON antiguo se importa a Room y se borra`() {
         val idImportada = "nota-test-importada-${System.nanoTime()}.m4a"
         val indice = File(contexto.filesDir, "notas-voz.json")
