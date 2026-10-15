@@ -153,6 +153,39 @@ class CuadernoViewModelTest {
     }
 
     @Test
+    fun `al girar la pantalla no se confirma el borrado y deshacer sigue funcionando`() {
+        val labores = FakeLaboresRepositorio()
+        val viewModel = viewModelConUnaLabor(labores)
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        // La rotación no es salir de la pantalla: el borrado sigue diferido.
+        viewModel.alSalir(cambiandoLaConfiguracion = true)
+
+        assertNull(labores.idLlamado)
+        assertEquals("lab-7", viewModel.uiState.value.laborBorrada?.id)
+
+        viewModel.deshacerEliminar()
+
+        val estado = viewModel.uiState.value
+        assertNull(estado.laborBorrada)
+        assertEquals(listOf("lab-7"), estado.campanas[0].labores.map { it.editable.id })
+    }
+
+    @Test
+    fun `al salir de verdad tras una rotacion el borrado pendiente se confirma`() {
+        val labores = FakeLaboresRepositorio()
+        val viewModel = viewModelConUnaLabor(labores)
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        viewModel.alSalir(cambiandoLaConfiguracion = true)
+        viewModel.alSalir()
+
+        assertEquals("lab-7", labores.idLlamado)
+    }
+
+    @Test
     fun `si el borrado falla la labor vuelve a la lista y se avisa`() {
         val labores = FakeLaboresRepositorio()
         labores.resultadoEliminar = false to "No se pudo eliminar la labor."
