@@ -49,10 +49,11 @@ fun Tarjeta(
 fun CabeceraSeccion(
     titulo: String,
     icono: Int? = null,
-    derecha: (@Composable () -> Unit)? = null
+    derecha: (@Composable () -> Unit)? = null,
+    modificador: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modificador.fillMaxWidth(),
         shape = FormasOlivApp.large,
         color = Primario
     ) {

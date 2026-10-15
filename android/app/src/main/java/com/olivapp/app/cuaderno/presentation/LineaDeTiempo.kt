@@ -25,11 +25,13 @@ import com.olivapp.app.core.formatos.NOMBRES_DE_CATEGORIA
 import com.olivapp.app.core.ui.ChipFiltro
 import com.olivapp.app.core.ui.ContenedorBajo
 import com.olivapp.app.core.ui.FormasOlivApp
+import com.olivapp.app.core.ui.MargenContenido
 import com.olivapp.app.core.ui.Superficie
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.core.ui.Borde
+import com.olivapp.app.core.ui.margenDeContenido
 import com.olivapp.app.cuaderno.domain.DatosLabor
 import com.olivapp.app.cuaderno.domain.FiltroDeCuaderno
 import com.olivapp.app.cuaderno.domain.GrupoDeMes
@@ -76,10 +78,11 @@ fun CabeceraDeMes(grupo: GrupoDeMes) {
 fun TarjetaDeLabor(
     labor: DatosLabor,
     alEditar: (() -> Unit)? = null,
-    alEliminar: (() -> Unit)? = null
+    alEliminar: (() -> Unit)? = null,
+    modificador: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modificador.fillMaxWidth(),
         shape = FormasOlivApp.large,
         color = Superficie,
         border = BorderStroke(1.dp, Borde)
@@ -114,7 +117,8 @@ fun FiltrosDeCuaderno(
         Text(
             text = "Filtrar por categoría",
             style = TextoCuerpo,
-            color = Texto
+            color = Texto,
+            modifier = Modifier.margenDeContenido()
         )
         Spacer(modifier = Modifier.height(8.dp))
         FilaDeChips {
@@ -140,7 +144,8 @@ fun FiltrosDeCuaderno(
             Text(
                 text = "Filtrar por parcela",
                 style = TextoCuerpo,
-                color = Texto
+                color = Texto,
+                modifier = Modifier.margenDeContenido()
             )
             Spacer(modifier = Modifier.height(8.dp))
             FilaDeChips {
@@ -164,13 +169,20 @@ fun FiltrosDeCuaderno(
     }
 }
 
-/** Fila de chips que se desliza a los lados si no caben todos. */
+/**
+ * Fila de chips que se desliza a los lados si no caben todos. Va a todo el
+ * ancho de la pantalla (fuera del margen de contenido) para que los chips pasen
+ * por debajo de los márgenes sin cortarse al deslizarlos; el margen va dentro
+ * del área deslizante, de modo que el primer y el último chip quedan alineados
+ * con el margen de contenido cuando la fila está en reposo.
+ */
 @Composable
 private fun FilaDeChips(contenido: @Composable RowScope.() -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
+            .padding(horizontal = MargenContenido)
     ) {
         contenido()
     }
