@@ -45,6 +45,14 @@ val LocalBarraInferiorVisible = compositionLocalOf { true }
 /** Margen de contenido de todas las pantallas (DESIGN.md: ritmo 4/8dp). */
 val MargenContenido = 24.dp
 
+/**
+ * Margen horizontal de contenido. Cada bloque lo aplica cuando la pantalla se
+ * dibuja a todo el ancho, que es lo que necesitan las filas que se deslizan a
+ * los lados: van de borde a borde y los elementos pasan por debajo de los
+ * márgenes sin cortarse, con el primero y el último alineados al margen.
+ */
+fun Modifier.margenDeContenido(): Modifier = this.padding(horizontal = MargenContenido)
+
 /** Hueco bajo el contenido: barra de navegación inferior si la pantalla la lleva. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -110,6 +118,11 @@ fun PantallaConBarraSuperior(
  * navegación inferior se reserva aquí, y el aviso con "Deshacer" y el botón
  * flotante se dibujan ENCIMA de esa barra (no debajo, como pasaba con el
  * `Scaffold` de Material, que los dejaba tapados).
+ *
+ * Con `margenLateral = false` el contenido va a todo el ancho de la pantalla y
+ * cada bloque aplica su propio margen con [margenDeContenido]: es lo que
+ * necesitan las filas de chips que se deslizan a los lados, para que pasen por
+ * debajo de los márgenes sin cortarse.
  */
 @Composable
 fun PantallaConBarraSuperiorEnLista(
@@ -117,6 +130,7 @@ fun PantallaConBarraSuperiorEnLista(
     onVolver: (() -> Unit)? = null,
     aviso: SnackbarHostState? = null,
     accionFlotante: (@Composable () -> Unit)? = null,
+    margenLateral: Boolean = true,
     contenido: @Composable () -> Unit
 ) {
     val huecoDeBarra = huecoDeBarraInferior()
@@ -136,8 +150,8 @@ fun PantallaConBarraSuperiorEnLista(
                         )
                     )
                     .padding(
-                        start = MargenContenido,
-                        end = MargenContenido,
+                        start = if (margenLateral) MargenContenido else 0.dp,
+                        end = if (margenLateral) MargenContenido else 0.dp,
                         top = 8.dp,
                         bottom = huecoInferior
                     )
