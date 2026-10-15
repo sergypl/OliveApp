@@ -21,6 +21,7 @@ Campos por categoría de labor (alineados con SIEX según ADR 0005):
 - Una Cooperativa agrupa N socios (Agricultores) y N Campañas.
 - Un Agricultor pertenece a una Cooperativa (única en el MVP) y tiene N Parcelas, N Labores y N datos de campaña.
 - Una Cuenta identifica a un Agricultor (email + contraseña) y se vincula a exactamente un socio por su código de socio. Cada socio solo accede a sus propios datos (aislamiento por socio): las consultas a los datos de otro socio fallan o devuelven vacío.
+- El Perfil del socio es una vista de solo lectura (no una entidad nueva) compuesta por la Cuenta, su socio (código de socio), la Cooperativa, el número de Parcelas del socio y la Campaña actual. No se edita en el MVP.
 - Una Campaña agrupa las Labores de "Mi cuaderno" y los datos oficiales de cada socio en esa temporada.
 - Una Parcela pertenece a un Agricultor.
 - Una Labor pertenece a exactamente una Parcela (y, a través de ella, a un Agricultor) y se sitúa en una Campaña.

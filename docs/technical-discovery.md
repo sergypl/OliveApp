@@ -29,6 +29,7 @@
 ## Authentication and Authorization
 - Registro/login con email + contraseña; el backend emite un token (JWT) que la app guarda en almacenamiento seguro del dispositivo.
 - Stance mínima: contraseñas hasheadas, token con caducidad y cierre de sesión. Fuera del MVP: reset por email, verificación de email, 2FA, baja de cuenta.
+- `GET /api/v1/mi-perfil` (módulo `backend/app/perfil.py`, requiere token): devuelve `{codigo_socio, email, cooperativa, numero_parcelas, campana_actual}` del socio de la cuenta del token (solo lectura; el socio se deduce del token, nunca de la petición, así un socio no ve los datos de otro). Lo consume la pestaña Perfil de la app.
 - Un único rol (socio). No hay rol de cooperativa ni permisos diferenciados.
 
 ## Deployment and Operations

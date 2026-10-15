@@ -51,8 +51,7 @@ import com.olivapp.app.R
 data class PanelUiState(
     val datos: DatosPanel? = null,
     val campanas: List<DatosCampanaResumen> = emptyList(),
-    val mensaje: String? = null,
-    val sesionCerrada: Boolean = false
+    val mensaje: String? = null
 )
 
 @HiltViewModel
@@ -89,22 +88,10 @@ class PanelViewModel @Inject constructor(
             }
         }
     }
-
-    fun cerrarSesion() {
-        // Se borra el token del dispositivo: sin él no hay acceso.
-        sesion.borrar()
-        _uiState.update { it.copy(sesionCerrada = true) }
-    }
-
-    /** La navegación tras cerrar sesión ya se ha hecho. */
-    fun sesionCerradaAtendida() {
-        _uiState.update { it.copy(sesionCerrada = false) }
-    }
 }
 
 @Composable
 fun PantallaPanel(
-    onSesionCerrada: () -> Unit,
     onAbrirNotasVoz: () -> Unit,
     onAbrirCampana: (String) -> Unit,
     viewModel: PanelViewModel = hiltViewModel()
@@ -114,12 +101,6 @@ fun PantallaPanel(
     // Carga autenticada: el token guardado acompaña a las peticiones.
     LaunchedEffect(Unit) {
         viewModel.cargar()
-    }
-    LaunchedEffect(estado.sesionCerrada) {
-        if (estado.sesionCerrada) {
-            viewModel.sesionCerradaAtendida()
-            onSesionCerrada()
-        }
     }
 
     Column(
@@ -224,11 +205,5 @@ fun PantallaPanel(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(
-            texto = "Cerrar sesión",
-            icono = R.drawable.ic_cerrar_sesion,
-            alPulsar = viewModel::cerrarSesion
-        )
     }
 }
