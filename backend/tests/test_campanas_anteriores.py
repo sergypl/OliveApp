@@ -24,9 +24,17 @@ def test_el_listado_marca_la_actual_y_las_cerradas():
         campanas = client.get("/api/v1/mi-campanas", headers=cabeceras).json()
 
         assert len(campanas) == 4
-        assert campanas[0] == {"id": "2025-2026", "nombre": "2025/2026", "estado": "actual"}
+        assert campanas[0] == {
+            "id": "2025-2026",
+            "nombre": "2025/2026",
+            "estado": "actual",
+            "aceite_obtenido": 1774.0,
+        }
         cerradas = [c for c in campanas if c["estado"] == "cerrada"]
         assert [c["id"] for c in cerradas] == ["2024-2025", "2023-2024", "2022-2023"]
+        # El aceite obtenido de cada campaña viaja en el listado (comparativa del panel).
+        assert cerradas[0]["aceite_obtenido"] == 1198.0
+        assert all(isinstance(c["aceite_obtenido"], float) for c in campanas)
 
 
 def test_el_detalle_de_una_campana_anterior_separa_datos_oficiales_y_labores():
