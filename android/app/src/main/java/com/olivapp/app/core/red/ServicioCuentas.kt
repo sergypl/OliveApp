@@ -519,7 +519,12 @@ object ServicioCuentas {
                                 DatosCampanaResumen(
                                     id = c.optString("id"),
                                     nombre = c.optString("nombre"),
-                                    estado = c.optString("estado")
+                                    estado = c.optString("estado"),
+                                    aceiteKg = if (c.has("aceite_obtenido") && !c.isNull("aceite_obtenido")) {
+                                        c.optDouble("aceite_obtenido")
+                                    } else {
+                                        null
+                                    }
                                 )
                             )
                         }

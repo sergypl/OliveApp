@@ -10,8 +10,17 @@ class DatosPanel(
     val aceiteObtenido: String
 )
 
-/** Resumen de una campaña en el listado del panel. */
-class DatosCampanaResumen(val id: String, val nombre: String, val estado: String)
+/**
+ * Resumen de una campaña en el listado del panel. [aceiteKg] es el aceite
+ * obtenido oficial en kg (sin formatear, para la comparativa); `null` si el
+ * backend no lo envía.
+ */
+class DatosCampanaResumen(
+    val id: String,
+    val nombre: String,
+    val estado: String,
+    val aceiteKg: Double? = null
+)
 
 /** Detalle de una campaña en modo consulta (labores aparte de lo oficial). */
 class DatosCampana(
