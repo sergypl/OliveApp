@@ -305,3 +305,31 @@ def test_usa_el_alias_chat_con_salida_json(monkeypatch):
         assert llamada["url"] == borrador.GATEWAY_CHAT
         assert llamada["modelo"] == borrador.MODELO == "chat"
         assert llamada["formato"] == {"type": "json_object"}
+
+
+def test_si_el_json_no_es_objeto_se_reintenta_y_falla_con_error_claro(monkeypatch):
+    """La salida del modelo no es de fiar: también puede ser una lista.
+
+    Una lista no es una ficha: se reintenta (plan B del ADR 0004) y, si
+    insiste, la extracción falla con un error claro en vez de reventar.
+    """
+    intentos = []
+
+    def falso(api_key, mensajes):
+        intentos.append(mensajes)
+        return "[1, 2]"
+
+    monkeypatch.setattr(borrador, "_llamar_al_gateway", falso)
+    with pytest.raises(borrador.ExtraccionFallida):
+        borrador.extraer("clave", "...", PARCELAS)
+
+    assert len(intentos) == 2
+
+
+def test_los_campos_que_no_son_objeto_se_tratan_como_vacios():
+    ficha = {"categoria": "tratamiento", "campos": ["producto"]}
+
+    assert set(borrador.campos_faltantes(ficha)) == set(
+        borrador.CAMPOS_POR_CATEGORIA["tratamiento"]
+    )
+    assert borrador._normalizar_campos("tratamiento", "producto") == {}
