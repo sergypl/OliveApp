@@ -16,6 +16,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0-bootstrap"
+        // La app solo existe en español: al compilar se descartan las traducciones
+        // del resto de idiomas que aportan las librerías (resources.arsc).
+        resourceConfigurations += listOf("es")
     }
 
     buildTypes {
