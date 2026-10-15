@@ -356,7 +356,7 @@ def eliminar_labor(
 
 
 @app.post("/api/v1/mis-notas-voz/transcripcion")
-async def transcribir_nota(
+def transcribir_nota(
     audio: UploadFile = File(...),
     conn: sqlite3.Connection = Depends(conexion),
     sesion=Depends(sesion_actual),
@@ -369,9 +369,18 @@ async def transcribir_nota(
     conserva nada. Si la IA no reconoce la categoría de la labor, el
     borrador se rechaza (devuelve null) y la app lo dice claro.
     """
-    contenido = await audio.read()
+    # El handler es síncrono a propósito: la transcripción y la extracción son
+    # llamadas bloqueantes al gateway y, al ser síncrono, FastAPI las ejecuta
+    # en su pool de hilos sin bloquear el event loop ni el resto de peticiones.
+    # El audio se lee por trozos y se corta al superar el límite: nunca se
+    # carga entero en memoria.
     nombre = audio.filename
-    await audio.close()
+    try:
+        contenido = transcripcion.leer_audio(nombre, audio.file)
+    except transcripcion.AudioInvalido as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        audio.file.close()
     try:
         texto = transcripcion.transcribir(
             os.environ["DEVEXPERT_API_KEY"], nombre, contenido
@@ -402,7 +411,7 @@ async def transcribir_nota(
 
 
 @app.post("/api/v1/borradores/completar")
-async def completar_borrador(
+def completar_borrador(
     audio: UploadFile = File(...),
     borrador_recibido: str = Form(..., alias="borrador"),
     conn: sqlite3.Connection = Depends(conexion),
@@ -422,18 +431,28 @@ async def completar_borrador(
         propuesta = json.loads(borrador_recibido)
     except ValueError:
         propuesta = None
+    campos = propuesta.get("campos") if isinstance(propuesta, dict) else None
     if (
         not isinstance(propuesta, dict)
         or propuesta.get("rechazado")
         or propuesta.get("categoria") not in labores.CATEGORIAS
+        # La ficha que llega del cliente no es de fiar: `campos` debe ser un
+        # objeto; con una lista o un texto el relleno conversacional fallaría.
+        or (campos is not None and not isinstance(campos, dict))
     ):
         raise HTTPException(
             status_code=400,
             detail="Ese borrador no se puede completar. Vuelve a dictar la nota.",
         )
-    contenido = await audio.read()
+    # Mismo criterio que en `transcribir_nota`: handler síncrono para no
+    # bloquear el event loop con el gateway, y audio leído por trozos.
     nombre = audio.filename
-    await audio.close()
+    try:
+        contenido = transcripcion.leer_audio(nombre, audio.file)
+    except transcripcion.AudioInvalido as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        audio.file.close()
     try:
         texto = transcripcion.transcribir(
             os.environ["DEVEXPERT_API_KEY"], nombre, contenido
