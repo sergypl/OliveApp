@@ -159,7 +159,8 @@ fun OlivApp() {
                         onEditarLabor = { labor ->
                             laborEnEdicion = labor
                             irA("nueva_labor")
-                        }
+                        },
+                        onDictarNota = { irA("notas_voz") }
                     )
                     "nueva_labor" -> PantallaNuevaLabor(
                         onVolver = { irA("cuaderno") },

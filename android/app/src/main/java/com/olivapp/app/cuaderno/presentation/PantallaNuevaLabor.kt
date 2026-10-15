@@ -1,13 +1,10 @@
 package com.olivapp.app.cuaderno.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,14 +23,13 @@ import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.Desplegable
-import com.olivapp.app.core.ui.Fondo
-import com.olivapp.app.core.ui.OpcionCategoria
 import com.olivapp.app.core.ui.Error
-import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.EsqueletoDeCarga
+import com.olivapp.app.core.ui.OpcionCategoria
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
 import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.TextoTitulo1
-import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import com.olivapp.app.cuaderno.domain.fechaDeHoy
@@ -67,7 +63,8 @@ data class NuevaLaborUiState(
     val mensaje: String? = null,
     val guardada: Boolean = false,
     val campanaGuardada: String? = null,
-    val trabajando: Boolean = false
+    val trabajando: Boolean = false,
+    val cargando: Boolean = false
 )
 
 @HiltViewModel
@@ -109,12 +106,20 @@ class NuevaLaborViewModel @Inject constructor(
         val token = sesion.token()
         if (token == null) {
             _uiState.update {
-                it.copy(mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión.")
+                it.copy(
+                    cargando = false,
+                    mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                )
             }
         } else {
+            _uiState.update { it.copy(cargando = true) }
             parcelasRepo.cargarParcelas(token) { lista, texto ->
                 _uiState.update {
-                    if (lista != null) it.copy(parcelas = lista) else it.copy(mensaje = texto)
+                    if (lista != null) {
+                        it.copy(cargando = false, parcelas = lista)
+                    } else {
+                        it.copy(cargando = false, mensaje = texto)
+                    }
                 }
             }
         }
@@ -248,12 +253,14 @@ private fun numeroInicial(labor: LaborEditable?, clave: String): String {
 
 /**
  * Formulario de una labor de "Mi cuaderno" (features alta-manual-labor y
- * edicion-de-labor): apunta una labor nueva o edita una existente.
+ * edicion-de-labor, con los componentes de la oleada 0 de
+ * cuaderno-linea-de-tiempo): apunta una labor nueva o edita una existente.
  *
  * Campos por categoría según ADR 0005. La labor se guarda en la campaña
  * que corresponde a su fecha (campaña oleícola del 1 de noviembre al
  * 31 de octubre).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaNuevaLabor(
     onVolver: () -> Unit,
@@ -267,172 +274,177 @@ fun PantallaNuevaLabor(
         viewModel.preparar(labor)
     }
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+    PantallaConBarraSuperiorGrande(
+        titulo = if (estado.esEdicion) "Editar labor" else "Apuntar una labor",
+        onVolver = onVolver
     ) {
-        Text(
-            text = if (estado.esEdicion) "Editar labor" else "Apuntar una labor",
-            style = TextoTitulo1,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (estado.esEdicion) {
-                "Los cambios se reflejan en Mi cuaderno."
-            } else {
-                "Va a Mi cuaderno, en la campaña de su fecha."
-            },
-            style = TextoCuerpo,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Fecha (día/mes/año)",
-            valor = estado.fecha,
-            alCambiar = viewModel::cambiarFecha,
-            tipo = KeyboardType.Text
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Desplegable(
-            etiqueta = "Parcela",
-            valor = estado.parcelaNombre,
-            opciones = estado.parcelas.map { it.nombre },
-            alElegir = viewModel::elegirParcela
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "¿Qué labor es?",
-            style = TextoCuerpo,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OpcionCategoria(
-            texto = "Tratamiento fitosanitario",
-            icono = R.drawable.ic_tratamiento,
-            elegida = estado.categoria == "tratamiento",
-            alPulsar = { viewModel.elegirCategoria("tratamiento") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OpcionCategoria(
-            texto = "Riego",
-            icono = R.drawable.ic_riego,
-            elegida = estado.categoria == "riego",
-            alPulsar = { viewModel.elegirCategoria("riego") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OpcionCategoria(
-            texto = "Cosecha",
-            icono = R.drawable.ic_cosecha,
-            elegida = estado.categoria == "cosecha",
-            alPulsar = { viewModel.elegirCategoria("cosecha") }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        when (estado.categoria) {
-            "tratamiento" -> {
-                CampoDeTexto(
-                    etiqueta = "Producto",
-                    valor = estado.producto,
-                    alCambiar = viewModel::cambiarProducto,
-                    tipo = KeyboardType.Text
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Desplegable(
-                    etiqueta = "Plaga a controlar",
-                    valor = estado.plaga,
-                    opciones = listOf(
-                        "mosca del olivo", "repilo", "prays", "tuberculosis",
-                        "cochinilla", "malas hierbas", "otra"
-                    ),
-                    alElegir = viewModel::cambiarPlaga
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                CampoDeTexto(
-                    etiqueta = "Cantidad",
-                    valor = estado.cantidad,
-                    alCambiar = viewModel::cambiarCantidad,
-                    tipo = KeyboardType.Decimal
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Desplegable(
-                    etiqueta = "Unidad",
-                    valor = estado.unidad,
-                    opciones = listOf("kg", "L", "g", "ml"),
-                    alElegir = viewModel::elegirUnidad
-                )
-            }
-            "riego" -> {
-                CampoDeTexto(
-                    etiqueta = "Cantidad",
-                    valor = estado.cantidad,
-                    alCambiar = viewModel::cambiarCantidad,
-                    tipo = KeyboardType.Decimal
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Desplegable(
-                    etiqueta = "Unidad",
-                    valor = estado.unidad,
-                    opciones = listOf("horas", "m³", "L"),
-                    alElegir = viewModel::elegirUnidad
-                )
-            }
-            "cosecha" -> {
-                Desplegable(
-                    etiqueta = "Modalidad",
-                    valor = estado.modalidad,
-                    opciones = listOf("a vuelo", "a suelo"),
-                    alElegir = viewModel::elegirModalidad
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                CampoDeTexto(
-                    etiqueta = "Kilos",
-                    valor = estado.kilos,
-                    alCambiar = viewModel::cambiarKilos,
-                    tipo = KeyboardType.Decimal
-                )
-            }
-        }
-        if (estado.categoria.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CampoDeTexto(
-                etiqueta = "Observaciones (opcional)",
-                valor = estado.observaciones,
-                alCambiar = viewModel::cambiarObservaciones,
-                tipo = KeyboardType.Text
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            BotonPrincipal(
-                texto = if (estado.trabajando) {
-                    if (estado.esEdicion) "Guardando los cambios…" else "Guardando la labor…"
-                } else {
-                    if (estado.esEdicion) "Guardar cambios" else "Guardar labor"
-                },
-                icono = R.drawable.ic_confirmada,
-                habilitado = !estado.trabajando,
-                alPulsar = viewModel::guardar
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        estado.mensaje?.let {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = it,
+                text = if (estado.esEdicion) {
+                    "Los cambios se reflejan en Mi cuaderno."
+                } else {
+                    "Va a Mi cuaderno, en la campaña de su fecha."
+                },
                 style = TextoCuerpo,
-                color = if (estado.guardada) Primario else Error,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
-        }
-        estado.campanaGuardada?.let {
+            Spacer(modifier = Modifier.height(24.dp))
+            CampoDeTexto(
+                etiqueta = "Fecha (día/mes/año)",
+                valor = estado.fecha,
+                alCambiar = viewModel::cambiarFecha,
+                tipo = KeyboardType.Text
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            if (estado.cargando) {
+                EsqueletoDeCarga(filas = 1, altoFila = 64.dp)
+            } else {
+                Desplegable(
+                    etiqueta = "Parcela",
+                    valor = estado.parcelaNombre,
+                    opciones = estado.parcelas.map { it.nombre },
+                    alElegir = viewModel::elegirParcela
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "¿Qué labor es?",
+                style = TextoCuerpo,
+                color = Texto
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OpcionCategoria(
+                texto = "Tratamiento fitosanitario",
+                icono = R.drawable.ic_tratamiento,
+                elegida = estado.categoria == "tratamiento",
+                alPulsar = { viewModel.elegirCategoria("tratamiento") }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OpcionCategoria(
+                texto = "Riego",
+                icono = R.drawable.ic_riego,
+                elegida = estado.categoria == "riego",
+                alPulsar = { viewModel.elegirCategoria("riego") }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OpcionCategoria(
+                texto = "Cosecha",
+                icono = R.drawable.ic_cosecha,
+                elegida = estado.categoria == "cosecha",
+                alPulsar = { viewModel.elegirCategoria("cosecha") }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            when (estado.categoria) {
+                "tratamiento" -> {
+                    CampoDeTexto(
+                        etiqueta = "Producto",
+                        valor = estado.producto,
+                        alCambiar = viewModel::cambiarProducto,
+                        tipo = KeyboardType.Text
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Desplegable(
+                        etiqueta = "Plaga a controlar",
+                        valor = estado.plaga,
+                        opciones = listOf(
+                            "mosca del olivo", "repilo", "prays", "tuberculosis",
+                            "cochinilla", "malas hierbas", "otra"
+                        ),
+                        alElegir = viewModel::cambiarPlaga
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CampoDeTexto(
+                        etiqueta = "Cantidad",
+                        valor = estado.cantidad,
+                        alCambiar = viewModel::cambiarCantidad,
+                        tipo = KeyboardType.Decimal
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Desplegable(
+                        etiqueta = "Unidad",
+                        valor = estado.unidad,
+                        opciones = listOf("kg", "L", "g", "ml"),
+                        alElegir = viewModel::elegirUnidad
+                    )
+                }
+                "riego" -> {
+                    CampoDeTexto(
+                        etiqueta = "Cantidad",
+                        valor = estado.cantidad,
+                        alCambiar = viewModel::cambiarCantidad,
+                        tipo = KeyboardType.Decimal
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Desplegable(
+                        etiqueta = "Unidad",
+                        valor = estado.unidad,
+                        opciones = listOf("horas", "m³", "L"),
+                        alElegir = viewModel::elegirUnidad
+                    )
+                }
+                "cosecha" -> {
+                    Desplegable(
+                        etiqueta = "Modalidad",
+                        valor = estado.modalidad,
+                        opciones = listOf("a vuelo", "a suelo"),
+                        alElegir = viewModel::elegirModalidad
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CampoDeTexto(
+                        etiqueta = "Kilos",
+                        valor = estado.kilos,
+                        alCambiar = viewModel::cambiarKilos,
+                        tipo = KeyboardType.Decimal
+                    )
+                }
+            }
+            if (estado.categoria.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CampoDeTexto(
+                    etiqueta = "Observaciones (opcional)",
+                    valor = estado.observaciones,
+                    alCambiar = viewModel::cambiarObservaciones,
+                    tipo = KeyboardType.Text
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                BotonPrincipal(
+                    texto = if (estado.trabajando) {
+                        if (estado.esEdicion) "Guardando los cambios…" else "Guardando la labor…"
+                    } else {
+                        if (estado.esEdicion) "Guardar cambios" else "Guardar labor"
+                    },
+                    icono = R.drawable.ic_confirmada,
+                    habilitado = !estado.trabajando,
+                    alPulsar = viewModel::guardar
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            estado.mensaje?.let {
+                Text(
+                    text = it,
+                    style = TextoCuerpo,
+                    color = if (estado.guardada) Primario else Error,
+                    textAlign = TextAlign.Center
+                )
+            }
+            estado.campanaGuardada?.let {
+                Spacer(modifier = Modifier.height(24.dp))
+                BotonSecundario(
+                    texto = "Ver Mi cuaderno de esa campaña",
+                    icono = R.drawable.ic_cuaderno,
+                    alPulsar = { onVerCampana(it) }
+                )
+            }
             Spacer(modifier = Modifier.height(24.dp))
             BotonSecundario(
-                texto = "Ver Mi cuaderno de esa campaña",
-                icono = R.drawable.ic_cuaderno,
-                alPulsar = { onVerCampana(it) }
+                texto = "Volver a Mi cuaderno",
+                icono = R.drawable.ic_volver,
+                alPulsar = onVolver
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver a Mi cuaderno", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

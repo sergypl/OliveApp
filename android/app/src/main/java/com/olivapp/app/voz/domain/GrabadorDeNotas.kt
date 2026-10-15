@@ -14,4 +14,11 @@ interface GrabadorDeNotas {
 
     /** Para la grabación y devuelve los segundos grabados. */
     fun parar(): Int
+
+    /**
+     * Amplitud máxima (0..32767) captada desde la última consulta, para dibujar
+     * la onda mientras se graba. Devuelve 0 si no se está grabando o si la
+     * grabadora no puede medirla.
+     */
+    fun amplitud(): Int = 0
 }
