@@ -31,7 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.EstadoVacio
-import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
+import com.olivapp.app.core.ui.PantallaConBarraSuperior
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.Primario
@@ -298,7 +298,7 @@ fun PantallaNotasVoz(
         }
     }
 
-    PantallaConBarraSuperiorGrande(
+    PantallaConBarraSuperior(
         titulo = "Notas de voz",
         onVolver = {
             // Con una grabación en marcha no se sale: primero se termina.
