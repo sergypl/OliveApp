@@ -2,7 +2,7 @@
 
 ## Estado verificado actual
 
-- Raíz del repositorio: `/Users/<usuario>/Projects/OliveApp`
+- Raíz del repositorio: el directorio donde está `init.sh`
 - Camino estándar de arranque: `./init.sh`
 - Camino estándar de verificación: `./init.sh` (backend: pytest + healthcheck; Android: compilación del APK e instalación/apertura automática si hay dispositivo por USB)
 - Siguiente feature lista actual: ninguna. Las 42 features están en `passing` (la última, `filtros-cuaderno-a-todo-ancho`, quedó verificada en el Xiaomi el 2026-10-15). Pendiente fuera de feature_list: el gateway de DevExpert devolvía 502 (la transcripción de voz depende de él), la limpieza de las notas de prueba en "Tus notas de voz" del móvil antes de la demo y las decisiones de release que siguen abiertas en `docs/risks-and-open-questions.md`.

@@ -16,3 +16,7 @@ android/local.properties
 *.db-shm
 *.db-wal
 *.db-journal
+# Claves de firma: jamás versionadas (la de release vive fuera del repo).
+*.jks
+*.keystore
+*.p12
