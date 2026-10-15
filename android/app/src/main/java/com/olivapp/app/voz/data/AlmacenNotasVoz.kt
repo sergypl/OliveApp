@@ -90,6 +90,16 @@ class AlmacenNotasVoz(private val contexto: Context) : ColaDeNotas {
     fun pendientesEnOrdenDeGrabacion(): List<NotaDeVoz> =
         dao.pendientes().map { aNotaDeVoz(it) }
 
+    /**
+     * Reinicio seguro tras un corte del proceso: una nota que se quedó
+     * 'transcribiendo' (sin respuesta del backend) vuelve a la cola como
+     * 'pendiente' para que se reintente. Es idempotente y no toca las notas en
+     * ningún otro estado.
+     */
+    fun reanudarTranscripcionesPendientes() {
+        dao.reanudarTranscripciones()
+    }
+
     private fun aNotaDeVoz(fila: NotaVozFila): NotaDeVoz {
         val creada = try {
             LocalDateTime.parse(fila.creadaEn).format(formato)
