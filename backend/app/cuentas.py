@@ -19,6 +19,7 @@ import hashlib
 import hmac
 import re
 import secrets
+import sqlite3
 import uuid
 
 ITERACIONES_PBKDF2 = 200000
@@ -46,6 +47,10 @@ def normalizar_email(email):
 def normalizar_codigo(codigo):
     """Normaliza un código de socio: sin espacios dobles y sin distinguir mayúsculas."""
     return " ".join((codigo or "").split()).casefold()
+
+
+def _existe_email(conn, email):
+    return conn.execute("SELECT 1 FROM cuenta WHERE email = ?", (email,)).fetchone() is not None
 
 
 def validar(email, contrasena):
@@ -105,15 +110,21 @@ def crear_cuenta(conn, cooperativa_id, email, contrasena, codigo_socio):
     if not socio:
         raise SocioDesconocido(codigo_socio)
 
-    existe = conn.execute("SELECT 1 FROM cuenta WHERE email = ?", (email,)).fetchone()
+    existe = _existe_email(conn, email)
     if existe:
         raise EmailDuplicado(email)
 
     cuenta_id = str(uuid.uuid4())
-    conn.execute(
-        "INSERT INTO cuenta (id, email, contrasena_hash, cooperativa_id, socio_id) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (cuenta_id, email, hashear(contrasena), cooperativa_id, socio["id"]),
-    )
+    try:
+        conn.execute(
+            "INSERT INTO cuenta (id, email, contrasena_hash, cooperativa_id, socio_id) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (cuenta_id, email, hashear(contrasena), cooperativa_id, socio["id"]),
+        )
+    except sqlite3.IntegrityError:
+        # Carrera: otra petición creó esa cuenta entre la comprobación y el
+        # alta. El email es único en la base: se responde como duplicado.
+        conn.rollback()
+        raise EmailDuplicado(email)
     conn.commit()
     return {"id": cuenta_id, "email": email, "socio_id": socio["id"]}
