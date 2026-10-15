@@ -5,21 +5,18 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,15 +35,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonSecundario
-import com.olivapp.app.core.ui.Fondo
+import com.olivapp.app.core.ui.EstadoVacio
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.TextoBoton
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
-import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.voz.data.AlmacenNotasVoz
 import com.olivapp.app.voz.data.SincronizadorNotas
 import com.olivapp.app.voz.domain.GrabadorDeNotas
@@ -252,6 +248,7 @@ class NotasVozViewModel @Inject constructor(
  * con error visible: se reintenta a mano o, si el audio no se puede usar, se
  * pide repetir el dictado.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaNotasVoz(
     onVolver: () -> Unit,
@@ -274,176 +271,167 @@ fun PantallaNotasVoz(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Notas de voz",
-            style = TextoTitulo1,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Graba una nota corta para apuntar una labor.\nMáximo $LIMITE_SEGUNDOS_NOTA segundos.",
-            style = TextoCuerpo,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = {
-                if (estado.grabando) {
-                    viewModel.pararGrabacion()
-                } else if (
-                    ContextCompat.checkSelfPermission(
-                        contexto, Manifest.permission.RECORD_AUDIO
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    viewModel.empezarGrabacion()
-                } else {
-                    lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            },
-            modifier = Modifier.size(120.dp),
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (estado.grabando) Error else Primario,
-                contentColor = Color.White
-            )
-        ) {
-            Text(
-                text = if (estado.grabando) "Parar" else "Grabar",
-                style = TextoBoton,
-                fontWeight = FontWeight.Bold
-            )
+    PantallaConBarraSuperiorGrande(
+        titulo = "Notas de voz",
+        onVolver = {
+            // Con una grabación en marcha no se sale: primero se termina.
+            if (!estado.grabando) onVolver()
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = if (estado.grabando) {
-                "Grabando… ${estado.segundos} de $LIMITE_SEGUNDOS_NOTA segundos"
-            } else {
-                "Toca el botón para empezar a grabar."
-            },
-            style = TextoCuerpo,
-            color = if (estado.grabando) Error else Texto,
-            textAlign = TextAlign.Center
-        )
-        estado.mensaje?.let {
-            Spacer(modifier = Modifier.height(16.dp))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = it,
+                text = "Graba una nota corta para apuntar una labor.\nMáximo $LIMITE_SEGUNDOS_NOTA segundos.",
                 style = TextoCuerpo,
                 color = Texto,
                 textAlign = TextAlign.Center
             )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Tus notas de voz",
-            style = TextoValor,
-            color = Primario
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        if (estado.notas.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = {
+                    if (estado.grabando) {
+                        viewModel.pararGrabacion()
+                    } else if (
+                        ContextCompat.checkSelfPermission(
+                            contexto, Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        viewModel.empezarGrabacion()
+                    } else {
+                        lanzadorPermiso.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                modifier = Modifier.size(120.dp),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (estado.grabando) Error else Primario,
+                    contentColor = Color.White
+                )
             ) {
                 Text(
-                    text = "Todavía no has grabado ninguna nota de voz.",
+                    text = if (estado.grabando) "Parar" else "Grabar",
+                    style = TextoBoton,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = if (estado.grabando) {
+                    "Grabando… ${estado.segundos} de $LIMITE_SEGUNDOS_NOTA segundos"
+                } else {
+                    "Toca el botón para empezar a grabar."
+                },
+                style = TextoCuerpo,
+                color = if (estado.grabando) Error else Texto,
+                textAlign = TextAlign.Center
+            )
+            estado.mensaje?.let {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = it,
                     style = TextoCuerpo,
                     color = Texto,
                     textAlign = TextAlign.Center
                 )
             }
-        } else {
-            val pendientes = estado.notas.filter { it.estado == "pendiente" }
-            val demas = estado.notas.filter { it.estado != "pendiente" }
-            if (pendientes.isNotEmpty()) {
-                // Cola local visible (feature cola-offline-de-notas).
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(2.dp, Error, RoundedCornerShape(12.dp))
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = if (pendientes.size == 1) {
-                            "Cola: 1 nota pendiente de enviar"
-                        } else {
-                            "Cola: " + pendientes.size + " notas pendientes de enviar"
-                        },
-                        style = TextoValor,
-                        color = Error
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Están guardadas en el teléfono y no se pierden. Se enviarán cuando haya conexión o al tocar Reintentar.",
-                        style = TextoCuerpo,
-                        color = Texto,
-                        textAlign = TextAlign.Center
-                    )
-                    for (nota in pendientes) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        FilaNotaVoz(
-                            nota,
-                            alReintentar = { viewModel.transcribir(nota) },
-                            alRepetir = { viewModel.empezarGrabacion() },
-                            alGuardarBorrador = { borradorNuevo ->
-                                viewModel.guardarBorrador(nota.id, borradorNuevo)
-                            },
-                            alConfirmarBorrador = { viewModel.confirmarBorrador(nota) },
-                            alDescartarBorrador = { viewModel.descartarBorrador(nota) }
-                        )
-                    }
-                }
-            }
-            if (demas.isNotEmpty()) {
-                if (pendientes.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(2.dp, Primario, RoundedCornerShape(12.dp))
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    for ((indice, nota) in demas.withIndex()) {
-                        if (indice > 0) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                        FilaNotaVoz(
-                            nota,
-                            alReintentar = { viewModel.transcribir(nota) },
-                            alRepetir = { viewModel.empezarGrabacion() },
-                            alGuardarBorrador = { borradorNuevo ->
-                                viewModel.guardarBorrador(nota.id, borradorNuevo)
-                            },
-                            alConfirmarBorrador = { viewModel.confirmarBorrador(nota) },
-                            alDescartarBorrador = { viewModel.descartarBorrador(nota) }
-                        )
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        if (estado.grabando) {
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Termina la grabación para volver.",
-                style = TextoCuerpo,
-                color = Texto,
-                textAlign = TextAlign.Center
+                text = "Tus notas de voz",
+                style = TextoValor,
+                color = Primario
             )
-        } else {
-            BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
+            Spacer(modifier = Modifier.height(12.dp))
+            if (estado.notas.isEmpty()) {
+                EstadoVacio(
+                    titulo = "Todavía no has grabado ninguna nota de voz",
+                    descripcion = "Toca el botón Grabar y cuéntanos la labor con tu voz."
+                )
+            } else {
+                val pendientes = estado.notas.filter { it.estado == "pendiente" }
+                val demas = estado.notas.filter { it.estado != "pendiente" }
+                if (pendientes.isNotEmpty()) {
+                    // Cola local visible (feature cola-offline-de-notas).
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, Error, RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = if (pendientes.size == 1) {
+                                "Cola: 1 nota pendiente de enviar"
+                            } else {
+                                "Cola: " + pendientes.size + " notas pendientes de enviar"
+                            },
+                            style = TextoValor,
+                            color = Error
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Están guardadas en el teléfono y no se pierden. Se enviarán cuando haya conexión o al tocar Reintentar.",
+                            style = TextoCuerpo,
+                            color = Texto,
+                            textAlign = TextAlign.Center
+                        )
+                        for (nota in pendientes) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            FilaNotaVoz(
+                                nota,
+                                alReintentar = { viewModel.transcribir(nota) },
+                                alRepetir = { viewModel.empezarGrabacion() },
+                                alGuardarBorrador = { borradorNuevo ->
+                                    viewModel.guardarBorrador(nota.id, borradorNuevo)
+                                },
+                                alConfirmarBorrador = { viewModel.confirmarBorrador(nota) },
+                                alDescartarBorrador = { viewModel.descartarBorrador(nota) }
+                            )
+                        }
+                    }
+                }
+                if (demas.isNotEmpty()) {
+                    if (pendientes.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, Primario, RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        for ((indice, nota) in demas.withIndex()) {
+                            if (indice > 0) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            FilaNotaVoz(
+                                nota,
+                                alReintentar = { viewModel.transcribir(nota) },
+                                alRepetir = { viewModel.empezarGrabacion() },
+                                alGuardarBorrador = { borradorNuevo ->
+                                    viewModel.guardarBorrador(nota.id, borradorNuevo)
+                                },
+                                alConfirmarBorrador = { viewModel.confirmarBorrador(nota) },
+                                alDescartarBorrador = { viewModel.descartarBorrador(nota) }
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            if (estado.grabando) {
+                Text(
+                    text = "Termina la grabación para volver.",
+                    style = TextoCuerpo,
+                    color = Texto,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
+            }
         }
     }
 }
