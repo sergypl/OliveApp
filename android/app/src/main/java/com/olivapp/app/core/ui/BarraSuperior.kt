@@ -153,6 +153,13 @@ private fun BarraSuperiorGrande(
             titleContentColor = Texto,
             navigationIconContentColor = Primario
         ),
+        // Sin flecha de volver (pestañas) la barra no necesita 152dp: la franja
+        // vacía encima del título era espacio perdido.
+        expandedHeight = if (onVolver == null) {
+            96.dp
+        } else {
+            TopAppBarDefaults.LargeAppBarExpandedHeight
+        },
         scrollBehavior = comportamiento
     )
 }
