@@ -28,8 +28,12 @@ object SincronizadorNotas {
     fun sincronizar(contexto: Context) {
         principal.post {
             if (sincronizando) return@post
-            val almacen = AlmacenNotasVoz(contexto)
-            val token = AlmacenSesiones(contexto).token() ?: return@post
+            val sesion = AlmacenSesiones(contexto)
+            val token = sesion.token() ?: return@post
+            // Solo se envía la cola de la cuenta activa y con su token: sin
+            // cuenta identificada no sale nada (nada de otros socios).
+            val idDeLaCuenta = sesion.idDeCuenta() ?: return@post
+            val almacen = AlmacenNotasVoz(contexto) { idDeLaCuenta }
             val ids = almacen.pendientesEnOrdenDeGrabacion().map { it.id }
             if (ids.isEmpty()) return@post
             sincronizando = true

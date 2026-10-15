@@ -23,17 +23,26 @@ data class NotaVozFila(
     val estado: String,
     val texto: String,
     /** Borrador IA en JSON (borrador-ia-desde-transcripcion); vacío si no hay. */
-    @ColumnInfo(defaultValue = "") val borrador: String = ""
+    @ColumnInfo(defaultValue = "") val borrador: String = "",
+    /**
+     * Cuenta dueña de la nota (aislamiento de la cola por socio). Vacío en las
+     * notas grabadas antes de que existiera el dueño: se conservan en el
+     * teléfono, pero no se enseñan ni se envían con la cuenta de nadie.
+     */
+    @ColumnInfo(name = "dueno", defaultValue = "") val dueno: String = ""
 )
 
 /** Acceso a la cola de notas de voz en Room. */
 @Dao
 interface NotasVozDao {
-    @Query("SELECT * FROM notas_voz ORDER BY creada_en DESC")
-    fun notas(): List<NotaVozFila>
+    @Query("SELECT * FROM notas_voz WHERE dueno = :dueno ORDER BY creada_en DESC")
+    fun notas(dueno: String): List<NotaVozFila>
 
-    @Query("SELECT * FROM notas_voz WHERE estado = 'pendiente' ORDER BY creada_en ASC")
-    fun pendientes(): List<NotaVozFila>
+    @Query(
+        "SELECT * FROM notas_voz WHERE estado = 'pendiente' AND dueno = :dueno " +
+            "ORDER BY creada_en ASC"
+    )
+    fun pendientes(dueno: String): List<NotaVozFila>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertar(nota: NotaVozFila)
@@ -56,7 +65,7 @@ interface NotasVozDao {
 }
 
 /** Base Room de la cola de notas de voz. */
-@Database(entities = [NotaVozFila::class], version = 2, exportSchema = false)
+@Database(entities = [NotaVozFila::class], version = 3, exportSchema = false)
 abstract class BaseNotasVoz : RoomDatabase() {
     abstract fun dao(): NotasVozDao
 
@@ -73,6 +82,15 @@ abstract class BaseNotasVoz : RoomDatabase() {
             }
         }
 
+        /** v3 (aislamiento-de-cola-por-socio): cada nota pertenece a una cuenta. */
+        private val MIGRACION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE notas_voz ADD COLUMN dueno TEXT NOT NULL DEFAULT ''"
+                )
+            }
+        }
+
         fun de(contexto: Context): BaseNotasVoz =
             instancia ?: synchronized(this) {
                 instancia ?: Room.databaseBuilder(
@@ -80,7 +98,7 @@ abstract class BaseNotasVoz : RoomDatabase() {
                     BaseNotasVoz::class.java,
                     "notas-voz.db"
                 )
-                    .addMigrations(MIGRACION_1_2)
+                    .addMigrations(MIGRACION_1_2, MIGRACION_2_3)
                     // La cola es pequeña y las consultas son de pocos milisegundos:
                     // el almacén mantiene la interfaz síncrona del resto de la app.
                     .allowMainThreadQueries()
