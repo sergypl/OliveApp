@@ -722,7 +722,7 @@
       "navegacion-barra-inferior",
       "perfil-del-socio"
     ],
-    "status": "not_started",
+    "status": "passing",
     "verification": [
       "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
       "Tests unitarios del cálculo de la comparativa (sin campaña anterior, valores a 0, redondeo del %) y del saludo según la hora",
@@ -730,8 +730,13 @@
       "Deslizar hacia abajo para refrescar y esqueleto al cargar, con márgenes de pantalla completa correctos",
       "Tests existentes del panel que cambien, actualizados a propósito y justificados en NOTAS"
     ],
-    "evidence": [],
-    "notes": "Sin endpoints nuevos salvo que sea imprescindible: se reutilizan /api/v1/mi-perfil y /api/v1/mi-campanas. El micrófono reutiliza el componente de fundamentos-visuales-modernos."
+    "evidence": [
+      "2026-10-15 ./init.sh completo en verde (pytest 156/156, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en el Xiaomi M2101K6G); cd android && ./gradlew testDebugUnitTest lint en verde con el puerto 8000 libre: 257 tests, 0 fallos (26 nuevos: comparativa sin campaña anterior, valores a 0 y redondeo del %, saludo según la hora, ViewModel del panel)",
+      "2026-10-15 Xiaomi: cabecera con saludo y avatar que abre el Perfil, tarjeta de campaña actual con Oficial · Cooperativa, comparativa +48 % (1.774 kg frente a 1.198 kg) con gráfico de barras con valores y sin depender solo del color, campañas anteriores como filas que abren su detalle, Dictar nota abre Notas de voz; capturas con fuente normal, 150 % y horizontal en docs/evidencia/panel-moderno/",
+      "2026-10-15 Xiaomi: deslizar muestra el indicador y recarga; esqueleto al cargar (servidor sin respuesta); sin backend, el arranque muestra Sin conexión + Reintentar y el refresco con datos conserva la tarjeta y avisa debajo",
+      "Único cambio de backend: mi-campanas incluye aceite_obtenido por campaña (test_campanas_anteriores.py actualizado). Tests existentes cambiados y justificados en docs/evidencia/panel-moderno/NOTAS.md"
+    ],
+    "notes": "Reutiliza /api/v1/mi-perfil y /api/v1/mi-campanas (con aceite_obtenido añadido a cada campaña). No probado con TalkBack."
   },
   {
     "id": "simulador-calculo-en-vivo",
