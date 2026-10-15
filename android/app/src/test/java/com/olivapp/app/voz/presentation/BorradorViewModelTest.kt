@@ -38,7 +38,8 @@ class BorradorViewModelTest {
         campanas: FakeCampanasRepositorio = FakeCampanasRepositorio(),
         parcelas: FakeParcelasRepositorio = FakeParcelasRepositorio(),
         labores: FakeLaboresRepositorio = FakeLaboresRepositorio(),
-        notas: FakeNotasRepositorio = FakeNotasRepositorio()
+        notas: FakeNotasRepositorio = FakeNotasRepositorio(),
+        grabador: FakeGrabadorDeNotas = FakeGrabadorDeNotas()
     ) = BorradorViewModel(
         RuntimeEnvironment.getApplication(),
         sesion,
@@ -46,7 +47,7 @@ class BorradorViewModelTest {
         parcelas,
         labores,
         notas,
-        FakeGrabadorDeNotas()
+        grabador
     )
 
     @Test
@@ -227,6 +228,22 @@ class BorradorViewModelTest {
         viewModel.alSalir()
 
         // El audio de una respuesta sin enviar no se queda en el teléfono.
+        assertFalse(viewModel.uiState.value.hayRespuestaSinEnviar)
+    }
+
+    @Test
+    fun `al salir se para una respuesta en curso y se libera el microfono`() {
+        val grabador = FakeGrabadorDeNotas()
+        val viewModel = crear(grabador = grabador)
+        viewModel.preparar("nota-1", fichaConPregunta)
+        viewModel.empezarRespuesta { }
+        assertTrue(grabador.grabando)
+
+        viewModel.alSalir()
+
+        // El grabador se para y se libera: el micro no queda ocupado.
+        assertFalse(grabador.grabando)
+        assertFalse(viewModel.uiState.value.grabando)
         assertFalse(viewModel.uiState.value.hayRespuestaSinEnviar)
     }
 
