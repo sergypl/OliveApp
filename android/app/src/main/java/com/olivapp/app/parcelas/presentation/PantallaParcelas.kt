@@ -25,7 +25,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonPrincipal
-import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Error
@@ -114,7 +113,6 @@ class ParcelasViewModel @Inject constructor(
  */
 @Composable
 fun PantallaParcelas(
-    onVolver: () -> Unit,
     viewModel: ParcelasViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -197,7 +195,5 @@ fun PantallaParcelas(
             color = Texto,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

@@ -22,7 +22,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.core.formatos.formatearCantidad
 import com.olivapp.app.core.ui.BotonPrincipal
-import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.Fondo
@@ -154,7 +153,6 @@ class SimuladorViewModel @Inject constructor() : ViewModel() {
  */
 @Composable
 fun PantallaSimulador(
-    onVolver: () -> Unit,
     viewModel: SimuladorViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -263,7 +261,5 @@ fun PantallaSimulador(
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

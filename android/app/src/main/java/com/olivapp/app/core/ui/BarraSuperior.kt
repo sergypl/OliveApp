@@ -75,7 +75,11 @@ fun PantallaConBarraSuperiorGrande(
                     start = 24.dp,
                     end = 24.dp,
                     top = 8.dp,
-                    bottom = if (reservaBarraInferior) AlturaBarraInferior else 24.dp
+                    bottom = if (reservaBarraInferior && LocalBarraInferiorVisible.current) {
+                        AlturaBarraInferior
+                    } else {
+                        24.dp
+                    }
                 )
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
