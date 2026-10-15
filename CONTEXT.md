@@ -103,6 +103,9 @@ Pantalla del propio socio con sus datos de cuenta y de cooperativa (código de s
 ### Barra de navegación
 Barra fija en la parte inferior de la pantalla con las secciones principales de la app (Inicio, Cuaderno, Simulador, Parcelas y Perfil). Siempre con texto, no solo iconos.
 
+### Barra superior
+Barra fija en la parte alta de **todas** las pantallas con el título de la pantalla (en el panel, el saludo al socio). Mismo alto, mismo margen y misma altura del título en toda la app, con flecha de volver en las pantallas de segundo nivel (Campaña, Notas de voz, Nueva labor) y en las de acceso. No se encoge ni se esconde al hacer scroll: el título siempre se ve.
+
 ### Simulador avanzado
 Parte opcional del simulador de liquidación en limpio que añade precio del aceite, gastos de la cooperativa y reparto por calidad para estimar un importe. No cambia el aceite neto de la simulación básica.
 

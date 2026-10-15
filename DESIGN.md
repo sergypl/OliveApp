@@ -134,7 +134,9 @@ Paleta M3 derivada del verde oliva del logo (tono 128° en OKLCH) con superficie
 ## Layout
 - Una columna, móvil-first. Una pantalla = una tarea.
 - Panel tras el login: campaña actual destacada arriba, micrófono circular (96dp) protagonista, y accesos grandes a las herramientas; debajo, campañas anteriores.
-- Sin menús ocultos ni cajón de navegación para las funciones core: todo visible como botón grande. La barra de navegación inferior de los mockups no se adopta (cambiaría los flujos).
+- Sin menús ocultos ni cajón de navegación para las funciones core: todo visible como botón grande. La navegación principal es la barra inferior de 5 secciones con texto e icono (`Barra de navegación` de CONTEXT.md).
+- **Barra superior en todas las pantallas** (`Barra superior` de CONTEXT.md): 72dp de alto, título h1 centrado verticalmente y alineado con el margen de contenido, flecha de volver opcional en pantallas de segundo nivel. Mismo alto, mismo margen y misma altura del título en toda la app: el título nunca se desplaza ni se esconde con el scroll.
+- Ritmo vertical del esqueleto de pantalla: margen de contenido 24dp, 8dp entre la barra superior y el contenido y **24dp + 80dp** de hueco inferior cuando hay barra de navegación (para que la última tarjeta no quede pegada a ella). Botón flotante y avisos se dibujan por encima de ese hueco.
 - Ritmo 4/8dp; padding de tarjeta 24dp; mínimo 16dp entre controles tocables.
 
 ## Shapes

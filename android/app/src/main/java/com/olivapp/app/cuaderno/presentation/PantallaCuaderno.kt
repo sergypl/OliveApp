@@ -43,7 +43,7 @@ import com.olivapp.app.core.ui.EsqueletoDeCarga
 import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.EstadoVacio
 import com.olivapp.app.core.ui.Fondo
-import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrandeEnLista
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoBoton
@@ -357,7 +357,7 @@ fun PantallaCuaderno(
         agruparPorMes(filtrarCampanas(estado.campanas, estado.filtro))
     }
 
-    PantallaConBarraSuperiorGrandeEnLista(
+    PantallaConBarraSuperiorEnLista(
         titulo = "Mi cuaderno",
         aviso = avisos,
         accionFlotante = {
@@ -388,7 +388,7 @@ fun PantallaCuaderno(
                     mensaje = errorDeCarga,
                     sinConexion = errorDeCarga.contains("conexión", ignoreCase = true),
                     alReintentar = viewModel::cargar,
-                    modificador = Modifier.padding(top = 32.dp, start = 24.dp, end = 24.dp)
+                    modificador = Modifier.padding(top = 32.dp)
                 )
                 estado.campanas.all { it.labores.isEmpty() } -> EstadoVacio(
                     titulo = "Apunta tu primera labor",
@@ -408,10 +408,9 @@ fun PantallaCuaderno(
                     modificador = Modifier.padding(top = 32.dp)
                 )
                 else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    // Hueco del botón flotante para que no tape la última labor.
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item(key = "entrada") {

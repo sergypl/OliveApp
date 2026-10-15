@@ -34,6 +34,7 @@ import com.olivapp.app.core.ui.EsqueletoDeCarga
 import com.olivapp.app.core.ui.EstadoDeError
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.FilaDatoApilada
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorEnLista
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.SobrePrimario
 import com.olivapp.app.core.ui.Tarjeta
@@ -42,7 +43,6 @@ import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoSecundario
 import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
-import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.perfil.domain.DatosPerfil
 import com.olivapp.app.perfil.domain.inicialesDe
 
@@ -68,54 +68,49 @@ fun PantallaPerfil(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .pantallaCompleta()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Tu perfil",
-            style = TextoTitulo1,
-            color = Texto,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        val perfil = estado.perfil
-        when {
-            perfil != null -> ContenidoPerfil(perfil)
-            estado.mensaje != null -> ErrorDePerfil(
-                mensaje = estado.mensaje ?: "",
-                sinConexion = estado.sinConexion,
-                alReintentar = viewModel::cargar
-            )
-            else -> {
-                Text(
-                    text = "Cargando tu perfil…",
-                    style = TextoCuerpo,
-                    color = TextoSecundario,
-                    modifier = Modifier.fillMaxWidth()
+    PantallaConBarraSuperiorEnLista(titulo = "Tu perfil") {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val perfil = estado.perfil
+            when {
+                perfil != null -> ContenidoPerfil(perfil)
+                estado.mensaje != null -> ErrorDePerfil(
+                    mensaje = estado.mensaje ?: "",
+                    sinConexion = estado.sinConexion,
+                    alReintentar = viewModel::cargar
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                EsqueletoDeCarga(filas = 5)
+                else -> {
+                    Text(
+                        text = "Cargando tu perfil…",
+                        style = TextoCuerpo,
+                        color = TextoSecundario,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    EsqueletoDeCarga(filas = 5)
+                }
             }
+            Spacer(modifier = Modifier.height(24.dp))
+            AvisoDeDemostracion()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "OlivApp, versión ${BuildConfig.VERSION_NAME}",
+                style = TextoCuerpo,
+                color = TextoSecundario,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            BotonSecundario(
+                texto = "Cerrar sesión",
+                icono = R.drawable.ic_cerrar_sesion,
+                alPulsar = viewModel::cerrarSesion
+            )
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        AvisoDeDemostracion()
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "OlivApp, versión ${BuildConfig.VERSION_NAME}",
-            style = TextoCuerpo,
-            color = TextoSecundario,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(
-            texto = "Cerrar sesión",
-            icono = R.drawable.ic_cerrar_sesion,
-            alPulsar = viewModel::cerrarSesion
-        )
     }
 }
 

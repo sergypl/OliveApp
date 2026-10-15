@@ -32,7 +32,7 @@ import com.olivapp.app.core.ui.CifraAnimada
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.FilaDato
 import com.olivapp.app.core.ui.FormasOlivApp
-import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
+import com.olivapp.app.core.ui.PantallaConBarraSuperior
 import com.olivapp.app.core.ui.Primario
 import com.olivapp.app.core.ui.Tarjeta
 import com.olivapp.app.core.ui.Texto
@@ -205,7 +205,7 @@ fun PantallaSimulador(
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     val estadoAvanzado by avanzado.uiState.collectAsStateWithLifecycle()
 
-    PantallaConBarraSuperiorGrande(
+    PantallaConBarraSuperior(
         titulo = "Liquidación en limpio",
         onVolver = null,
         fijo = { TarjetaDeResultado(estado) }
