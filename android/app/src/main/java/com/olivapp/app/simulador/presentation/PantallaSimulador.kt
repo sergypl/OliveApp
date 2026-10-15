@@ -224,7 +224,8 @@ fun PantallaSimulador(
                 valor = estado.kilos,
                 alCambiar = viewModel::cambiarKilos,
                 tipo = KeyboardType.Decimal,
-                sufijo = "kg"
+                sufijo = "kg",
+                formato = ::formatearNumeroDeCampo
             )
             Spacer(modifier = Modifier.height(16.dp))
             CampoDeTexto(
@@ -232,7 +233,8 @@ fun PantallaSimulador(
                 valor = estado.rendimiento,
                 alCambiar = viewModel::cambiarRendimiento,
                 tipo = KeyboardType.Decimal,
-                sufijo = "%"
+                sufijo = "%",
+                formato = ::formatearNumeroDeCampo
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -269,7 +271,8 @@ fun PantallaSimulador(
                 valor = estado.ajuste,
                 alCambiar = viewModel::cambiarAjuste,
                 tipo = KeyboardType.Decimal,
-                sufijo = "%"
+                sufijo = "%",
+                formato = ::formatearNumeroDeCampo
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
