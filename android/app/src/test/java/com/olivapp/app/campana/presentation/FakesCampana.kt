@@ -33,10 +33,23 @@ class FakeCampanasRepositorio : CampanasRepositorio {
 
     var tokenLlamada: String? = null
     var campanaIdLlamada: String? = null
+    var llamadasPanel = 0
+
+    /** Si es true, el panel y las campañas no responden hasta [terminarPendientes]. */
+    var diferido = false
+    private val pendientes = mutableListOf<() -> Unit>()
+
+    fun terminarPendientes() {
+        diferido = false
+        val lista = pendientes.toList()
+        pendientes.clear()
+        lista.forEach { it() }
+    }
 
     override fun cargarMiPanel(token: String, alTerminar: (DatosPanel?, String) -> Unit) {
         tokenLlamada = token
-        alTerminar(resultadoMiPanel.first, resultadoMiPanel.second)
+        llamadasPanel += 1
+        responder { alTerminar(resultadoMiPanel.first, resultadoMiPanel.second) }
     }
 
     override fun cargarCampanas(
@@ -44,7 +57,11 @@ class FakeCampanasRepositorio : CampanasRepositorio {
         alTerminar: (List<DatosCampanaResumen>?, String) -> Unit
     ) {
         tokenLlamada = token
-        alTerminar(resultadoCampanas.first, resultadoCampanas.second)
+        responder { alTerminar(resultadoCampanas.first, resultadoCampanas.second) }
+    }
+
+    private fun responder(respuesta: () -> Unit) {
+        if (diferido) pendientes.add(respuesta) else respuesta()
     }
 
     override fun cargarCampana(
