@@ -38,6 +38,8 @@ import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.core.ui.pantallaCompleta
 import com.olivapp.app.cuaderno.domain.DatosCampanaDeLabores
+import com.olivapp.app.cuaderno.domain.DatosLabor
+import com.olivapp.app.cuaderno.domain.FiltroDeCuaderno
 import com.olivapp.app.cuaderno.domain.LaboresRepositorio
 import com.olivapp.app.cuaderno.domain.LaborEditable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,8 +54,19 @@ import com.olivapp.app.R
 data class CuadernoUiState(
     val campanas: List<DatosCampanaDeLabores> = emptyList(),
     val cargado: Boolean = false,
+    val refrescando: Boolean = false,
+    val filtro: FiltroDeCuaderno = FiltroDeCuaderno(),
     val mensaje: String? = null,
-    val laborParaEliminar: LaborEditable? = null
+    val laborParaEliminar: LaborEditable? = null,
+    /** Labor ya quitada de la lista, esperando a que se cierre su mensaje de "Deshacer". */
+    val laborBorrada: LaborEditable? = null
+)
+
+/** Una labor quitada de la lista, con su sitio para poder volver a ponerla. */
+private class BorradoPendiente(
+    val campana: String,
+    val indice: Int,
+    val labor: DatosLabor
 )
 
 @HiltViewModel
@@ -65,6 +78,8 @@ class CuadernoViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CuadernoUiState())
     val uiState: StateFlow<CuadernoUiState> = _uiState.asStateFlow()
 
+    private var borradoPendiente: BorradoPendiente? = null
+
     /** Carga el cuaderno con el token guardado (a cada entrada en la pantalla). */
     fun cargar() {
         val token = sesion.token()
@@ -72,7 +87,8 @@ class CuadernoViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión.",
-                    cargado = true
+                    cargado = true,
+                    refrescando = false
                 )
             }
             return
@@ -81,11 +97,31 @@ class CuadernoViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     cargado = true,
-                    campanas = lista ?: it.campanas,
+                    refrescando = false,
+                    // La labor con su mensaje de "Deshacer" abierto sigue fuera
+                    // de la lista hasta que se deshaga o se borre de verdad.
+                    campanas = lista?.let { cargadas -> sinBorradoPendiente(cargadas) }
+                        ?: it.campanas,
                     mensaje = if (lista != null) it.mensaje else texto
                 )
             }
         }
+    }
+
+    /** Deslizar hacia abajo para refrescar. */
+    fun alRefrescar() {
+        _uiState.update { it.copy(refrescando = true, mensaje = null) }
+        cargar()
+    }
+
+    /** Chip de categoría de la línea de tiempo (null = todas). */
+    fun filtrarPorCategoria(categoria: String?) {
+        _uiState.update { it.copy(filtro = it.filtro.copy(categoria = categoria)) }
+    }
+
+    /** Chip de parcela de la línea de tiempo (null = todas). */
+    fun filtrarPorParcela(parcela: String?) {
+        _uiState.update { it.copy(filtro = it.filtro.copy(parcela = parcela)) }
     }
 
     /** El socio pide eliminar una labor: se le pide confirmación antes. */
@@ -97,21 +133,113 @@ class CuadernoViewModel @Inject constructor(
         _uiState.update { it.copy(laborParaEliminar = null) }
     }
 
-    /** Borrado directo confirmado (no hay papelera que lo recupere). */
+    /**
+     * Borrado con "Deshacer": la labor desaparece de la lista al momento, pero
+     * solo se borra en el backend cuando se cierre el mensaje sin deshacer
+     * (ver [cerrarAvisoDeBorrado]). No hay papelera que la recupere después.
+     */
     fun confirmarEliminar() {
         val objetivo = _uiState.value.laborParaEliminar ?: return
-        _uiState.update { it.copy(laborParaEliminar = null) }
+        // Si ya había un borrado esperando su mensaje, se cierra: se borra ya.
+        cerrarAvisoDeBorrado()
+        val estado = _uiState.value
+        val campana = estado.campanas.firstOrNull { c ->
+            c.labores.any { it.editable.id == objetivo.id }
+        } ?: return
+        val indice = campana.labores.indexOfFirst { it.editable.id == objetivo.id }
+        borradoPendiente = BorradoPendiente(campana.nombre, indice, campana.labores[indice])
+        _uiState.update {
+            it.copy(
+                laborParaEliminar = null,
+                laborBorrada = objetivo,
+                campanas = sinBorradoPendiente(it.campanas)
+            )
+        }
+    }
+
+    /** El socio pulsó "Deshacer": la labor vuelve a su sitio y no se borra nada. */
+    fun deshacerEliminar() {
+        val pendiente = borradoPendiente ?: return
+        borradoPendiente = null
+        _uiState.update {
+            it.copy(
+                campanas = reponerLabor(it.campanas, pendiente),
+                laborBorrada = null,
+                mensaje = null
+            )
+        }
+    }
+
+    /**
+     * Se cerró el mensaje sin deshacer (o se sale de la pantalla con él
+     * abierto): ahora sí se borra la labor en el backend. Si el borrado falla,
+     * la labor vuelve a la lista y se avisa.
+     */
+    fun cerrarAvisoDeBorrado() {
+        val pendiente = borradoPendiente ?: return
+        borradoPendiente = null
         val token = sesion.token()
         if (token == null) {
             _uiState.update {
-                it.copy(mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión.")
+                it.copy(
+                    campanas = reponerLabor(it.campanas, pendiente),
+                    laborBorrada = null,
+                    mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                )
             }
-        } else {
-            laboresRepo.eliminarLabor(token, objetivo.id) { exito, texto ->
-                _uiState.update { it.copy(mensaje = texto) }
-                if (exito) {
-                    cargar()
+            return
+        }
+        laboresRepo.eliminarLabor(token, pendiente.labor.editable.id) { exito, _ ->
+            if (exito) {
+                // El aviso con "Deshacer" ya dijo lo que pasaba: solo queda
+                // recargar para que la lista cuadre con el backend.
+                _uiState.update { it.copy(laborBorrada = null) }
+                cargar()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        campanas = reponerLabor(it.campanas, pendiente),
+                        laborBorrada = null,
+                        mensaje = "No se pudo eliminar la labor. Vuelve a estar en tu cuaderno."
+                    )
                 }
+            }
+        }
+    }
+
+    /** Al salir de la pantalla con el mensaje abierto, la labor se borra. */
+    fun alSalir() {
+        cerrarAvisoDeBorrado()
+    }
+
+    private fun sinBorradoPendiente(campanas: List<DatosCampanaDeLabores>):
+        List<DatosCampanaDeLabores> {
+        val idPendiente = borradoPendiente?.labor?.editable?.id ?: return campanas
+        return campanas.map { campana ->
+            DatosCampanaDeLabores(
+                nombre = campana.nombre,
+                esActual = campana.esActual,
+                labores = campana.labores.filterNot { it.editable.id == idPendiente }
+            )
+        }
+    }
+
+    private fun reponerLabor(
+        campanas: List<DatosCampanaDeLabores>,
+        pendiente: BorradoPendiente
+    ): List<DatosCampanaDeLabores> {
+        if (campanas.none { it.nombre == pendiente.campana }) {
+            return listOf(
+                DatosCampanaDeLabores(pendiente.campana, false, listOf(pendiente.labor))
+            ) + campanas
+        }
+        return campanas.map { campana ->
+            if (campana.nombre != pendiente.campana) {
+                campana
+            } else {
+                val labores = campana.labores.toMutableList()
+                labores.add(pendiente.indice.coerceIn(0, labores.size), pendiente.labor)
+                DatosCampanaDeLabores(campana.nombre, campana.esActual, labores)
             }
         }
     }

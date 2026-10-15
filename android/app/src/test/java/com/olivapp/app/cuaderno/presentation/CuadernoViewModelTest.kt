@@ -12,10 +12,28 @@ import org.robolectric.RobolectricTestRunner
 // Con Robolectric como el resto de la batería: los ViewModels construyen
 // JSON (org.json), que en JVM sin Robolectric no está implementado.
 @RunWith(RobolectricTestRunner::class)
-/** Tests del ViewModel de "Mi cuaderno" (feature consulta-cuaderno-por-campana). */
+/** Tests del ViewModel de "Mi cuaderno" (features consulta-cuaderno-por-campana y
+ *  cuaderno-linea-de-tiempo). */
 class CuadernoViewModelTest {
 
     private fun sesionAbierta() = FakeSesionRepositorio().apply { guardar("token-abc") }
+
+    /** Un cuaderno ya cargado con una labor en la campaña actual. */
+    private fun viewModelConUnaLabor(
+        labores: FakeLaboresRepositorio,
+        sesion: FakeSesionRepositorio = sesionAbierta()
+    ): CuadernoViewModel {
+        labores.resultadoMisLabores = listOf(
+            DatosCampanaDeLabores(
+                nombre = "2025/2026",
+                esActual = true,
+                labores = listOf(datosLaborDeEjemplo())
+            )
+        ) to ""
+        val viewModel = CuadernoViewModel(sesion, labores)
+        viewModel.cargar()
+        return viewModel
+    }
 
     @Test
     fun `con sesion abierta se carga el cuaderno agrupado por campana`() {
@@ -77,31 +95,107 @@ class CuadernoViewModelTest {
     }
 
     @Test
-    fun `confirmar eliminar borra la labor y recarga el cuaderno`() {
+    fun `confirmar eliminar quita la labor de la lista pero todavia no la borra`() {
         val labores = FakeLaboresRepositorio()
-        val viewModel = CuadernoViewModel(sesionAbierta(), labores)
+        val viewModel = viewModelConUnaLabor(labores)
 
         viewModel.pedirEliminar(laborDeEjemplo())
         viewModel.confirmarEliminar()
 
         val estado = viewModel.uiState.value
+        // El backend no se entera hasta que se cierre el mensaje sin deshacer.
+        assertNull(labores.idLlamado)
+        assertTrue(estado.campanas[0].labores.isEmpty())
+        assertEquals("lab-7", estado.laborBorrada?.id)
+    }
+
+    @Test
+    fun `si no se deshace, al cerrarse el mensaje la labor se borra y se recarga`() {
+        val labores = FakeLaboresRepositorio()
+        val viewModel = viewModelConUnaLabor(labores)
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        viewModel.cerrarAvisoDeBorrado()
+
+        val estado = viewModel.uiState.value
         assertEquals("lab-7", labores.idLlamado)
-        assertEquals("Labor eliminada de tu cuaderno.", estado.mensaje)
-        assertNull(estado.laborParaEliminar)
+        assertNull(estado.laborBorrada)
         // Tras el borrado se recarga: el fake vuelve a ser consultado.
         assertEquals("token-abc", labores.tokenLlamada)
     }
 
     @Test
-    fun `confirmar eliminar sin sesion no borra nada y avisa`() {
+    fun `al deshacer la labor vuelve a su sitio y no se borra nada`() {
         val labores = FakeLaboresRepositorio()
-        val viewModel = CuadernoViewModel(FakeSesionRepositorio(), labores)
+        val viewModel = viewModelConUnaLabor(labores)
 
         viewModel.pedirEliminar(laborDeEjemplo())
         viewModel.confirmarEliminar()
+        viewModel.deshacerEliminar()
+
+        val estado = viewModel.uiState.value
+        assertNull(labores.idLlamado)
+        assertNull(estado.laborBorrada)
+        assertEquals(listOf("lab-7"), estado.campanas[0].labores.map { it.editable.id })
+    }
+
+    @Test
+    fun `al salir con el mensaje abierto la labor se borra`() {
+        val labores = FakeLaboresRepositorio()
+        val viewModel = viewModelConUnaLabor(labores)
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        viewModel.alSalir()
+
+        assertEquals("lab-7", labores.idLlamado)
+    }
+
+    @Test
+    fun `si el borrado falla la labor vuelve a la lista y se avisa`() {
+        val labores = FakeLaboresRepositorio()
+        labores.resultadoEliminar = false to "No se pudo eliminar la labor."
+        val viewModel = viewModelConUnaLabor(labores)
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        viewModel.cerrarAvisoDeBorrado()
+
+        val estado = viewModel.uiState.value
+        assertEquals("No se pudo eliminar la labor. Vuelve a estar en tu cuaderno.", estado.mensaje)
+        assertEquals(listOf("lab-7"), estado.campanas[0].labores.map { it.editable.id })
+    }
+
+    @Test
+    fun `confirmar eliminar sin sesion no borra nada y avisa`() {
+        val labores = FakeLaboresRepositorio()
+        val sesion = sesionAbierta()
+        val viewModel = viewModelConUnaLabor(labores, sesion)
+        sesion.borrar()
+
+        viewModel.pedirEliminar(laborDeEjemplo())
+        viewModel.confirmarEliminar()
+        viewModel.cerrarAvisoDeBorrado()
 
         val estado = viewModel.uiState.value
         assertEquals("Sesión caducada o no válida. Vuelve a iniciar sesión.", estado.mensaje)
         assertNull(labores.idLlamado)
+    }
+
+    @Test
+    fun `los filtros de categoria y parcela se guardan en el estado`() {
+        val viewModel = CuadernoViewModel(sesionAbierta(), FakeLaboresRepositorio())
+
+        viewModel.filtrarPorCategoria("riego")
+        viewModel.filtrarPorParcela("La Noria")
+
+        val filtro = viewModel.uiState.value.filtro
+        assertEquals("riego", filtro.categoria)
+        assertEquals("La Noria", filtro.parcela)
+
+        viewModel.filtrarPorCategoria(null)
+        viewModel.filtrarPorParcela(null)
+        assertTrue(viewModel.uiState.value.filtro.sinFiltros)
     }
 }
