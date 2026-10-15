@@ -19,6 +19,7 @@ from app import db as basedatos
 from app import labores
 from app import parcelas
 from app import perfil
+from app import precios
 from app import seed
 from app import sesiones
 from app import transcripcion
@@ -74,6 +75,7 @@ def sesion_actual(authorization: str = Header(default="")):
 
 app = FastAPI(title="OlivApp API", lifespan=lifespan)
 app.include_router(perfil.crear_router(conexion, sesion_actual))
+app.include_router(precios.crear_router(conexion, sesion_actual))
 
 
 class RegistroEntrada(BaseModel):
