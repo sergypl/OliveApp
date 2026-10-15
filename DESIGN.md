@@ -127,7 +127,7 @@ Paleta M3 derivada del verde oliva del logo (tono 128° en OKLCH) con superficie
 - Regla dura: todo texto cumple contraste AA (≥ 4,5:1; ≥ 3:1 para texto grande o iconos) en **todas** las combinaciones anteriores, verificadas con fuente grande y en horizontal además de en vertical. Los datos oficiales de la cooperativa se distinguen de "Mi cuaderno" por superficie **y** etiqueta (no solo por color).
 
 ## Typography
-- **Montserrat** (títulos y cifras) e **Inter** (cuerpo, etiquetas, botones), empaquetadas como recursos (ADR 0009), en `sp` para respetar el escalado del dispositivo.
+- **Montserrat** (títulos y cifras) e **Inter** (cuerpo, etiquetas, botones), empaquetadas como recursos (ADR 0009) y podadas al subconjunto latino para aligerar el APK (ADR 0012), en `sp` para respetar el escalado del dispositivo.
 - Jerarquía: h1 28sp Montserrat SemiBold; h2 22sp Montserrat SemiBold; cifra destacada 40sp Montserrat Bold (resultado del simulador); cuerpo 18sp Inter Regular; etiqueta 16sp Inter SemiBold.
 - **Regla sénior**: cuerpo ≥ 18sp y nada por debajo de 16sp, aunque los mockups de Stitch usen 12-16px (se escalan por legibilidad, decisión aprobada en la Fase 0).
 
