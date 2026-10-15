@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonPrincipal
+import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.EsqueletoDeCarga
@@ -48,7 +49,9 @@ data class ParcelasUiState(
     val mensaje: String? = null,
     val creada: Boolean = false,
     val trabajando: Boolean = false,
-    val cargando: Boolean = true
+    val cargando: Boolean = true,
+    /** La carga de la lista falló: no se sabe si hay parcelas, así que no se dice que no hay. */
+    val errorDeCarga: Boolean = false
 )
 
 @HiltViewModel
@@ -80,9 +83,9 @@ class ParcelasViewModel @Inject constructor(
         parcelasRepo.cargarParcelas(token) { lista, texto ->
             _uiState.update {
                 if (lista != null) {
-                    it.copy(cargando = false, parcelas = lista)
+                    it.copy(cargando = false, parcelas = lista, errorDeCarga = false)
                 } else {
-                    it.copy(cargando = false, mensaje = texto)
+                    it.copy(cargando = false, mensaje = texto, errorDeCarga = true)
                 }
             }
         }
@@ -173,6 +176,11 @@ fun PantallaParcelas(
                     filas = 3,
                     altoFila = 28.dp,
                     modificador = Modifier.fillMaxWidth()
+                )
+                estado.errorDeCarga && estado.parcelas.isEmpty() -> BotonSecundario(
+                    texto = "Reintentar",
+                    icono = R.drawable.ic_refrescar,
+                    alPulsar = viewModel::cargar
                 )
                 estado.parcelas.isEmpty() -> EstadoVacio(
                     titulo = "Aún no tienes parcelas. Añade la primera",
