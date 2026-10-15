@@ -119,11 +119,13 @@ fun PantallaPanel(
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
                     .pantallaCompleta()
                     .verticalScroll(rememberScrollState())
             ) {
                 CabeceraDelPanel(
-                    saludo = saludoDeCabecera(hora, estado.perfil?.codigoSocio),
+                    // Espacio duro en "Socio 1" para que el número no se quede solo en otra línea.
+                    saludo = saludoDeCabecera(hora, estado.perfil?.codigoSocio?.replace(' ', '\u00A0')),
                     perfil = estado.perfil,
                     alAbrirPerfil = onAbrirPerfil
                 )
@@ -259,10 +261,10 @@ private fun TarjetaCampanaActual(datos: DatosPanel) {
 private fun SeccionComparativa(comparativa: ComparativaAceite, barras: List<BarraDeAceite>) {
     Text(text = "Comparativa con la campaña anterior", style = TextoTitulo2, color = Texto)
     Spacer(modifier = Modifier.height(12.dp))
-    val anterior = formatearCantidad(comparativa.aceiteAnteriorKg) + " kg"
+    val anterior = formatearCantidad(comparativa.aceiteAnteriorKg) + "\u00A0kg"
     TarjetaDatoVariacion(
         etiqueta = "Aceite obtenido",
-        valor = formatearCantidad(comparativa.aceiteActualKg) + " kg",
+        valor = formatearCantidad(comparativa.aceiteActualKg) + "\u00A0kg",
         variacion = comparativa.textoVariacion?.takeIf { comparativa.sube != null },
         sube = comparativa.sube,
         referencia = when {
@@ -292,7 +294,7 @@ private fun GraficoDeAceite(barras: List<BarraDeAceite>) {
         Text(text = "Aceite obtenido por campaña", style = TextoValor, color = Texto)
         for (barra in barras) {
             Spacer(modifier = Modifier.height(16.dp))
-            val valor = formatearCantidad(barra.aceiteKg) + " kg"
+            val valor = formatearCantidad(barra.aceiteKg) + "\u00A0kg"
             val nombre = "Campaña ${barra.campana}" + if (barra.esActual) " (actual)" else ""
             Column(
                 modifier = Modifier.semantics(mergeDescendants = true) {
@@ -393,7 +395,7 @@ private fun FilaDeCampana(campana: DatosCampanaResumen, alAbrir: (String) -> Uni
             Text(text = "Campaña ${campana.nombre}", style = TextoValor, color = Texto)
             campana.aceiteKg?.let {
                 Text(
-                    text = "Aceite obtenido: ${formatearCantidad(it)} kg",
+                    text = "Aceite obtenido: ${formatearCantidad(it)}\u00A0kg",
                     style = TextoCuerpo,
                     color = TextoSecundario
                 )

@@ -35,7 +35,7 @@ Aceituna que el socio lleva a la cooperativa durante una campaña.
 Aceite resultante de molturar los kilos entregados en una campaña. Cifra oficial de la cooperativa: el **aceite industrial**, es decir, el efectivo tras la merma del proceso. Por eso no cuadra con kilos × rendimiento graso (que es el de laboratorio): la diferencia es la merma industrial.
 
 ### Panel
-Pantalla de aterrizaje tras el inicio de sesión. Muestra la campaña actual, da acceso a las campañas anteriores y a los dos módulos: cuaderno de campo y simulador.
+Pantalla de aterrizaje tras el inicio de sesión (pestaña Inicio). Saluda al socio según la hora, destaca la campaña actual con sus datos oficiales, la compara con la campaña anterior (variación del aceite obtenido y gráfico de barras), lista las campañas anteriores y ofrece "Dictar nota". Los dos módulos (cuaderno de campo y simulador) están en la barra de navegación.
 
 ### Cuaderno de campo
 Historial cronológico de labores de un socio, agrupado por campaña. En OlivApp es la vista "Mi cuaderno"; su estructura de campos imita la del SIEX.
