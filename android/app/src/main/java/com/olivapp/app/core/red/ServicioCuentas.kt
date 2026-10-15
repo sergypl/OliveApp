@@ -28,6 +28,27 @@ import org.json.JSONObject
 object ServicioCuentas {
     private val principal = Handler(Looper.getMainLooper())
 
+    /** Error cuando el cuerpo de la respuesta no se puede leer como JSON. */
+    private const val RESPUESTA_ILEGIBLE = "No se pudo leer la respuesta del servidor."
+
+    /**
+     * Cuerpo de la respuesta como objeto JSON. Un 200 sin cuerpo, un HTML de
+     * portal cautivo o un JSON malformado no deben tumbar la app desde el hilo
+     * de OkHttp: se toman como respuesta ilegible (null).
+     */
+    private fun objetoDe(cuerpo: String?): JSONObject? = try {
+        JSONObject(cuerpo ?: "")
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Igual que [objetoDe], para respuestas que son un array JSON. */
+    private fun arregloDe(cuerpo: String?): JSONArray? = try {
+        JSONArray(cuerpo ?: "")
+    } catch (e: Exception) {
+        null
+    }
+
     fun crearCuenta(
         email: String,
         contrasena: String,
@@ -86,8 +107,13 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val token = JSONObject(it.body?.string() ?: "").optString("token")
-                        principal.post { alTerminar(token, "") }
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val token = cuerpo.optString("token")
+                            principal.post { alTerminar(token, "") }
+                        }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo iniciar sesión. Revisa los datos." }
@@ -116,22 +142,26 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val cuerpo = JSONObject(it.body?.string() ?: "")
-                        val campana = cuerpo.optJSONObject("campana")?.optString("nombre") ?: ""
-                        val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
-                        val datos = DatosPanel(
-                            campana = campana,
-                            kilosEntregados = formatearNumero(
-                                oficiales.optDouble("kilos_entregados"), 0
-                            ) + " kg",
-                            rendimientoGraso = formatearNumero(
-                                oficiales.optDouble("rendimiento_graso"), 2
-                            ) + " %",
-                            aceiteObtenido = formatearNumero(
-                                oficiales.optDouble("aceite_obtenido"), 0
-                            ) + " kg"
-                        )
-                        principal.post { alTerminar(datos, "") }
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val campana = cuerpo.optJSONObject("campana")?.optString("nombre") ?: ""
+                            val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
+                            val datos = DatosPanel(
+                                campana = campana,
+                                kilosEntregados = formatearNumero(
+                                    oficiales.optDouble("kilos_entregados"), 0
+                                ) + " kg",
+                                rendimientoGraso = formatearNumero(
+                                    oficiales.optDouble("rendimiento_graso"), 2
+                                ) + " %",
+                                aceiteObtenido = formatearNumero(
+                                    oficiales.optDouble("aceite_obtenido"), 0
+                                ) + " kg"
+                            )
+                            principal.post { alTerminar(datos, "") }
+                        }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudieron cargar tus datos." }
@@ -160,14 +190,18 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val respuesta = JSONObject(it.body?.string() ?: "")
-                        val campana = respuesta.optString("campana_id")
-                        principal.post {
-                            alTerminar(
-                                campana,
-                                "Labor guardada en la campaña " +
-                                    campana.replace("-", "/") + "."
-                            )
+                        val respuesta = objetoDe(it.body?.string())
+                        if (respuesta == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val campana = respuesta.optString("campana_id")
+                            principal.post {
+                                alTerminar(
+                                    campana,
+                                    "Labor guardada en la campaña " +
+                                        campana.replace("-", "/") + "."
+                                )
+                            }
                         }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
@@ -226,17 +260,24 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val respuesta = JSONObject(it.body?.string() ?: "")
-                        val texto = respuesta.optString("texto")
-                        // null en la respuesta = borrador rechazado por la IA.
-                        val borrador = when {
-                            !respuesta.has("borrador") -> ""
-                            respuesta.isNull("borrador") ->
-                                AlmacenNotasVoz.BORRADOR_RECHAZADO
-                            else -> respuesta.optJSONObject("borrador")?.toString()
-                                ?: AlmacenNotasVoz.BORRADOR_RECHAZADO
+                        val respuesta = objetoDe(it.body?.string())
+                        if (respuesta == null) {
+                            // Cuerpo ilegible: fallo del servicio, reintentable.
+                            principal.post {
+                                alTerminar(null, "", RESPUESTA_ILEGIBLE, false, false)
+                            }
+                        } else {
+                            val texto = respuesta.optString("texto")
+                            // null en la respuesta = borrador rechazado por la IA.
+                            val borrador = when {
+                                !respuesta.has("borrador") -> ""
+                                respuesta.isNull("borrador") ->
+                                    AlmacenNotasVoz.BORRADOR_RECHAZADO
+                                else -> respuesta.optJSONObject("borrador")?.toString()
+                                    ?: AlmacenNotasVoz.BORRADOR_RECHAZADO
+                            }
+                            principal.post { alTerminar(texto, borrador, "", false, false) }
                         }
-                        principal.post { alTerminar(texto, borrador, "", false, false) }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo transcribir la nota." }
@@ -297,11 +338,20 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val respuesta = JSONObject(it.body?.string() ?: "")
-                        val texto = respuesta.optString("texto")
-                        val borradorNuevo = respuesta.optJSONObject("borrador")?.toString()
-                            ?: ""
-                        principal.post { alTerminar(texto, borradorNuevo, "", false, false) }
+                        val respuesta = objetoDe(it.body?.string())
+                        if (respuesta == null) {
+                            // Cuerpo ilegible: fallo del servicio, reintentable.
+                            principal.post {
+                                alTerminar(null, "", RESPUESTA_ILEGIBLE, false, false)
+                            }
+                        } else {
+                            val texto = respuesta.optString("texto")
+                            val borradorNuevo = respuesta.optJSONObject("borrador")?.toString()
+                                ?: ""
+                            principal.post {
+                                alTerminar(texto, borradorNuevo, "", false, false)
+                            }
+                        }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo completar el borrador." }
@@ -332,13 +382,17 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val arreglo = JSONArray(it.body?.string() ?: "[]")
-                        val lista = mutableListOf<DatosParcela>()
-                        for (i in 0 until arreglo.length()) {
-                            val p = arreglo.optJSONObject(i) ?: continue
-                            lista.add(DatosParcela(p.optString("id"), p.optString("nombre")))
+                        val arreglo = arregloDe(it.body?.string())
+                        if (arreglo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val lista = mutableListOf<DatosParcela>()
+                            for (i in 0 until arreglo.length()) {
+                                val p = arreglo.optJSONObject(i) ?: continue
+                                lista.add(DatosParcela(p.optString("id"), p.optString("nombre")))
+                            }
+                            principal.post { alTerminar(lista, "") }
                         }
-                        principal.post { alTerminar(lista, "") }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudieron cargar tus parcelas." }
@@ -430,26 +484,30 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val cuerpo = JSONObject(it.body?.string() ?: "{}")
-                        val arreglo = cuerpo.optJSONArray("campanas") ?: JSONArray()
-                        val lista = mutableListOf<DatosCampanaDeLabores>()
-                        for (i in 0 until arreglo.length()) {
-                            val c = arreglo.optJSONObject(i) ?: continue
-                            val filas = c.optJSONArray("labores") ?: JSONArray()
-                            val labores = mutableListOf<DatosLabor>()
-                            for (j in 0 until filas.length()) {
-                                val l = filas.optJSONObject(j) ?: continue
-                                labores.add(formatearLabor(l))
-                            }
-                            lista.add(
-                                DatosCampanaDeLabores(
-                                    nombre = c.optString("nombre"),
-                                    esActual = c.optBoolean("es_actual"),
-                                    labores = labores
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val arreglo = cuerpo.optJSONArray("campanas") ?: JSONArray()
+                            val lista = mutableListOf<DatosCampanaDeLabores>()
+                            for (i in 0 until arreglo.length()) {
+                                val c = arreglo.optJSONObject(i) ?: continue
+                                val filas = c.optJSONArray("labores") ?: JSONArray()
+                                val labores = mutableListOf<DatosLabor>()
+                                for (j in 0 until filas.length()) {
+                                    val l = filas.optJSONObject(j) ?: continue
+                                    labores.add(formatearLabor(l))
+                                }
+                                lista.add(
+                                    DatosCampanaDeLabores(
+                                        nombre = c.optString("nombre"),
+                                        esActual = c.optBoolean("es_actual"),
+                                        labores = labores
+                                    )
                                 )
-                            )
+                            }
+                            principal.post { alTerminar(lista, "") }
                         }
-                        principal.post { alTerminar(lista, "") }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo cargar tu cuaderno." }
@@ -511,24 +569,28 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val arreglo = JSONArray(it.body?.string() ?: "[]")
-                        val lista = mutableListOf<DatosCampanaResumen>()
-                        for (i in 0 until arreglo.length()) {
-                            val c = arreglo.optJSONObject(i) ?: continue
-                            lista.add(
-                                DatosCampanaResumen(
-                                    id = c.optString("id"),
-                                    nombre = c.optString("nombre"),
-                                    estado = c.optString("estado"),
-                                    aceiteKg = if (c.has("aceite_obtenido") && !c.isNull("aceite_obtenido")) {
-                                        c.optDouble("aceite_obtenido")
-                                    } else {
-                                        null
-                                    }
+                        val arreglo = arregloDe(it.body?.string())
+                        if (arreglo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val lista = mutableListOf<DatosCampanaResumen>()
+                            for (i in 0 until arreglo.length()) {
+                                val c = arreglo.optJSONObject(i) ?: continue
+                                lista.add(
+                                    DatosCampanaResumen(
+                                        id = c.optString("id"),
+                                        nombre = c.optString("nombre"),
+                                        estado = c.optString("estado"),
+                                        aceiteKg = if (c.has("aceite_obtenido") && !c.isNull("aceite_obtenido")) {
+                                            c.optDouble("aceite_obtenido")
+                                        } else {
+                                            null
+                                        }
+                                    )
                                 )
-                            )
+                            }
+                            principal.post { alTerminar(lista, "") }
                         }
-                        principal.post { alTerminar(lista, "") }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudieron cargar tus campañas." }
@@ -561,30 +623,34 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val cuerpo = JSONObject(it.body?.string() ?: "")
-                        val campana = cuerpo.optJSONObject("campana") ?: JSONObject()
-                        val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
-                        val laboresJson = cuerpo.optJSONArray("labores") ?: JSONArray()
-                        val labores = mutableListOf<DatosLabor>()
-                        for (i in 0 until laboresJson.length()) {
-                            val l = laboresJson.optJSONObject(i) ?: continue
-                            labores.add(formatearLabor(l))
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val campana = cuerpo.optJSONObject("campana") ?: JSONObject()
+                            val oficiales = cuerpo.optJSONObject("datos_oficiales") ?: JSONObject()
+                            val laboresJson = cuerpo.optJSONArray("labores") ?: JSONArray()
+                            val labores = mutableListOf<DatosLabor>()
+                            for (i in 0 until laboresJson.length()) {
+                                val l = laboresJson.optJSONObject(i) ?: continue
+                                labores.add(formatearLabor(l))
+                            }
+                            val datos = DatosCampana(
+                                nombre = campana.optString("nombre"),
+                                estado = campana.optString("estado"),
+                                kilosEntregados = formatearNumero(
+                                    oficiales.optDouble("kilos_entregados"), 0
+                                ) + " kg",
+                                rendimientoGraso = formatearNumero(
+                                    oficiales.optDouble("rendimiento_graso"), 2
+                                ) + " %",
+                                aceiteObtenido = formatearNumero(
+                                    oficiales.optDouble("aceite_obtenido"), 0
+                                ) + " kg",
+                                labores = labores
+                            )
+                            principal.post { alTerminar(datos, "") }
                         }
-                        val datos = DatosCampana(
-                            nombre = campana.optString("nombre"),
-                            estado = campana.optString("estado"),
-                            kilosEntregados = formatearNumero(
-                                oficiales.optDouble("kilos_entregados"), 0
-                            ) + " kg",
-                            rendimientoGraso = formatearNumero(
-                                oficiales.optDouble("rendimiento_graso"), 2
-                            ) + " %",
-                            aceiteObtenido = formatearNumero(
-                                oficiales.optDouble("aceite_obtenido"), 0
-                            ) + " kg",
-                            labores = labores
-                        )
-                        principal.post { alTerminar(datos, "") }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo cargar la campaña." }
@@ -613,8 +679,13 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val email = JSONObject(it.body?.string() ?: "").optString("email")
-                        principal.post { alTerminar(email, "") }
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val email = cuerpo.optString("email")
+                            principal.post { alTerminar(email, "") }
+                        }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "Sesión caducada o no válida. Vuelve a iniciar sesión." }
@@ -643,15 +714,19 @@ object ServicioCuentas {
             override fun onResponse(call: Call, response: Response) {
                 response.use {
                     if (it.isSuccessful) {
-                        val cuerpo = JSONObject(it.body?.string() ?: "")
-                        val perfil = DatosPerfil(
-                            codigoSocio = cuerpo.optString("codigo_socio"),
-                            email = cuerpo.optString("email"),
-                            cooperativa = cuerpo.optString("cooperativa"),
-                            numeroParcelas = cuerpo.optInt("numero_parcelas"),
-                            campanaActual = cuerpo.optString("campana_actual")
-                        )
-                        principal.post { alTerminar(perfil, "") }
+                        val cuerpo = objetoDe(it.body?.string())
+                        if (cuerpo == null) {
+                            principal.post { alTerminar(null, RESPUESTA_ILEGIBLE) }
+                        } else {
+                            val perfil = DatosPerfil(
+                                codigoSocio = cuerpo.optString("codigo_socio"),
+                                email = cuerpo.optString("email"),
+                                cooperativa = cuerpo.optString("cooperativa"),
+                                numeroParcelas = cuerpo.optInt("numero_parcelas"),
+                                campanaActual = cuerpo.optString("campana_actual")
+                            )
+                            principal.post { alTerminar(perfil, "") }
+                        }
                     } else {
                         val detalle = ClienteRed.detalleDeError(it)
                             .ifEmpty { "No se pudo cargar tu perfil." }

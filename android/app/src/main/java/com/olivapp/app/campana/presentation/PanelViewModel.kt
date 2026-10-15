@@ -83,29 +83,40 @@ class PanelViewModel @Inject constructor(
         // Con datos ya en pantalla la recarga es silenciosa: no vuelve el esqueleto.
         _uiState.update { it.copy(cargando = it.datos == null) }
         campanasRepo.cargarMiPanel(token) { cargados, texto ->
-            _uiState.update {
-                if (cargados != null) {
-                    it.copy(datos = cargados, mensaje = null)
-                } else {
-                    it.copy(mensaje = texto.ifEmpty { "No se pudieron cargar tus datos." })
+            try {
+                _uiState.update {
+                    if (cargados != null) {
+                        it.copy(datos = cargados, mensaje = null)
+                    } else {
+                        it.copy(mensaje = texto.ifEmpty { "No se pudieron cargar tus datos." })
+                    }
                 }
+            } finally {
+                // Cómo termine la respuesta, la petición se descuenta: el panel
+                // nunca se queda en "Cargando…" por una respuesta ilegible.
+                terminarPeticion()
             }
-            terminarPeticion()
         }
         campanasRepo.cargarCampanas(token) { lista, texto ->
-            _uiState.update {
-                if (lista != null) {
-                    it.copy(campanas = lista, errorDeCampanas = null)
-                } else {
-                    it.copy(errorDeCampanas = texto)
+            try {
+                _uiState.update {
+                    if (lista != null) {
+                        it.copy(campanas = lista, errorDeCampanas = null)
+                    } else {
+                        it.copy(errorDeCampanas = texto)
+                    }
                 }
+            } finally {
+                terminarPeticion()
             }
-            terminarPeticion()
         }
         // La cabecera (saludo, cooperativa y avatar) se degrada sin el perfil.
         perfilRepo.cargarPerfil(token) { perfil, _ ->
-            if (perfil != null) _uiState.update { it.copy(perfil = perfil) }
-            terminarPeticion()
+            try {
+                if (perfil != null) _uiState.update { it.copy(perfil = perfil) }
+            } finally {
+                terminarPeticion()
+            }
         }
     }
 
@@ -117,7 +128,9 @@ class PanelViewModel @Inject constructor(
     }
 
     private fun terminarPeticion() {
-        pendientes -= 1
+        // Nunca por debajo de cero: un descuento de más dejaría el contador
+        // cojo y el panel sin terminar de cargar jamás.
+        pendientes = (pendientes - 1).coerceAtLeast(0)
         if (pendientes == 0) {
             _uiState.update { it.copy(cargando = false, refrescando = false) }
         }
