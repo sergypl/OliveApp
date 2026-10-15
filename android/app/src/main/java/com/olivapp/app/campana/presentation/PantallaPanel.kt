@@ -24,7 +24,6 @@ import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.campana.domain.CampanasRepositorio
 import com.olivapp.app.campana.domain.DatosCampanaResumen
 import com.olivapp.app.campana.domain.DatosPanel
-import com.olivapp.app.core.ui.BotonAccion
 import com.olivapp.app.core.ui.BotonMicrofono
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CabeceraSeccion
@@ -106,10 +105,7 @@ class PanelViewModel @Inject constructor(
 @Composable
 fun PantallaPanel(
     onSesionCerrada: () -> Unit,
-    onAbrirParcelas: () -> Unit,
-    onAbrirCuaderno: () -> Unit,
     onAbrirNotasVoz: () -> Unit,
-    onAbrirSimulador: () -> Unit,
     onAbrirCampana: (String) -> Unit,
     viewModel: PanelViewModel = hiltViewModel()
 ) {
@@ -228,16 +224,6 @@ fun PantallaPanel(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        BotonAccion(texto = "Tus parcelas", icono = R.drawable.ic_parcelas, alPulsar = onAbrirParcelas)
-        Spacer(modifier = Modifier.height(12.dp))
-        BotonAccion(texto = "Cuaderno de campo", icono = R.drawable.ic_cuaderno, alPulsar = onAbrirCuaderno)
-        Spacer(modifier = Modifier.height(12.dp))
-        BotonAccion(
-            texto = "Simulador de liquidación en limpio",
-            icono = R.drawable.ic_simulador,
-            alPulsar = onAbrirSimulador
-        )
         Spacer(modifier = Modifier.height(32.dp))
         BotonSecundario(
             texto = "Cerrar sesión",
