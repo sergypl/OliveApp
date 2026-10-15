@@ -7,6 +7,7 @@ nota queda pendiente de reintentar.
 
 import os
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import transcripcion
@@ -140,3 +141,47 @@ def test_fallo_del_gateway_da_error_claro_y_reintentable(monkeypatch):
         respuesta = _subir(client, cabeceras)
         assert respuesta.status_code == 502
         assert "inténtalo de nuevo" in respuesta.json()["detail"].lower()
+
+
+def test_el_audio_se_corta_al_superar_el_limite_sin_cargarlo_entero(monkeypatch):
+    """La subida se lee por trozos: al superar el límite se corta enseguida."""
+
+    class Subida:
+        def __init__(self):
+            self.trozos_leidos = 0
+
+        def read(self, tamano):
+            self.trozos_leidos += 1
+            return b"0123456789"
+
+    monkeypatch.setattr(transcripcion, "TROZO_LEIDO", 10)
+    monkeypatch.setattr(transcripcion, "LIMITE_BYTES", 25)
+    subida = Subida()
+
+    with pytest.raises(transcripcion.AudioInvalido):
+        transcripcion.leer_audio("nota.m4a", subida)
+
+    # Se corta nada más superar el límite: no se lee el audio entero.
+    assert subida.trozos_leidos == 3
+
+
+def test_una_respuesta_del_gateway_sin_texto_da_error_claro(monkeypatch):
+    """La respuesta del gateway no es de fiar: `text` puede no ser un texto.
+
+    Antes revienta la petición con un 500; ahora se responde con el error
+    claro de transcripción fallida y la nota queda para reintentar.
+    """
+
+    class Respuesta:
+        status_code = 200
+
+        def json(self):
+            return {"text": None}
+
+    monkeypatch.setattr(transcripcion.httpx, "post", lambda *args, **kwargs: Respuesta())
+    with TestClient(app) as client:
+        cabeceras = _entrar(client)
+        respuesta = _subir(client, cabeceras)
+
+    assert respuesta.status_code == 502
+    assert "inténtalo de nuevo" in respuesta.json()["detail"].lower()
