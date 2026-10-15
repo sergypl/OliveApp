@@ -141,7 +141,6 @@ fun OlivApp() {
                         onVolver = { irA("sesion") }
                     )
                     "sesion" -> PantallaPanel(
-                        onSesionCerrada = { irA("inicio") },
                         onAbrirNotasVoz = { irA("notas_voz") },
                         onAbrirCampana = { id ->
                             idCampana = id
@@ -149,7 +148,7 @@ fun OlivApp() {
                         }
                     )
                     "parcelas" -> PantallaParcelas()
-                    "perfil" -> PantallaPerfil()
+                    "perfil" -> PantallaPerfil(onSesionCerrada = { irA("inicio") })
                     "notas_voz" -> PantallaNotasVoz(onVolver = { irA("sesion") })
                     "simulador" -> PantallaSimulador()
                     "cuaderno" -> PantallaCuaderno(
