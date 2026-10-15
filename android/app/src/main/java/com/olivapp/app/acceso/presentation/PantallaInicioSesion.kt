@@ -30,12 +30,14 @@ import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
 import com.olivapp.app.core.ui.TextoTitulo1
+import com.olivapp.app.core.ui.pantallaCompleta
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible de la pantalla de inicio de sesión. */
 data class InicioSesionUiState(
@@ -94,10 +96,8 @@ fun PantallaInicioSesion(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .pantallaCompleta()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -130,6 +130,7 @@ fun PantallaInicioSesion(
         Spacer(modifier = Modifier.height(24.dp))
         BotonPrincipal(
             texto = if (estado.trabajando) "Entrando…" else "Iniciar sesión",
+            icono = R.drawable.ic_iniciar_sesion,
             habilitado = !estado.trabajando,
             alPulsar = viewModel::iniciarSesion
         )
@@ -143,8 +144,8 @@ fun PantallaInicioSesion(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Crear cuenta", alPulsar = onCrearCuenta)
+        BotonSecundario(texto = "Crear cuenta", icono = R.drawable.ic_crear_cuenta, alPulsar = onCrearCuenta)
         Spacer(modifier = Modifier.height(16.dp))
-        BotonSecundario(texto = "Volver al inicio", alPulsar = onVolver)
+        BotonSecundario(texto = "Volver al inicio", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }

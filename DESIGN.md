@@ -12,16 +12,22 @@ designAssets:
 colors:
   primary: "#2D5A27"
   primary-pressed: "#154212"
+  on-primary: "#FFFFFF"
   accent: "#FE932C"
   on-accent: "#663500"
-  background: "#FAF8FF"
-  surface: "#FFFFFF"
-  surface-highlight: "#EAEDFF"
-  surface-highlight-strong: "#E2E7FF"
-  text: "#131B2E"
-  text-secondary: "#42493E"
+  background: "#F4F8F0"
+  surface: "#FDFFFC"
+  surface-container-lowest: "#FDFFFA"
+  surface-container-low: "#EEF2E9"
+  surface-container: "#E7EBE2"
+  surface-container-high: "#E0E5DA"
+  surface-container-highest: "#D9DFD3"
+  text: "#18200E"
+  text-secondary: "#46503A"
   error: "#BA1A1A"
-  border: "#E2E8F0"
+  error-soft-background: "#FFDAD6"
+  error-soft-text: "#93000A"
+  border: "#C1C6BA"
 typography:
   h1:
     fontFamily: Montserrat
@@ -109,13 +115,16 @@ Dirección visual del MVP de OlivApp tras el rediseño `rediseno-visual-android`
 Calmado, funcional y "de campo", con autoridad agrícola: tarjetas estructuradas con borde fino, cabeceras de sección en verde oliva profundo, cifras destacadas y un naranja de cosecha reservado a la voz. Todo operable con una mano, a la luz del sol y sin gafas de leer; ligero y rápido en móviles modestos.
 
 ## Colors
-- **Primario `#2D5A27`** (verde oliva del logo; `#154212` pulsado): botones principales, cabeceras de sección, acciones destacadas.
-- **Acento `#FE932C` con contenido `#663500`** (naranja de cosecha): **reservado al micrófono y a las acciones de voz**; debe verse y encontrarse a la primera. Ajuste de contraste aprobado: el blanco sobre `#FE932C` da 2,2:1 (no pasa AA ni para iconos), por eso el icono/texto van en `#663500` (4,5:1 ✓).
-- **Superficies**: canvas `#FAF8FF`, tarjetas `#FFFFFF` con borde 1px `#E2E8F0`, paneles destacados `#EAEDFF`/`#E2E7FF` (tokens Stitch literales, aprobados en la Fase 0).
-- **Texto**: principal `#131B2E` (16,3:1 sobre canvas), secundario `#42493E` (9,3:1). Prohibido `#72796E` para texto pequeño (4,49:1, por debajo de AA).
-- **Error `#BA1A1A`** (y `#93000A` sobre `#FFDAD6`) para acciones destructivas y errores.
-- **Chips de estado**: verde `#166534`/`#DCFCE7`, ámbar `#92400E`/`#FEF3C7`, rojo `#991B1B`/`#FEE2E2` (todos ≥ 6,3:1).
-- Regla dura: todo texto cumple contraste AA (≥ 4,5:1; ≥ 3:1 para texto grande o iconos). Los datos oficiales de la cooperativa se distinguen de "Mi cuaderno" por superficie **y** etiqueta (no solo por color).
+Paleta M3 derivada del verde oliva del logo (tono 128° en OKLCH) con superficies en neutros cálidos; se retiró el tinte lavanda de los tokens Stitch (`#FAF8FF`, `#EAEDFF`, `#E2E7FF`) porque acentuaba el azul frente al oliva. Los pares de contraste están calculados con la fórmula WCAG (sRGB).
+
+- **Primario `#2D5A27`** (verde oliva del logo; `#154212` pulsado; contenido blanco): botones principales, cabeceras de sección, acciones destacadas. Blanco sobre primario **8,1:1** ✓ (11,5:1 pulsado).
+- **Acento `#FE932C` con contenido `#663500`** (naranja de cosecha): **reservado al micrófono y a las acciones de voz**; debe verse y encontrarse a la primera. El blanco sobre `#FE932C` da 2,2:1 (no pasa AA ni para iconos); `#663500` da **4,5:1** ✓.
+- **Superficies** (escala tonal M3 del oliva): fondo `#F4F8F0`, superficie `#FDFFFC`, contenedores `#FDFFFA` / `#EEF2E9` / `#E7EBE2` / `#E0E5DA` / `#D9DFD3` (de `surfaceContainerLowest` a `surfaceContainerHighest`). Se sustituyen los antiguos `PanelDestacado`/`PanelDestacadoFuerte` por `Contenedor`/`ContenedorAlto`.
+- **Texto** principal `#18200E`: **15,6:1** sobre fondo, **16,7:1** sobre superficie y entre **12,3:1 y 14,8:1** sobre los contenedores ✓✓. Texto secundario `#46503A`: **7,9:1** sobre fondo, **8,5:1** sobre superficie, **6,6:1** sobre el contenedor más alto ✓.
+- **Error `#BA1A1A`** (6,0:1 sobre fondo) y su versión suave `#93000A` sobre `#FFDAD6` (7,2:1) para acciones destructivas y errores.
+- **Chips de estado**: verde `#166534`/`#DCFCE7` (6,5:1), ámbar `#92400E`/`#FEF3C7` (6,4:1), rojo `#991B1B`/`#FEE2E2` (6,8:1). Siempre con etiqueta de texto, nunca solo color.
+- **Borde `#C1C6BA`** (1,7:1 sobre superficie): es **decorativo** — nunca es la única señal de un control: los campos se identifican por su etiqueta de texto y los botones por su relleno o su contorno grueso de 2dp con el color primario.
+- Regla dura: todo texto cumple contraste AA (≥ 4,5:1; ≥ 3:1 para texto grande o iconos) en **todas** las combinaciones anteriores, verificadas con fuente grande y en horizontal además de en vertical. Los datos oficiales de la cooperativa se distinguen de "Mi cuaderno" por superficie **y** etiqueta (no solo por color).
 
 ## Typography
 - **Montserrat** (títulos y cifras) e **Inter** (cuerpo, etiquetas, botones), empaquetadas como recursos (ADR 0009), en `sp` para respetar el escalado del dispositivo.
@@ -137,7 +146,7 @@ Calmado, funcional y "de campo", con autoridad agrícola: tarjetas estructuradas
 - `button-secondary`: contorno verde 1.5dp, texto verde, 64dp.
 - `button-danger`: contorno rojo `#BA1A1A`, texto rojo, 64dp (acciones destructivas con confirmación).
 - `button-microphone`: **naranja `#FE932C`, circular, 96dp, icono `#663500`**; estado de grabación con animación sencilla (pulsar/cambiar de color).
-- `card`: blanca con borde 1px `#E2E8F0`, radio 16dp, padding 24dp.
+- `card`: superficie `#FDFFFC` con borde 1px `#C1C6BA`, radio 16dp, padding 24dp.
 - `section-header`: banda verde `#2D5A27` con texto blanco (cabeceras tipo "Patio Abierto" de los mockups).
 - Campos de formulario: altura mínima 64dp, etiqueta encima en 18sp, sin placeholders como única etiqueta; foco con anillo de 2dp en primario.
 - Chips/estados de la nota de voz (pendiente / transcribiendo / transcrita / error): píldoras con etiqueta de texto, nunca solo color.

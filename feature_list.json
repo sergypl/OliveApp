@@ -641,5 +641,193 @@
       "Contraste WCAG AA de la paleta aplicada documentado en la Fase 0 y en el commit ea51644 (pares verificados: blanco/#2D5A27 8,07:1, #131B2E/canvas 16,3:1, #42493E/blanco 9,3:1, texto sobre naranja #663500/#FE932C)"
     ],
     "notes": "Rediseño SOLO visual (tema, colores, tipografía, formas, componentes y layout de pantallas) tomando como referencia los mockups de Stitch de docs/design/stitch/ (fuente de verdad en designAssets de DESIGN.md). Los mockups son orientativos: donde muestran contenido que la app no tiene (patio de tolvas, mercado POOLred, clima, contacto, navegación inferior, parámetros agronómicos y precios €/kg del simulador de cosecha) o falta el que la app sí tiene, manda la funcionalidad existente; no se añaden funciones, campos ni pantallas, y los strings solo cambian con aprobación explícita del usuario respetando el vocabulario de CONTEXT.md. Restricciones no negociables: sin cambios de comportamiento (mismos flujos, ViewModels, repositorios, Room, endpoints y permisos), usabilidad sénior de DESIGN.md (texto ≥18sp, nada <16sp, AA, botones ≥64dp, micrófono 96dp protagonista), los 121 tests en verde sin tocar aserciones, sin dependencias nuevas sin ADR y sin push ni PR. Decisiones aprobadas por el usuario en la Fase 0 (2026-10-14): (1) tipografía Montserrat + Inter empaquetada como TTF estáticos en res/font, sin dependencias Gradle (ADR 0009), con tamaños escalados a la regla sénior; (2) superficies con los tokens Stitch literales (canvas #FAF8FF, paneles #EAEDFF/#E2E7FF, tarjetas blancas con borde 1px); (3) micrófono en naranja #FE932C con icono/texto #663500 (el blanco sobre ese naranja da 2,2:1 y no pasa AA); (4) plan de icono: adaptive icon (background #2D5A27, foreground = aceituna del olivapp_logo convertida a VectorDrawable, monochrome) + splash, sin PNGs por densidad (minSdk 26) y sin dependencias. Fases con un commit por fase: sistema de diseño en core/ui, panel, simulador, acceso, cuaderno+campaña, voz+parcelas y fase final de icono/splash. Verificación definida ANTES de implementar."
+  },
+  {
+    "id": "fundamentos-visuales-modernos",
+    "area": "diseno",
+    "title": "La base visual moderna: pantalla completa, paleta cálida de oliva, iconos y componentes de core/ui",
+    "user_visible_behavior": "La app ocupa toda la pantalla de borde a borde sin que nada quede tapado ni recortado, usa superficies neutras cálidas derivadas del verde oliva (sin el tinte lavanda), iconos redondeados siempre acompañados de texto, transiciones suaves entre pantallas, gesto atrás predictivo y la entrada del logo animada en el splash. Además aparecen los componentes base nuevos (barra superior que se encoge al hacer scroll, esqueleto de carga con brillo, estado vacío con hoja de olivo, aviso con Deshacer, tarjeta de dato con variación, botón flotante del micrófono y refresco deslizando hacia abajo) que las siguientes pistas aplicarán a sus pantallas.",
+    "depends_on": [
+      "rediseno-visual-android"
+    ],
+    "status": "passing",
+    "verification": [
+      "./init.sh completo en verde (backend pytest, healthcheck, datos sembrados, APK compilado, instalado y abierto en el dispositivo)",
+      "cd android && ./gradlew testDebugUnitTest lint en verde (los tests existentes sin cambiar sus aserciones)",
+      "Capturas en el móvil de todas las pantallas actuales (fuente normal, fuente grande y horizontal), antes y después, en docs/evidencia/fundamentos-visuales-modernos/",
+      "Smoke test: recorrer la app, girar el móvil y comprobar logcat sin crash",
+      "Pares de contraste AA de la nueva paleta calculados y documentados en DESIGN.md (incluido su frontmatter de colors)",
+      "Comprobar que ninguna pantalla queda tapada ni recortada por las barras del sistema, el teclado ni el hueco de la futura barra inferior"
+    ],
+    "evidence": [
+      "2026-10-15: ./init.sh completo en verde (backend 124/124 tests, healthcheck GET /health -> 200, datos sembrados OK con token de sesión, APK compilado, instalado y abierto en el Xiaomi M2101K6G)",
+      "2026-10-15: cd android && ./gradlew testDebugUnitTest lint -> BUILD SUCCESSFUL (tests y lint en verde; los tests requieren el puerto 8000 libre, como documenta PROGRESS.md)",
+      "2026-10-15: capturas antes/después de las 13 pantallas actuales en docs/evidencia/fundamentos-visuales-modernos/ (despues/, despues-fuente-grande/ con font_scale 1.3 y despues-horizontal/ con wm user-rotation), más despues-simulador-resultado.png; panel, filas de datos, cabeceras y categorías del cuaderno muestran los iconos Material Symbols junto a su texto",
+      "2026-10-15: smoke test en dispositivo: recorrido completo (panel, campaña, parcelas, cuaderno, formulario y ficha de labor, simulador con cálculo 1000 kg · 20 % · 10 % -> 180 kg, notas de voz, cierre y nuevo inicio de sesión) con rotaciones a horizontal y vuelta (la rotación conserva pantalla y lo tecleado); logcat sin FATAL EXCEPTION, sin errores de AndroidRuntime ni ANR de com.olivapp.app",
+      "2026-10-15: contraste AA de la nueva paleta calculado con la fórmula WCAG sRGB y documentado en DESIGN.md (frontmatter colors y sección Colors): texto principal 15,6:1 sobre fondo y 12,3-16,7:1 sobre superficies, texto secundario 6,6-8,5:1, blanco/primario 8,1:1, #663500/#FE932C 4,5:1; revisado además con fuente grande y en horizontal",
+      "2026-10-15: comprobado en las capturas que nada queda tapado ni recortado por la barra de estado, la de navegación, el teclado ni el hueco reservado de la futura barra inferior (80dp, retirado con el teclado abierto)"
+    ],
+    "notes": "Base común de la oleada de modernización: todas las pistas dependen de estos fundamentos, así que se hace completo y estable antes de que arranquen. No cambia flujos, textos, ViewModels, Room ni endpoints: solo la base visual (pantalla completa, paleta, iconos) y los componentes nuevos de core/ui, que las pistas irán aplicando. Se mantiene el router propio de core/navegacion/Navegacion.kt y su tienda de ViewModels por visita (la rotación conserva pantalla y lo tecleado); las transiciones se hacen con AnimatedContent sin romper esa tienda. Gesto atrás predictivo con android:enableOnBackInvokedCallback=\"true\" en <application> (no es un permiso). Fuera de alcance: modo oscuro y widget de pantalla de inicio. Detalle de decisiones y evidencia en docs/evidencia/fundamentos-visuales-modernos/NOTAS.md."
+  },
+  {
+    "id": "navegacion-barra-inferior",
+    "area": "navegacion",
+    "title": "Navegación por barra inferior de cinco pestañas tras iniciar sesión",
+    "user_visible_behavior": "Tras iniciar sesión hay una barra de navegación inferior fija con Inicio, Cuaderno, Simulador, Parcelas y Perfil, con etiqueta siempre visible y la pestaña activa marcada. Desde una pestaña distinta de Inicio, el botón atrás del sistema vuelve a Inicio; desde Inicio sale de la app. El panel deja de mostrar los botones de acceso a parcelas, cuaderno y simulador (sigue teniendo el micrófono de nota de voz). Las pantallas de segundo nivel ocultan la barra y conservan Volver.",
+    "depends_on": [
+      "fundamentos-visuales-modernos"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Tests unitarios de la lógica de pestañas y del botón atrás (lógica sacada a una función o clase pura)",
+      "Comprobar en el dispositivo que la barra se ve solo en las pantallas de primer nivel y que las de segundo nivel la ocultan y conservan Volver",
+      "Comprobar el botón atrás: pestaña distinta de Inicio -> Inicio; Inicio -> salir de la app; sin historial acumulado entre pestañas",
+      "Rotación: conserva pestaña, pantalla y lo tecleado"
+    ],
+    "evidence": [
+      "2026-10-15 Xiaomi M2101K6G tras integrar las 3 pistas: barra inferior de 5 pestañas con etiqueta siempre visible, cambio entre pestañas, atrás desde Perfil vuelve a Inicio, pantalla de segundo nivel (Apuntar una labor) sin barra y con Volver, barra legible con fuente del sistema al 150 % y en horizontal (capturas en docs/evidencia/navegacion-barra-inferior/)",
+      "2026-10-15 Arreglo hallado al verificar: etiqueta 'Simulador' cortada en 360dp (ahora 13sp sin recorte). Tests Android 231/231 y lint en verde; init.sh completo en verde (pytest 156/156)"
+    ],
+    "notes": "El router propio de core/navegacion/Navegacion.kt se mantiene (sin Navigation Compose). La barra se apoya en los componentes y márgenes de pantalla completa de fundamentos-visuales-modernos."
+  },
+  {
+    "id": "perfil-del-socio",
+    "area": "cuenta",
+    "title": "Pestaña Perfil con los datos del socio y cierre de sesión",
+    "user_visible_behavior": "Una pestaña Perfil de solo lectura muestra el avatar de iniciales del socio, su código de socio, su email, el nombre de la cooperativa, el número de parcelas y la campaña actual, más el aviso de datos de demostración y la versión de la app. El botón Cerrar sesión se mueve aquí desde el panel, con su confirmación y comportamiento actuales.",
+    "depends_on": [
+      "navegacion-barra-inferior"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd backend && ./.venv/bin/python -m pytest -q en verde con tests de GET /api/v1/mi-perfil en backend/tests/test_perfil.py: con token, sin token (401) y aislamiento (un socio no ve los datos de otro)",
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Comprobar en el dispositivo la pestaña Perfil con sus datos, el aviso de datos de demostración, la versión de la app y el cierre de sesión con confirmación",
+      "Estados de carga (esqueleto), error y sin conexión coherentes con el resto de la app",
+      "Sin cambios en las tablas de Room existentes ni permisos del manifest"
+    ],
+    "evidence": [
+      "2026-10-15 Xiaomi: pestaña Perfil con avatar de iniciales, email, código de socio, cooperativa, parcelas y campaña actual, y estado Sin conexión con Reintentar (docs/evidencia/perfil-del-socio/). pytest 156/156 con tests de token, 401 y aislamiento de mi-perfil",
+      "2026-10-15 Arreglo hallado: la fila Cooperativa estiraba la tarjeta (nueva FilaDatoApilada). PENDIENTE de probar en el móvil: Cerrar sesión desde el Perfil con su confirmación",
+      "2026-10-15 Xiaomi M2101K6G, tras instalar el build integrado: Perfil completo (avatar, código Socio 1, cooperativa en fila apilada, 6 parcelas, campaña 2025/2026, aviso de demostración y versión 0.1.0-bootstrap); Cerrar sesión lleva a la pantalla de bienvenida y se puede volver a entrar (docs/evidencia/perfil-del-socio/). Sin cambios en tablas de Room ni permisos del manifest (git diff)."
+    ],
+    "notes": "Fuera de alcance: edición de datos, cambio de contraseña y foto. El backend expone GET /api/v1/mi-perfil en un módulo nuevo backend/app/perfil.py (en main.py solo lo mínimo para registrarlo)."
+  },
+  {
+    "id": "panel-moderno",
+    "area": "campanas",
+    "title": "Panel con cabecera de saludo, campaña actual destacada, comparativa y refresco",
+    "user_visible_behavior": "El panel saluda según la hora con la cooperativa debajo y un avatar de iniciales que abre el Perfil. La campaña actual va en una tarjeta destacada (campaña como título, aceite obtenido como cifra grande, kilos entregados y rendimiento graso como datos secundarios y la etiqueta Oficial · Cooperativa), con la frase de que las labores van aparte, en el cuaderno de campo. Debajo, una comparativa con la campaña anterior (+X % aceite vs 24/25) con icono además de color y un gráfico de barras del aceite de las campañas disponibles; sin campaña anterior no se muestra. Las campañas anteriores son filas de lista que abren su detalle. El micrófono pasa a botón flotante extendido Dictar nota, y la pantalla admite deslizar hacia abajo para refrescar y esqueleto al cargar.",
+    "depends_on": [
+      "navegacion-barra-inferior",
+      "perfil-del-socio"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Tests unitarios del cálculo de la comparativa (sin campaña anterior, valores a 0, redondeo del %) y del saludo según la hora",
+      "Comprobar en el dispositivo la tarjeta de campaña destacada, la etiqueta Oficial · Cooperativa, la comparativa y el gráfico de barras legible con valores visibles y sin depender solo del color",
+      "Deslizar hacia abajo para refrescar y esqueleto al cargar, con márgenes de pantalla completa correctos",
+      "Tests existentes del panel que cambien, actualizados a propósito y justificados en NOTAS"
+    ],
+    "evidence": [
+      "2026-10-15 ./init.sh completo en verde (pytest 156/156, healthcheck 200, datos sembrados con token OK, APK instalado y abierto en el Xiaomi M2101K6G); cd android && ./gradlew testDebugUnitTest lint en verde con el puerto 8000 libre: 257 tests, 0 fallos (26 nuevos: comparativa sin campaña anterior, valores a 0 y redondeo del %, saludo según la hora, ViewModel del panel)",
+      "2026-10-15 Xiaomi: cabecera con saludo y avatar que abre el Perfil, tarjeta de campaña actual con Oficial · Cooperativa, comparativa +48 % (1.774 kg frente a 1.198 kg) con gráfico de barras con valores y sin depender solo del color, campañas anteriores como filas que abren su detalle, Dictar nota abre Notas de voz; capturas con fuente normal, 150 % y horizontal en docs/evidencia/panel-moderno/",
+      "2026-10-15 Xiaomi: deslizar muestra el indicador y recarga; esqueleto al cargar (servidor sin respuesta); sin backend, el arranque muestra Sin conexión + Reintentar y el refresco con datos conserva la tarjeta y avisa debajo",
+      "Único cambio de backend: mi-campanas incluye aceite_obtenido por campaña (test_campanas_anteriores.py actualizado). Tests existentes cambiados y justificados en docs/evidencia/panel-moderno/NOTAS.md"
+    ],
+    "notes": "Reutiliza /api/v1/mi-perfil y /api/v1/mi-campanas (con aceite_obtenido añadido a cada campaña). No probado con TalkBack."
+  },
+  {
+    "id": "simulador-calculo-en-vivo",
+    "area": "simulador",
+    "title": "El simulador recalcula la liquidación en limpio al teclear",
+    "user_visible_behavior": "El simulador de liquidación en limpio deja de tener botón Simular: el resultado se recalcula al teclear. Con campos vacíos o ilegibles no hay error, se muestra un estado neutro (Escribe los kilos y el rendimiento). Los campos llevan sus unidades (kg, %) y teclado numérico, con los miles formateados al escribir (1.000). El rendimiento graso tiene botones −/+ con paso de 0,1, deslizador de 10 a 30 % y teclado, los tres sincronizados. La cifra del resultado se anima al cambiar y la tarjeta de resultado está siempre visible.",
+    "depends_on": [
+      "fundamentos-visuales-modernos"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Tests unitarios del cálculo en vivo y de numeroDeCampo (coma decimal y puntos de millar) sin depender del botón Simular",
+      "Comprobar en el dispositivo que el resultado se recalcula al teclear, que con campos vacíos se ve el estado neutro y que la tarjeta de resultado no se va de pantalla con el teclado abierto",
+      "Rendimiento graso: botones −/+, deslizador y teclado sincronizados, con zonas táctiles grandes",
+      "Tests que dependían del botón Simular actualizados a propósito y justificados en NOTAS"
+    ],
+    "evidence": [
+      "2026-10-15 Xiaomi: 10.958 kg x 17,93 % = 1.964,77 kg; menos 10 % = 1.768,29 kg, recalculado al teclear sin botón Simular; estado neutro con campos vacíos (docs/evidencia/simulador-calculo-en-vivo/)",
+      "2026-10-15 Arreglo hallado: al teclear 10958 el campo mostraba 10.985 (cursor tras el punto de millar); corregido en CampoDeTexto con test PosicionTrasFormatoTest. PENDIENTE de probar en el móvil: botones -/+ y deslizador sincronizados; con el teclado abierto la tarjeta de resultado fija ocupa mucho y tapa el segundo campo (revisar diseño)",
+      "2026-10-15 Xiaomi: 10.958 kg x 20 % = 2.191,6 kg y, con ajuste del 10 %, 1.972,44 kg al teclear; botones +0,1 x3 y -0,1 x2 dan 20,3 y 20,1 con el neto recalculado; el deslizador llega a 27,4 % (2.702,24 kg) y 13,8 % (1.360,98 kg) y sigue al campo; con campos vacíos se ve 'Escribe los kilos y el rendimiento'. Tras corregir la tarjeta de resultado (ahora compacta, el desglose va en el scroll), con el teclado abierto se ve el campo que se escribe. Deslizador verde, sin barra naranja. Tests Android 257/257 y lint en verde (docs/evidencia/simulador-calculo-en-vivo/)"
+    ],
+    "notes": "Se mantiene simularLiquidacion/recalcularConAjuste: solo cambia cuándo se calcula y cómo se presenta. La barra superior grande viene de fundamentos-visuales-modernos."
+  },
+  {
+    "id": "simulador-avanzado-precio-aceite",
+    "area": "simulador",
+    "title": "Simulador avanzado con precio del aceite, gastos de la cooperativa y reparto por calidad",
+    "user_visible_behavior": "Un interruptor Simulador avanzado (guardado como preferencia) despliega el precio del aceite en €/kg (consultado de precios pasados por categoría, mercado y semana, o escrito a mano con coma decimal), los gastos de la cooperativa en €/kg de aceite (0,20 por defecto, editable) y el reparto por calidad (% AOVE / virgen / lampante que debe sumar 100, con aviso claro si no suma). El resultado avanzado muestra el importe bruto estimado, los gastos, el importe neto estimado y su equivalente en €/kg de aceituna, con el aviso de que el precio es de referencia en origen a granel y no es lo que paga la cooperativa, su fuente y la semana del precio usado.",
+    "depends_on": [
+      "simulador-calculo-en-vivo"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd backend && ./.venv/bin/python -m pytest -q en verde con tests sin red sobre fixtures grabados en backend/tests/fixtures/: parseo de \"€445.00\", conversión a €/kg, deduplicación, mapeo de categorías y mercados, filtros, uso de la caché y fallo o timeout de la API",
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde, con tests de las funciones puras de importe (precio ponderado, gastos, reparto que no suma 100, precio 0, gastos mayores que el precio y campos vacíos)",
+      "Comprobar en el dispositivo la consulta de un precio pasado (categoría, mercado, semana) y la entrada manual, el reparto por calidad y el resultado avanzado con su aviso, fuente y semana",
+      "Si la API o el backend fallan, la app lo dice claramente y la entrada manual sigue funcionando",
+      "ADR nuevo para la fuente de precios y la arquitectura de proxy y caché, más docs/technical-discovery.md y docs/domain-model.md actualizados"
+    ],
+    "evidence": [
+      "2026-10-15 Backend con la API real de la Comisión Europea: GET /api/v1/precios-aceite/ultima-semana?mercado=media-nacional -> AOVE 3,3186 / virgen 3,0699 / lampante 2,9515 EUR/kg (semana 05-11/10/2026); serie AOVE 2024/2025 = 53 semanas (7,3995 a 4,2694 EUR/kg); segundo pedido desde caché en 0,3 s. pytest 156/156 sin red",
+      "2026-10-15 PENDIENTE de probar en el móvil: interruptor Simulador avanzado, consulta de precio pasado, entrada manual, reparto por calidad y error sin conexión",
+      "2026-10-15 Xiaomi con el backend real y la API de la Comisión Europea: interruptor Simulador avanzado; 'Última semana disponible' (05/10/2026, AOVE 3,319 EUR/kg); lista de semanas elegible; campañas 2026/2027 a 2018/2019 (2024/2025 muestra 29/09/2025 a 4,269 EUR/kg); gastos 0,20 EUR/kg y reparto por calidad (precio ponderado 3,319). Con 1.360,98 kg netos: bruto 4.516,56 EUR, gastos -272,20 EUR, neto 4.244,36 EUR, 0,387 EUR/kg de aceituna, con el aviso 'Precio de referencia en origen a granel. No es lo que paga tu cooperativa.', la fuente y la semana. Precio escrito a mano 4,5 EUR/kg con 10.958 kg al 20 %: bruto 8.875,98 EUR y neto 8.481,49 EUR. Con el backend parado: 'No hay conexión con el servidor. Puedes escribir el precio a mano.' y la entrada manual sigue funcionando (docs/evidencia/simulador-avanzado-precio-aceite/). pytest 156/156"
+    ],
+    "notes": "La app no llama directamente a la API europea: el backend hace de proxy en backend/app/precios.py (en main.py solo lo mínimo para registrarlo), cachea en una tabla NUEVA de SQLite y sirve la caché con su antigüedad si la API falla. Precio del aceite = precio de referencia en origen a granel en €/kg; un importe en € es siempre una estimación, nunca la liquidación de la cooperativa."
+  },
+  {
+    "id": "cuaderno-linea-de-tiempo",
+    "area": "cuaderno",
+    "title": "Mi cuaderno como línea de tiempo con filtros y Deshacer al eliminar",
+    "user_visible_behavior": "Mi cuaderno es una línea de tiempo con icono y color por categoría de labor (tratamiento fitosanitario, riego, cosecha; el color nunca es la única señal), cabeceras de mes fijas dentro de cada campaña y filtros por categoría y parcela con chips grandes y texto. Al eliminar una labor aparece un aviso con Deshacer: la labor desaparece de la lista y solo se borra en el backend si no se deshace. La pantalla admite deslizar hacia abajo para refrescar, esqueleto al cargar y estado vacío con Apunta tu primera labor; el Cuaderno y Parcelas tienen también el botón flotante Dictar nota y el estado vacío de parcelas.",
+    "depends_on": [
+      "fundamentos-visuales-modernos"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Tests de la lógica de agrupación por mes, de los filtros y del Deshacer (funciones puras o ViewModel)",
+      "Comprobar en el dispositivo el Deshacer al eliminar una labor: salir de la pantalla con el mensaje abierto borra la labor, y un fallo de red la devuelve a la lista con aviso",
+      "Aplicar en Parcelas, Cuaderno, Nueva labor/edición y Notas de voz la barra superior grande, el esqueleto y el estado vacío de fundamentos-visuales-modernos",
+      "La confirmación actual que protege de borrados accidentales se mantiene además del Deshacer"
+    ],
+    "evidence": [
+      "2026-10-15 Xiaomi: línea de tiempo con filtros por categoría y parcela, cabecera de campaña y de mes (docs/evidencia/cuaderno-linea-de-tiempo/). Arreglos hallados: sin conexión mostraba Apunta tu primera labor (ahora Sin conexión con Reintentar) y lo mismo en Parcelas (ahora Reintentar)",
+      "2026-10-15 PENDIENTE de probar en el móvil: Deshacer al eliminar (salir con el mensaje abierto, fallo de red), refrescar deslizando y el botón flotante Dictar nota",
+      "2026-10-15 Xiaomi: Eliminar pide confirmación y después muestra el aviso 'Labor eliminada de tu cuaderno.' con Deshacer (ahora 10 s); la labor desaparece de la lista (10 a 9 labores) pero sigue en el backend mientras el aviso está abierto; Deshacer la devuelve (backend 1); salir a otra pestaña con el aviso abierto la borra (backend 0); dejar cerrarse el aviso la borra; con el servidor caído la labor vuelve a la lista con 'No se pudo eliminar la labor. Vuelve a estar en tu cuaderno.'; deslizar hacia abajo recarga (una petición más al backend); sin conexión muestra Sin conexión con Reintentar. Corregido el texto del diálogo (decía que no se podía deshacer). Botón flotante Dictar nota abre Notas de voz (docs/evidencia/cuaderno-linea-de-tiempo/)"
+    ],
+    "notes": "El botón flotante Dictar nota recibe la acción por parámetro: no se toca Navegacion.kt. Si hace falta cablearlo allí, se apunta en NOTAS para la integración."
+  },
+  {
+    "id": "grabacion-voz-animada",
+    "area": "voz",
+    "title": "Grabación de nota de voz con onda animada, cuenta atrás y vibración",
+    "user_visible_behavior": "Mientras se graba una nota de voz se ve una onda animada según la amplitud real del micrófono y un anillo de cuenta atrás de 60 s, con vibración al empezar y al terminar. Si el sistema tiene desactivadas las animaciones reducidas, se muestra un indicador estático con el contador, sin onda animada.",
+    "depends_on": [
+      "fundamentos-visuales-modernos"
+    ],
+    "status": "passing",
+    "verification": [
+      "cd android && ./gradlew assembleDebug testDebugUnitTest lint en verde",
+      "Tests de la lógica de cuenta atrás y de normalización de la amplitud",
+      "Comprobar en el dispositivo la onda animada según la amplitud real, el anillo de cuenta atrás de 60 s (la grabación se detiene sola) y la vibración al empezar y al terminar",
+      "Con animaciones reducidas del sistema: sin onda animada, indicador estático y contador",
+      "Sin permiso VIBRATE en el manifest (vibración con LocalHapticFeedback) y sin cambios en la cola de notas, Room, la transcripción, el sincronizador ni el borrador IA"
+    ],
+    "evidence": [
+      "2026-10-15 Integrada y compilando (tests Android 231/231, lint verde, sin permiso VIBRATE). PENDIENTE de probar en el móvil con micrófono real: onda según amplitud, cuenta atrás de 60 s, vibración y modo de animaciones reducidas",
+      "2026-10-15 Xiaomi con micrófono real: onda de barras que cambia con la voz, anillo de cuenta atrás y texto 'Grabando… quedan N de 60 segundos'; la grabación se detiene sola a los 60 s (nota de 60 s en la lista); con animaciones del sistema desactivadas (animator_duration_scale 0) se ve un punto 'Grabando', el contador y el anillo, sin onda; vibración registrada por el sistema al empezar y al parar (CLICK a las 08:59:39 y 09:00:03). Sin permiso VIBRATE (manifest) y sin cambios en Room, sincronizador ni repositorio de notas. La transcripción falla porque el gateway de DevExpert devuelve 502 (ajeno a esta feature; la nota queda con Reintentar) (docs/evidencia/grabacion-voz-animada/)"
+    ],
+    "notes": "Si hace falta exponer la amplitud desde voz/data/GrabadorNotas.kt, se hace con el cambio mínimo y sin alterar el resto de su comportamiento."
   }
 ]

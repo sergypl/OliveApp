@@ -35,7 +35,7 @@ Aceituna que el socio lleva a la cooperativa durante una campaña.
 Aceite resultante de molturar los kilos entregados en una campaña. Cifra oficial de la cooperativa: el **aceite industrial**, es decir, el efectivo tras la merma del proceso. Por eso no cuadra con kilos × rendimiento graso (que es el de laboratorio): la diferencia es la merma industrial.
 
 ### Panel
-Pantalla de aterrizaje tras el inicio de sesión. Muestra la campaña actual, da acceso a las campañas anteriores y a los dos módulos: cuaderno de campo y simulador.
+Pantalla de aterrizaje tras el inicio de sesión (pestaña Inicio). Saluda al socio según la hora, destaca la campaña actual con sus datos oficiales, la compara con la campaña anterior (variación del aceite obtenido y gráfico de barras), lista las campañas anteriores y ofrece "Dictar nota". Los dos módulos (cuaderno de campo y simulador) están en la barra de navegación.
 
 ### Cuaderno de campo
 Historial cronológico de labores de un socio, agrupado por campaña. En OlivApp es la vista "Mi cuaderno"; su estructura de campos imita la del SIEX.
@@ -96,6 +96,30 @@ Cálculo bajo demanda de una liquidación en limpio en el simulador. No se guard
 
 ### Almazara
 Fábrica donde se muele la aceituna para obtener aceite. Una cooperativa suele tener la suya; en OlivApp "almazara" nombra la fábrica, no la cooperativa.
+
+### Perfil
+Pantalla del propio socio con sus datos de cuenta y de cooperativa (código de socio, email, cooperativa, parcelas y campaña actual) y el cierre de sesión. Es de solo lectura: no se editan datos ni contraseña desde ella.
+
+### Barra de navegación
+Barra fija en la parte inferior de la pantalla con las secciones principales de la app (Inicio, Cuaderno, Simulador, Parcelas y Perfil). Siempre con texto, no solo iconos.
+
+### Simulador avanzado
+Parte opcional del simulador de liquidación en limpio que añade precio del aceite, gastos de la cooperativa y reparto por calidad para estimar un importe. No cambia el aceite neto de la simulación básica.
+
+### Precio del aceite
+Precio de referencia en origen a granel, en €/kg de aceite. Es un precio de mercado orientativo (de una semana y un mercado concretos o escrito a mano por el socio); **no es lo que paga la cooperativa**.
+
+### Categoría de aceite
+Calidad del aceite según su acidez: **AOVE** (aceite de oliva virgen extra), **virgen** (aceite de oliva virgen) y **lampante** (aceite de oliva lampante). Cada categoría tiene su precio de referencia.
+
+### Gastos de la cooperativa
+Descuento por kilo de aceite (€/kg de aceite) que la cooperativa aplica por molturación y servicios. En el simulador avanzado es un valor editable que arranca en 0,20 €/kg; no son los gastos reales de ninguna cooperativa concreta.
+
+### Reparto por calidad
+Porcentaje del aceite estimado en cada categoría (AOVE, virgen y lampante). Los tres deben sumar 100 y sirven para calcular un precio ponderado con los precios de esa misma semana y mercado.
+
+### Importe estimado
+Cifra en € que sale del simulador avanzado (bruto, gastos y neto) a partir del precio del aceite, los gastos de la cooperativa y el reparto por calidad. **Es siempre una estimación orientativa y nunca la liquidación de la cooperativa**: el documento real de liquidación lo emite la cooperativa y puede diferir.
 
 ## Términos rechazados / ambiguos
 

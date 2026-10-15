@@ -35,6 +35,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -47,6 +48,8 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.core:core-ktx:1.13.1")
+    // Splash animado (fundamentos-visuales-modernos, ADR 0010).
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.compose.ui:ui")
@@ -55,6 +58,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Almacenamiento seguro del token de sesión (Keystore del dispositivo).
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Preferencias del simulador avanzado (simulador-avanzado-precio-aceite).
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     // Cola local de notas de voz (feature cola-offline-de-notas): Room sobre SQLite.
     implementation("androidx.room:room-runtime:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")

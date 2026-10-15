@@ -1,16 +1,13 @@
 package com.olivapp.app.parcelas.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,12 +24,13 @@ import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.ui.BotonPrincipal
 import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.CampoDeTexto
-import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Error
-import com.olivapp.app.core.ui.Texto
+import com.olivapp.app.core.ui.EsqueletoDeCarga
+import com.olivapp.app.core.ui.EstadoVacio
+import com.olivapp.app.core.ui.PantallaConBarraSuperiorGrande
 import com.olivapp.app.core.ui.Primario
+import com.olivapp.app.core.ui.Texto
 import com.olivapp.app.core.ui.TextoCuerpo
-import com.olivapp.app.core.ui.TextoTitulo1
 import com.olivapp.app.core.ui.TextoValor
 import com.olivapp.app.parcelas.domain.DatosParcela
 import com.olivapp.app.parcelas.domain.ParcelasRepositorio
@@ -42,6 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
+import com.olivapp.app.R
 
 /** Estado visible de la pantalla de parcelas. */
 data class ParcelasUiState(
@@ -49,7 +48,10 @@ data class ParcelasUiState(
     val parcelas: List<DatosParcela> = emptyList(),
     val mensaje: String? = null,
     val creada: Boolean = false,
-    val trabajando: Boolean = false
+    val trabajando: Boolean = false,
+    val cargando: Boolean = true,
+    /** La carga de la lista falló: no se sabe si hay parcelas, así que no se dice que no hay. */
+    val errorDeCarga: Boolean = false
 )
 
 @HiltViewModel
@@ -67,16 +69,31 @@ class ParcelasViewModel @Inject constructor(
 
     /** Carga la lista con el token guardado (a cada entrada en la pantalla). */
     fun cargar() {
+        _uiState.update { it.copy(cargando = true) }
         val token = sesion.token()
         if (token == null) {
             _uiState.update {
-                it.copy(mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión.")
+                it.copy(
+                    cargando = false,
+                    mensaje = "Sesión caducada o no válida. Vuelve a iniciar sesión."
+                )
             }
             return
         }
         parcelasRepo.cargarParcelas(token) { lista, texto ->
             _uiState.update {
-                if (lista != null) it.copy(parcelas = lista) else it.copy(mensaje = texto)
+                if (lista != null) {
+                    it.copy(
+                        cargando = false,
+                        parcelas = lista,
+                        errorDeCarga = false,
+                        // El aviso de una carga fallida no sobrevive a la carga buena;
+                        // el de "parcela creada" sí.
+                        mensaje = if (it.errorDeCarga) null else it.mensaje
+                    )
+                } else {
+                    it.copy(cargando = false, mensaje = texto, errorDeCarga = true)
+                }
             }
         }
     }
@@ -106,13 +123,16 @@ class ParcelasViewModel @Inject constructor(
 }
 
 /**
- * Pantalla de parcelas del socio: alta con nombre propio y lista.
+ * Pantalla de parcelas del socio (features alta-de-parcela y
+ * cuaderno-linea-de-tiempo, que le pone los componentes de la oleada 0): alta
+ * con nombre propio y lista, con barra superior grande, esqueleto al cargar y
+ * estado vacío.
  *
  * Las parcelas no se eliminan ni archivan en el MVP (docs/domain-model.md).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaParcelas(
-    onVolver: () -> Unit,
     viewModel: ParcelasViewModel = hiltViewModel()
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,82 +141,91 @@ fun PantallaParcelas(
         viewModel.cargar()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Fondo)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    PantallaConBarraSuperiorGrande(
+        titulo = "Tus parcelas"
     ) {
-        Text(
-            text = "Tus parcelas",
-            style = TextoTitulo1,
-            color = Texto
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Aquí viven tus parcelas.\nLes pondrás labores desde el cuaderno.",
-            style = TextoCuerpo,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        CampoDeTexto(
-            etiqueta = "Nombre de la parcela",
-            valor = estado.nombre,
-            alCambiar = viewModel::cambiarNombre,
-            tipo = KeyboardType.Text
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        BotonPrincipal(
-            texto = if (estado.trabajando) "Creando la parcela…" else "Crear parcela",
-            habilitado = !estado.trabajando,
-            alPulsar = viewModel::crearParcela
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        estado.mensaje?.let {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = it,
+                text = "Aquí viven tus parcelas.\nLes pondrás labores desde el cuaderno.",
                 style = TextoCuerpo,
-                color = if (estado.creada) Primario else Error,
+                color = Texto,
                 textAlign = TextAlign.Center
             )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        if (estado.parcelas.isNotEmpty()) {
-            Text(
-                text = "Parcelas de este socio",
-                style = TextoValor,
-                color = Primario
+            Spacer(modifier = Modifier.height(24.dp))
+            CampoDeTexto(
+                etiqueta = "Nombre de la parcela",
+                valor = estado.nombre,
+                alCambiar = viewModel::cambiarNombre,
+                tipo = KeyboardType.Text
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, Primario, RoundedCornerShape(12.dp))
-                    .padding(16.dp)
-            ) {
-                for ((indice, parcela) in estado.parcelas.withIndex()) {
-                    if (indice > 0) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
+            Spacer(modifier = Modifier.height(16.dp))
+            BotonPrincipal(
+                texto = if (estado.trabajando) "Creando la parcela…" else "Crear parcela",
+                icono = R.drawable.ic_parcelas,
+                habilitado = !estado.trabajando,
+                alPulsar = viewModel::crearParcela
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            estado.mensaje?.let {
+                Text(
+                    text = it,
+                    style = TextoCuerpo,
+                    color = if (estado.creada) Primario else Error,
+                    textAlign = TextAlign.Center
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            when {
+                estado.cargando -> EsqueletoDeCarga(
+                    filas = 3,
+                    altoFila = 28.dp,
+                    modificador = Modifier.fillMaxWidth()
+                )
+                estado.errorDeCarga && estado.parcelas.isEmpty() -> BotonSecundario(
+                    texto = "Reintentar",
+                    icono = R.drawable.ic_refrescar,
+                    alPulsar = viewModel::cargar
+                )
+                estado.parcelas.isEmpty() -> EstadoVacio(
+                    titulo = "Aún no tienes parcelas. Añade la primera",
+                    modificador = Modifier.padding(vertical = 8.dp)
+                )
+                else -> {
                     Text(
-                        text = parcela.nombre,
-                        style = TextoCuerpo,
-                        color = Texto
+                        text = "Parcelas de este socio",
+                        style = TextoValor,
+                        color = Primario
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(2.dp, Primario, RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    ) {
+                        for ((indice, parcela) in estado.parcelas.withIndex()) {
+                            if (indice > 0) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            Text(
+                                text = parcela.nombre,
+                                style = TextoCuerpo,
+                                color = Texto
+                            )
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Las parcelas no se borran en esta versión.",
+                style = TextoCuerpo,
+                color = Texto,
+                textAlign = TextAlign.Center
+            )
         }
-        Text(
-            text = "Las parcelas no se borran en esta versión.",
-            style = TextoCuerpo,
-            color = Texto,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        BotonSecundario(texto = "Volver al panel", alPulsar = onVolver)
     }
 }
