@@ -118,3 +118,8 @@ y miran el estado). `SimuladorCaracterizacionTest` no se toca (solo dominio):
   `feature/mod-simulador`): cálculo en vivo sin botón, estado neutro, unidades en los campos, miles
   formateados al teclear, rendimiento con botones/deslizador/teclado sincronizados, cifra animada y
   tarjeta de resultado fijada. Pendiente de comprobación en dispositivo en la integración."
+
+## Reverificación al reanudar (2026-10-15)
+Al reanudar la pista se repitió `./gradlew assembleDebug testDebugUnitTest lint` sobre la rama:
+`BUILD SUCCESSFUL`, sin fallos de tests (los 11 de `ServicioCuentasCaracterizacionTest` citados
+arriba no se reprodujeron: el puerto 8000 estaba libre) y lint sin incidencias.
