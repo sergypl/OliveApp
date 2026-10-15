@@ -27,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.olivapp.app.acceso.domain.SesionRepositorio
 import com.olivapp.app.core.formatos.NOMBRES_DE_CATEGORIA
 import com.olivapp.app.core.ui.BotonPrincipal
-import com.olivapp.app.core.ui.BotonSecundario
 import com.olivapp.app.core.ui.Fondo
 import com.olivapp.app.core.ui.Error
 import com.olivapp.app.core.ui.Texto
@@ -127,7 +126,6 @@ class CuadernoViewModel @Inject constructor(
  */
 @Composable
 fun PantallaCuaderno(
-    onVolver: () -> Unit,
     onApuntarLabor: () -> Unit,
     onEditarLabor: (LaborEditable) -> Unit,
     viewModel: CuadernoViewModel = hiltViewModel()
@@ -247,7 +245,5 @@ fun PantallaCuaderno(
                 textAlign = TextAlign.Center
             )
         }
-        Spacer(modifier = Modifier.height(32.dp))
-        BotonSecundario(texto = "Volver al panel", icono = R.drawable.ic_volver, alPulsar = onVolver)
     }
 }
