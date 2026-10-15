@@ -62,7 +62,7 @@ ADR 0011, `docs/technical-discovery.md` (Integrations), `docs/domain-model.md` (
 borde).
 
 ## Verificación ejecutada (comandos y resultado)
-- `cd backend && ./.venv/bin/python -m pytest -q` → **151 passed** (26 tests nuevos en
+- `cd backend && ./.venv/bin/python -m pytest -q` → **151 passed** (27 tests nuevos en
   `tests/test_precios_aceite.py`, sin red: parseo, €/kg, mapeo, filtros, deduplicación, rutas con
   sesión, 400/503, uso de la caché, antigüedad, timeout y respuestas erróneas de la fuente).
 - `cd android && ./gradlew assembleDebug testDebugUnitTest lint` → `BUILD SUCCESSFUL`, **177 tests,
