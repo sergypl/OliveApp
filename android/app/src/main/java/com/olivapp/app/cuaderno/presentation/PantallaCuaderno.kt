@@ -315,7 +315,7 @@ fun PantallaCuaderno(
                 Text(
                     text = labor.fechaVisible + " · " +
                         (NOMBRES_DE_CATEGORIA[labor.categoria] ?: labor.categoria) +
-                        "\n\nSe borrará de tu cuaderno. No se puede deshacer.",
+                        "\n\nSe quitará de tu cuaderno. Tendrás unos segundos para deshacerlo.",
                     style = TextoCuerpo,
                     color = Texto
                 )
