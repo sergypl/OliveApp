@@ -83,7 +83,14 @@ class ParcelasViewModel @Inject constructor(
         parcelasRepo.cargarParcelas(token) { lista, texto ->
             _uiState.update {
                 if (lista != null) {
-                    it.copy(cargando = false, parcelas = lista, errorDeCarga = false)
+                    it.copy(
+                        cargando = false,
+                        parcelas = lista,
+                        errorDeCarga = false,
+                        // El aviso de una carga fallida no sobrevive a la carga buena;
+                        // el de "parcela creada" sí.
+                        mensaje = if (it.errorDeCarga) null else it.mensaje
+                    )
                 } else {
                     it.copy(cargando = false, mensaje = texto, errorDeCarga = true)
                 }
